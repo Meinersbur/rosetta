@@ -23,6 +23,9 @@ FetchContent_Declare(googlebenchmark
 )
 FetchContent_MakeAvailable(googlebenchmark)
 
+# Python
+find_package(Python 3.8.10 REQUIRED)
+
 
 ## Introspection ################################################################
 
@@ -40,6 +43,8 @@ check_cxx_source_compiles("
     HAVE_CXX___RESTRICT
 )
 
+add_custom_target(gbench)
+
 
 ## Build #######################################################################
 
@@ -47,4 +52,14 @@ add_subdirectory(src)
 
 
 ## Run #########################################################################
+
+set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/runner.py")
+add_custom_target(run
+    DEPENDS gbench
+    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--exedir" "${CMAKE_CURRENT_BINARY_DIR}/src"
+    COMMENT "Run benchmarks ..."
+    USES_TERMINAL VERBATIM
+)
+
+
 
