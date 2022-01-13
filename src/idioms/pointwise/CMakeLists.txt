@@ -10,3 +10,8 @@ target_compile_options(pointwise.omp_parallel.gbench PUBLIC -fno-exceptions)
 add_dependencies(gbench pointwise.omp_parallel.gbench)
 
 
+add_executable(pointwise.omp_taskloop.gbench pointwise.omp_taskloop.cpp)
+target_link_libraries(pointwise.omp_taskloop.gbench PRIVATE benchmark::benchmark OpenMP::OpenMP_CXX)
+target_compile_options(pointwise.omp_taskloop.gbench PUBLIC -fno-exceptions)
+add_dependencies(gbench pointwise.omp_taskloop.gbench)
+
