@@ -2,8 +2,6 @@
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <string>
-#include <omp.h>
-
 
 static void kernel(int n, double *B, double *A) {
     #pragma omp parallel for
@@ -13,7 +11,7 @@ static void kernel(int n, double *B, double *A) {
 }
 
 
-static void pointwise_omp_parallel(benchmark::State& state, int n) {
+static void pointwise_seq(benchmark::State& state, int n) {
     double *A = new double[n];
     double *B = new double[n];
 
@@ -27,6 +25,8 @@ static void pointwise_omp_parallel(benchmark::State& state, int n) {
 }
 
 
+
+
 int main(int argc, char* argv[]) {
     ::benchmark::Initialize(&argc, argv);
 
@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-    benchmark::RegisterBenchmark(("pointwise_seq" + std::string("/") +std:: to_string(n)).c_str(), pointwise_seq, n)->Unit(benchmark::kMillisecond);
+    benchmark::RegisterBenchmark(("pointwise.omp_parallel" + std::string("/") +std:: to_string(n)).c_str(), pointwise_seq, n)->Unit(benchmark::kMillisecond);
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();

@@ -59,7 +59,7 @@ def main(argv):
     for e in args.exe:
         results += list(run_gbench(exe=e))
     for p in args.exedir:
-        for e in p.glob("**/*.seq"):
+        for e in p.glob("**/*.gbench"):
             results += list(run_gbench(exe=e))
 
     print("Name: WallTime RealTime MaxRSS")
