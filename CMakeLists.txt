@@ -6,11 +6,14 @@ project(rosetta
 
 ## Configuration ###############################################################
 
+set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70" CACHE STRING "Compiler arguments for OpenMP offloading")
+set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget" CACHE STRING "Linker arguments for OpenMP offloading")
+set(CMAKE_CUDA_ARCHITECTURES OFF)
 
 ## Dependencies ################################################################
 
 # pthreads
-find_package(Threads REQUIRED)
+#find_package(Threads REQUIRED)
 
 # OpenMP
 find_package(OpenMP REQUIRED)
@@ -29,6 +32,7 @@ find_package(Python 3.8.10 REQUIRED)
 
 ## Introspection ################################################################
 
+# pointer restrict
 check_cxx_source_compiles("
         int f(void *restrict x);
         int main(void) {return 0;}
@@ -43,10 +47,14 @@ check_cxx_source_compiles("
     HAVE_CXX___RESTRICT
 )
 
-add_custom_target(gbench)
-
+# OpenMP offloading
+add_library(OpenMP::OpenMP_Offload_CXX INTERFACE IMPORTED)
+set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_COMPILE_OPTIONS ${OPENMP_OFFLOADING_CFLAGS})
+set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_LINK_OPTIONS ${OPENMP_OFFLOADING_LDFLAGS})
 
 ## Build #######################################################################
+
+add_custom_target(gbench)
 
 add_subdirectory(src)
 
