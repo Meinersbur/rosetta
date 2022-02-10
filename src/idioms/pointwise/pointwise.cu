@@ -5,7 +5,7 @@
 
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
-__device__  void kernel(int n, double *B, double *A) {
+__global__ void kernel(int n, double *B, double *A) {
      int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < n)
         B[i] = 42* A[i];
@@ -26,8 +26,8 @@ static void pointwise_cuda(benchmark::State& state, int n) {
     int blocksPerGrid =(n + threadsPerBlock - 1) / threadsPerBlock;
 
     for (auto &&_ : state) {
-        kernel<<blocksPerGrid, threadsPerBlock>>(n, dev_B, dev_A);
-        
+        kernel<<<blocksPerGrid, threadsPerBlock>>>(n, dev_B, dev_A);
+
         // TODO: Is the invocation already blocking?
          cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
     }

@@ -8,6 +8,5 @@ else ()
 endif ()
 
 
-
 add_subdirectory(idioms)
 #add_subdirectory(qmcpack)
