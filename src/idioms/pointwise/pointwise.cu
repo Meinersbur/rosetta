@@ -31,7 +31,7 @@ static void pointwise_cuda(benchmark::State& state, int n) {
         // TODO: Is the invocation already blocking?
          cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
     }
-
+ 
     cudaFree(dev_A);
     cudaFree(dev_B);
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n)).c_str(), pointwise_cuda, n)->Unit(benchmark::kMillisecond);
+    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n)).c_str(), &pointwise_cuda, n)->Unit(benchmark::kMillisecond);
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();

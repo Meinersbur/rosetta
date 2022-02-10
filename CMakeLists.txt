@@ -1,21 +1,18 @@
 cmake_minimum_required(VERSION 3.21.3)
-list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-  )
- 
 project(rosetta
   VERSION 0.0.1
   LANGUAGES C CXX
 )
 
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  )
 
-
+include(FetchContent)
 include(CheckLanguage)
 
 
-
 ## Configuration ###############################################################
-
 
 set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
   CACHE STRING "Compiler arguments for OpenMP offloading")
@@ -25,6 +22,13 @@ set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
 
 
 ## Dependencies ################################################################
+
+# Google Benchmark
+set(BENCHMARK_ENABLE_TESTING OFF)
+FetchContent_Declare(googlebenchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+)
+FetchContent_MakeAvailable(googlebenchmark)
 
 # Python
 find_package(Python 3.6.13 REQUIRED)
@@ -38,18 +42,12 @@ find_package(OpenMP REQUIRED)
 # OpenMP offloading
 find_package(OpenMPOffload REQUIRED)
 
-# Google Benchmark
-include(FetchContent)
-set(BENCHMARK_ENABLE_TESTING OFF)
-FetchContent_Declare(googlebenchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-)
-FetchContent_MakeAvailable(googlebenchmark)
-
 # CUDA
-check_language(CUDA)
-if (CMAKE_CUDA_COMPILER)
-  enable_language(CUDA)
+if (NOT DEFINED ROSETTA_ENABLE_CUDA OR ROSETTA_ENABLE_CUDA)
+  check_language(CUDA)
+  if (CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+  endif ()
 endif ()
 
 
@@ -74,18 +72,18 @@ check_cxx_source_compiles("
 
 ## Compiler-preconfigurations ##################################################
 
-option(XCELLENT_ENABLE_SERIAL ON)
+option(ROSETTA_ENABLE_SERIAL ON)
 
 set(_cuda_enabled_default OFF)
 if (CMAKE_CUDA_COMPILER AND CMAKE_CUDA_HOST_COMPILER)
-    set(_cuda_enabled_default ON)
+  set(_cuda_enabled_default ON)
 endif ()
-option(XCELLENT_ENABLE_CUDA ${_cuda_enabled_default})
+option(ROSETTA_ENABLE_CUDA ${_cuda_enabled_default})
 
 
-option(XCELLENT_ENABLE_OPENMP_PARALLEL ON)
-option(XCELLENT_ENABLE_OPENMP_TASKS ON)
-option(XCELLENT_ENABLE_OPENMP_TARGET ON)
+option(ROSETTA_ENABLE_OPENMP_PARALLEL ON)
+option(ROSETTA_ENABLE_OPENMP_TASKS ON)
+option(ROSETTA_ENABLE_OPENMP_TARGET ON)
 
 
 
@@ -105,6 +103,24 @@ add_custom_target(run
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
 )
+
+
+## Summary #########################################################################
+
+set(_disabled_ppm)
+
+
+message("")
+message("Configuration summary")
+message("---------------------")
+message("Enabled PPMs:")
+if (ROSETTA_ENABLE_CUDA)
+  message("  CUDA: ${CMAKE_CUDA_COMPILER}")
+else ()
+  set(_disabled_ppm "CUDA ${_disabled_ppm}")
+endif ()
+message("Disabled PPMs: ${_disabled_ppm}")
+message("")
 
 
 

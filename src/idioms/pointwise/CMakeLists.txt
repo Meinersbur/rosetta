@@ -22,5 +22,7 @@ target_compile_options(pointwise.omp_target.gbench PUBLIC -fno-exceptions)
 add_dependencies(gbench pointwise.omp_target.gbench)
 
 
-add_executable(pointwise.cuda.gbench pointwise.cu)
-target_link_libraries(pointwise.cuda.gbench PRIVATE benchmark::benchmark)
+if (ROSETTA_ENABLE_CUDA)
+  add_executable(pointwise.cuda.gbench pointwise.cu)
+  target_link_libraries(pointwise.cuda.gbench PRIVATE benchmark::benchmark)
+endif ()

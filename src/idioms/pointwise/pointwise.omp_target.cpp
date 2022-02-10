@@ -36,7 +36,9 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
+
     benchmark::RegisterBenchmark(("pointwise.omp_target" + std::string("/") +std:: to_string(n)).c_str(), pointwise_seq, n)->Unit(benchmark::kMillisecond);
+
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();
