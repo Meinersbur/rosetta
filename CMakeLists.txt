@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.21.3)
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
@@ -27,7 +27,7 @@ set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
 ## Dependencies ################################################################
 
 # Python
-find_package(Python 3.8.10 REQUIRED)
+find_package(Python 3.6.13 REQUIRED)
 
 # pthreads
 #find_package(Threads REQUIRED)
