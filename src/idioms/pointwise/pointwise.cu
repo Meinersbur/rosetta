@@ -2,6 +2,7 @@
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <string>
+#include "synchronization.hpp" 
 
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
@@ -17,16 +18,19 @@ static void pointwise_cuda(benchmark::State& state, int n) {
     double *B = new double[n];
 
     double *dev_A, *dev_B;
-    cudaMalloc((void**)&dev_A, n * sizeof(double));
-    cudaMalloc((void**)&dev_B, n * sizeof(double));
+    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
+    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_B, n * sizeof(double)));
 
     cudaMemcpy(dev_A, A, N * sizeof(double), cudaMemcpyHostToDevice);
 
     int threadsPerBlock = 256;
-    int blocksPerGrid =(n + threadsPerBlock - 1) / threadsPerBlock;
+    int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
 
     for (auto &&_ : state) {
-        kernel<<<blocksPerGrid, threadsPerBlock>>>(n, dev_B, dev_A);
+       cudaStream_t stream = 0;
+
+        cuda_event_timer raii(state, true, stream); 
+        kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_B, dev_A);
 
         // TODO: Is the invocation already blocking?
          cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
@@ -50,7 +54,7 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n)).c_str(), &pointwise_cuda, n)->Unit(benchmark::kMillisecond);
+    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n)).c_str(), &pointwise_cuda, n)->Unit(benchmark::kMillisecond)->UseManualTime();
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();
