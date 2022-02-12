@@ -1,8 +1,9 @@
 #include "pointwise.h"
-#include <benchmark/benchmark.h>
-#include <cstdlib>
-#include <string>
-#include "synchronization.hpp" 
+#include "rosetta.h"
+//#include <benchmark/benchmark.h>
+//#include <cstdlib>
+//#include <string>
+//#include "synchronization.hpp" 
 
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
@@ -23,17 +24,23 @@ static void pointwise_cuda(benchmark::State& state, int n) {
 
     cudaMemcpy(dev_A, A, N * sizeof(double), cudaMemcpyHostToDevice);
 
+// TODO: dim3 dimBlock(16, 16, 1);
     int threadsPerBlock = 256;
     int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
 
+//state.PauseTiming();
     for (auto &&_ : state) {
+state.PauseTiming();
        cudaStream_t stream = 0;
-
-        cuda_event_timer raii(state, true, stream); 
+    //    cuda_event_timer raii(state, true, stream); 
+state.ResumeTiming();
         kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_B, dev_A);
+
 
         // TODO: Is the invocation already blocking?
          cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
+         benchmark::ClobberMemory(); 
+
     }
  
     cudaFree(dev_A);
@@ -54,7 +61,8 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n)).c_str(), &pointwise_cuda, n)->Unit(benchmark::kMillisecond)->UseManualTime();
+    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n) + "/gpu").c_str(), &pointwise_cuda, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond)->UseManualTime();
+    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n) + "/cpu").c_str() , &pointwise_cuda, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond);
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();

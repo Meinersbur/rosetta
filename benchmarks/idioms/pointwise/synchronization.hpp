@@ -23,7 +23,7 @@
 #define BENCH_CUDA_TRY(call)                                                         \
   do {                                                                               \
     auto const status = (call);                                                      \
-    if (cudaSuccess != status) { throw std::runtime_error("CUDA error detected."); } \
+    if (cudaSuccess != status) { abort(); } \
   } while (0);
 
 /**

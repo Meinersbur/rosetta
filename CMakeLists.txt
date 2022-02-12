@@ -79,8 +79,9 @@ check_cxx_source_compiles("
 )
 
 
-
 ## Compiler-preconfigurations ##################################################
+
+option(ROSETTA_NO_EXCEPTIONS "Disable exceptions" ON)
 
 option(ROSETTA_ENABLE_SERIAL "Include PPM: non-parallel" ON)
 
@@ -107,18 +108,20 @@ option(ROSETTA_ENABLE_OPENMP_TARGET "Include PPM: #pragma omp target" OFF)
 
 ## Build #######################################################################
 
+add_subdirectory(src)
+
 set_property(GLOBAL PROPERTY benchmarks_serial)
 set_property(GLOBAL PROPERTY benchmarks_cuda)
-set_property(GLOBAL PROPERTY benchmarks_omp_parallel)
+set_property(GLOBAL PROPERTY benchmarks_openmp_parallel)
 
 add_custom_target(gbench-serial)
 add_custom_target(gbench-cuda)
-add_custom_target(gbench-omp_parallel)
+add_custom_target(gbench-openmp_parallel)
 
 add_custom_target(gbench)
-add_dependencies(gbench gbench-serial gbench-cuda gbench-omp_parallel)
+add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel)
 
-add_subdirectory(src)
+add_subdirectory(benchmarks)
 
 get_property(_tmp GLOBAL PROPERTY benchmarks_cuda)
 message(VERBOSE "CUDA benchmarks: ${_tmp}")
@@ -148,7 +151,7 @@ file(GENERATE
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 #file(CHMOD "${CMAKE_BINARY_DIR}/run.sh" FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
-# file (COPY ${CMAKE_BINARY_DIR}/tmp/somescript.sh DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+#file (COPY ${CMAKE_BINARY_DIR}/tmp/somescript.sh DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
 
 execute_process(
       COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${CMAKE_DEFAULT_BUILD_TYPE}.sh" "run.sh" 
@@ -171,27 +174,32 @@ add_custom_target(run-cuda
     USES_TERMINAL VERBATIM
 )
 
+
 ## Summary #########################################################################
 
 set(_disabled_ppm)
 
+set(_extra_flags)
+if (ROSETTA_NO_EXCEPTIONS)
+ set(_extra_flags "-fno-exceptions")
+endif ()
 
 message("")
 message("Configuration summary")
 message("---------------------")
 message("Enabled PPMs:")
 if (ROSETTA_ENABLE_SERIAL)
-  message("  Serial: ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  Serial: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "Serial ${_disabled_ppm}")
 endif ()
 if (ROSETTA_ENABLE_CUDA)
-  message("  CUDA: ${CMAKE_CUDA_COMPILER} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION})")
+  message("  CUDA: ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "CUDA ${_disabled_ppm}")
 endif ()
 if (ROSETTA_ENABLE_OPENMP_PARALLEL)
-  message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "OpenMP-parallel ${_disabled_ppm}")
 endif ()
@@ -201,4 +209,3 @@ else ()
 message("Disabled PPMs: -none-")
 endif ()
 message("")
-

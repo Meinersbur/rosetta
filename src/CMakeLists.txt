@@ -1,12 +1,14 @@
+add_library(rosetta
+  rosetta.cpp
+  )
 
-if (HAVE_CXX_RESTRICT)
-  set (KEYWORD_RESTRICT "restrict")
-elif (HAVE_CXX___RESTRICT)
-  set (KEYWORD_RESTRICT "__restrict")
-else ()
-  set (KEYWORD_RESTRICT "")
+target_include_directories(rosetta PUBLIC "${CMAKE_SOURCE_DIR}/include")
+target_link_libraries(rosetta PUBLIC benchmark::benchmark)
+
+if (ROSETTA_NO_EXCEPTIONS)
+  # TODO: Introspection
+  target_compile_options(rosetta PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>) 
 endif ()
 
 
-add_subdirectory(idioms)
-#add_subdirectory(qmcpack)
+
