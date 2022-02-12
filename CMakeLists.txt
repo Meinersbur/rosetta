@@ -35,10 +35,10 @@ find_package(Python 3.6.13 REQUIRED)
 
 # CUDA
 if (NOT DEFINED ROSETTA_ENABLE_CUDA OR ROSETTA_ENABLE_CUDA)
-  message("Looking for CUDA...")
+  #message("Looking for CUDA...")
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
-  message("Enable CUDA...")
+    #message("Enable CUDA...")
     enable_language(CUDA)
   elseif (ROSETTA_ENABLE_CUDA)
     message(FATAL_ERROR "ROSETTA_ENABLE_CUDA enabled but CUDA not found")
@@ -48,9 +48,10 @@ endif ()
 # pthreads
 #find_package(Threads REQUIRED)
 
-if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL)
-  # OpenMP
-  if (ROSETTA_ENABLE_OPENMP_PARALLEL)
+# OpenMP
+if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
+  OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK)
+  if (ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_TASK)
     find_package(OpenMP REQUIRED)
   else ()
     find_package(OpenMP)
@@ -87,21 +88,21 @@ option(ROSETTA_ENABLE_SERIAL "Include PPM: non-parallel" ON)
 
 set(_cuda_enabled_default OFF)
 if (CMAKE_CUDA_COMPILER)
-  message("Enable CUDA by default...")
+  #message("Enable CUDA by default...")
   set(_cuda_enabled_default ON)
 endif ()
-message("_cuda_enabled_default: ${_cuda_enabled_default}")
-message("ROSETTA_ENABLE_CUDA: ${ROSETTA_ENABLE_CUDA}")
+#message("_cuda_enabled_default: ${_cuda_enabled_default}")
+#message("ROSETTA_ENABLE_CUDA: ${ROSETTA_ENABLE_CUDA}")
 option(ROSETTA_ENABLE_CUDA "Include PPM: CUDA" ${_cuda_enabled_default})
-message("ROSETTA_ENABLE_CUDA: ${ROSETTA_ENABLE_CUDA}")
+#message("ROSETTA_ENABLE_CUDA: ${ROSETTA_ENABLE_CUDA}")
 
-set(_openmp_paralel_enabled_default OFF)
+set(_openmp_enabled_default OFF)
 if (OpenMP_FOUND)
-  set(_openmp_paralel_enabled_default ON)
+  set(_openmp_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENMP_PARALLEL "Include PPM: #pragma omp parallel" ON)
+option(ROSETTA_ENABLE_OPENMP_PARALLEL "Include PPM: #pragma omp parallel" ${_openmp_enabled_default})
+option(ROSETTA_ENABLE_OPENMP_TASK     "Include PPM: #pragma omp task"     ${_openmp_enabled_default})
 
-option(ROSETTA_ENABLE_OPENMP_TASKS "Include PPM: #pragma omp task" OFF)
 option(ROSETTA_ENABLE_OPENMP_TARGET "Include PPM: #pragma omp target" OFF)
 
 
@@ -113,18 +114,20 @@ add_subdirectory(src)
 set_property(GLOBAL PROPERTY benchmarks_serial)
 set_property(GLOBAL PROPERTY benchmarks_cuda)
 set_property(GLOBAL PROPERTY benchmarks_openmp_parallel)
+set_property(GLOBAL PROPERTY benchmarks_openmp_task)
 
 add_custom_target(gbench-serial)
 add_custom_target(gbench-cuda)
 add_custom_target(gbench-openmp_parallel)
+add_custom_target(gbench-openmp_task)
 
 add_custom_target(gbench)
-add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel)
+add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel gbench-openmp_task)
 
 add_subdirectory(benchmarks)
 
-get_property(_tmp GLOBAL PROPERTY benchmarks_cuda)
-message(VERBOSE "CUDA benchmarks: ${_tmp}")
+#get_property(_tmp GLOBAL PROPERTY benchmarks_cuda)
+#message(VERBOSE "CUDA benchmarks: ${_tmp}")
 
 
 ## Run #########################################################################
@@ -137,9 +140,14 @@ set(_benchmarks_run "#! /usr/bin/env bash
 ${Python_EXECUTABLE} ${RUNNER_EXECUTABLE}")
 
 
+get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
+list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
 list(APPEND _benchmarks ${_benchmarks_cuda})
-
+get_property(_benchmarks_openmp_parallel GLOBAL PROPERTY benchmarks_openmp_parallel)
+list(APPEND _benchmarks ${_benchmarks_openmp_parallel})
+get_property(_benchmarks_openmp_task GLOBAL PROPERTY benchmarks_openmp_task)
+list(APPEND _benchmarks ${_benchmarks_openmp_task})
 
 foreach (_target IN LISTS _benchmarks_cuda)
   set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda-exe $<TARGET_FILE:${_target}>")
@@ -202,6 +210,11 @@ if (ROSETTA_ENABLE_OPENMP_PARALLEL)
   message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "OpenMP-parallel ${_disabled_ppm}")
+endif ()
+if (ROSETTA_ENABLE_OPENMP_TASK)
+  message("  OpenMP-Task: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "OpenMP-task ${_disabled_ppm}")
 endif ()
 if (_disabled_ppm)
 message("Disabled PPMs: ${_disabled_ppm}")
