@@ -8,7 +8,7 @@ import subprocess
 import pathlib
 import os
 import resource
-import datetime 
+import datetime
 import json
 
 
@@ -24,7 +24,7 @@ class BenchResult:
 def run_gbench(exe):
     start = datetime.datetime.now()
     p = subprocess.Popen([exe, '--benchmark_format=json'],stdout=subprocess.PIPE,text=True)
-    
+
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
     stop = datetime.datetime.now()
     wtime = max(stop - start,datetime.timedelta(0))
@@ -51,8 +51,9 @@ def run_gbench(exe):
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    parser.add_argument('--exe',    action='append', default=[], type=pathlib.Path,  help="Google Benchmark Executable")
-    parser.add_argument('--exedir', action='append', default=[], type=pathlib.Path, help="Google Benchmark Executable")
+    #parser.add_argument('--exe',    action='append', default=[], type=pathlib.Path,  help="Google Benchmark Executable")
+    #parser.add_argument('--exedir', action='append', default=[], type=pathlib.Path, help="Google Benchmark Executable")
+    parser.add_argument('gbenchexe',nargs='+', help="Google Benchmark Executables")
     args = parser.parse_args(argv[1:])
 
     results = []
@@ -70,5 +71,3 @@ def main(argv):
 if __name__ == '__main__':
     if retcode := main(argv=sys.argv):
         exit(retcode)
-
-

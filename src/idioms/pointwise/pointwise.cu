@@ -23,13 +23,13 @@ static void pointwise_cuda(benchmark::State& state, int n) {
     cudaMemcpy(dev_A, A, N * sizeof(double), cudaMemcpyHostToDevice);
 
     int threadsPerBlock = 256;
-    int blocksPerGrid =(n + threadsPerBlock - 1) / threadsPerBlock;
+    int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
 
     for (auto &&_ : state) {
         kernel<<<blocksPerGrid, threadsPerBlock>>>(n, dev_B, dev_A);
 
-        // TODO: Is the invocation already blocking?
-         cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
+        //cudaMemcpy(B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost);
+        cudaDeviceSynchronize();
     }
 
     cudaFree(dev_A);
@@ -57,4 +57,3 @@ int main(int argc, char* argv[]) {
     ::benchmark::Shutdown();
     return EXIT_SUCCESS;
 }
-

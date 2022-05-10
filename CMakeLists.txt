@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
- 
+
 project(rosetta
   VERSION 0.0.1
   LANGUAGES C CXX
@@ -29,6 +29,14 @@ set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
 # Python
 find_package(Python 3.8.10 REQUIRED)
 
+# Google Benchmark
+include(FetchContent)
+set(BENCHMARK_ENABLE_TESTING OFF)
+FetchContent_Declare(googlebenchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+)
+FetchContent_MakeAvailable(googlebenchmark)
+
 # pthreads
 #find_package(Threads REQUIRED)
 
@@ -37,14 +45,6 @@ find_package(OpenMP REQUIRED)
 
 # OpenMP offloading
 find_package(OpenMPOffload REQUIRED)
-
-# Google Benchmark
-include(FetchContent)
-set(BENCHMARK_ENABLE_TESTING OFF)
-FetchContent_Declare(googlebenchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-)
-FetchContent_MakeAvailable(googlebenchmark)
 
 # CUDA
 check_language(CUDA)
@@ -91,20 +91,28 @@ option(XCELLENT_ENABLE_OPENMP_TARGET ON)
 
 ## Build #######################################################################
 
+set_property(GLOBAL PROPERTY GBENCHS_SERIAL_EXE)
+add_custom_target(gbench.serial)
+
+set_property(GLOBAL PROPERTY GBENCHS_CUDA_EXE)
+add_custom_target(gbench.cuda)
+
+set_property(GLOBAL PROPERTY GBENCHS_EXE)
 add_custom_target(gbench)
+add_dependencies(gbench gbench.serial gbench.cuda)
+
 
 add_subdirectory(src)
+
 
 
 ## Run #########################################################################
 
 set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/runner.py")
+get_property(exefiles GLOBAL PROPERTY GBENCHS_EXE)
 add_custom_target(run
     DEPENDS gbench
-    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--exedir" "${CMAKE_CURRENT_BINARY_DIR}/src"
+    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${exefiles}
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
 )
-
-
-

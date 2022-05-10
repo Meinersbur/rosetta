@@ -1,31 +1,28 @@
-#include "pointwise.h"
+#include "pointwise_inplace.h"
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <string>
 
-static void kernel(int n, double *B, double *A) {
+static void kernel(int n, double *A) {
     for (int i = 0; i < n; i += 1) {
-        B[i] = 42 * A[i];
+        A[i] += 42;
     }
 }
 
 
-static void pointwise_seq(benchmark::State& state, int n) {
+static void pointwise_inplace_serial(benchmark::State& state, int n) {
     double *A = new double[n];
-    double *B = new double[n];
 
     for (auto &&_ : state) {
-        kernel(n, B, A);
+        kernel(n, A);
         benchmark::ClobberMemory();
     }
 
     delete[] A;
-    delete[] B;
 }
 
 
 
-// BENCHMARK(pointwise_seq)->Unit(benchmark::kMicrosecond);
 
 
 int main(int argc, char* argv[]) {
@@ -38,11 +35,10 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-    benchmark::RegisterBenchmark(("pointwise.seq" + std::string("/") +std:: to_string(n)).c_str(), pointwise_seq, n)->Unit(benchmark::kMillisecond);
+    benchmark::RegisterBenchmark(("pointwise_inplace_serial" + std::string("/") +std:: to_string(n)).c_str(), pointwise_inplace_serial, n)->Unit(benchmark::kMillisecond);
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();
     ::benchmark::Shutdown();
     return EXIT_SUCCESS;
 }
-
