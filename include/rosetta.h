@@ -15,13 +15,13 @@
      } \
   } while (0);
 
-typedef  void BenchmarkFuncTy(benchmark::State& , int );
+typedef void BenchmarkFuncTy(benchmark::State& , int );
 
 class RosettaBenchmark {
 private:
 const char *name;
- BenchmarkFuncTy*func;
-    RosettaBenchmark *next;
+  BenchmarkFuncTy*func;
+  RosettaBenchmark *next;
 public:
     RosettaBenchmark(const char *name, BenchmarkFuncTy &func);
 
@@ -31,6 +31,6 @@ public:
 };
 
 #define ROSETTA_BENCHMARK(NAME) \
- static RosettaBenchmark StaticInitializer{#NAME, NAME};
+  static RosettaBenchmark StaticInitializer{#NAME, NAME};
 
 #endif /* ROSETTA_H_ */

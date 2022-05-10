@@ -1,54 +1,20 @@
 function (append_global_property propname)
   get_property(propval GLOBAL PROPERTY ${propname})
   list(APPEND propval ${ARGN})
+  message("ARGN=${ARGN}")
+  message("${propname}=${propval}")
   set_property(GLOBAL PROPERTY ${propname} "${propval}")
 endfunction ()
-
-
-# function (add_test_serial name)
-#   if (NOT XCELLENT_ENABLE_SERIAL)
-#     return()
-#   endif ()
-
-#   cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "")
-#   set(exe "${name}.serial")
-#   set(src "${name}.cpp")
-
-#   add_executable(${exe} "${src}")
-#   target_link_libraries(${exe} PRIVATE benchmark::benchmark)
-#   #target_compile_options(${exe} PUBLIC -fno-exceptions)
-#   add_dependencies(gbench.serial ${exe})
-
-#   append_global_property(GBENCHS_SERIAL_EXE "$<TARGET_FILE:${exe}>")
-#   append_global_property(GBENCHS_EXE "$<TARGET_FILE:${exe}>")
-# endfunction ()
-
-
-# function (add_test_cuda name)
-#   if (NOT XCELLENT_ENABLE_CUDA)
-#     return()
-#   endif ()
-
-#   cmake_parse_arguments(PARSE_ARGV 1 arg "" "" "")
-#   set(exe "${name}.set")
-#   set(src "${name}.cu")
-
-#   add_executable(${exe} "${src}")
-#   target_link_libraries(${exe} PRIVATE benchmark::benchmark)
-#   add_dependencies(gbench.cuda ${exe})
-
-#   append_global_property(GBENCHS_CUDA_EXE "$<TARGET_FILE:${exe}>")
-#   append_global_property(GBENCHS_EXE "$<TARGET_FILE:${exe}>")
-# endfunction ()
 
 
 
 
 function (add_benchmark_serial basename)
+  message("add_benchmark_serial(${basename})")
   if (NOT ROSETTA_ENABLE_SERIAL)
       return ()
   endif ()
-  cmake_parse_arguments(_arg "" "" "SOURCES"  ${ARGN} )
+  cmake_parse_arguments(_arg "" "DEFAULT_SIZE" "SOURCES"  ${ARGN} )
 
   set(_target "${basename}.serial")
   set(_sources "${basename}.cpp")
@@ -56,8 +22,11 @@ function (add_benchmark_serial basename)
   target_link_libraries("${_target}" PRIVATE rosetta)
   add_dependencies(gbench-serial "${_target}")
 
-  append_global_property(benchmarks_serial "$<TARGET_FILE:${exe}>")
+  append_global_property(benchmarks_serial "${_target}")
 endfunction ()
+
+
+
 
 
 function (add_benchmark_cuda basename)

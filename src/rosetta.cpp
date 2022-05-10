@@ -6,15 +6,17 @@
 static RosettaBenchmark *benchmarkListFirst=nullptr;
 static RosettaBenchmark *benchmarkListLast=nullptr;
 
-RosettaBenchmark:: RosettaBenchmark(const char *name, BenchmarkFuncTy &func) : name(name), func(&func) , next(nullptr){
+RosettaBenchmark::RosettaBenchmark(const char *name, BenchmarkFuncTy &func) : name(name), func(&func) , next(nullptr){
      if (!benchmarkListFirst)
-      benchmarkListFirst  = this;
+        benchmarkListFirst  = this;
       if (benchmarkListLast) {
           benchmarkListLast->next = this;
           benchmarkListLast = this;
       }
  }
 
+ __attribute__((weak))
+void run(benchmark::State& state, int n) ;
 
 int main(int argc, char* argv[]) {
     ::benchmark::Initialize(&argc, argv);
@@ -31,13 +33,18 @@ int main(int argc, char* argv[]) {
     while (cur) {
         std::string&& name = std::string(cur->getName()) + "/"+std:: to_string(n);
         printf("name %s\n", name.c_str());
-        benchmark::RegisterBenchmark(   name.c_str(), cur->getFunc(), n)->Unit(benchmark::kMillisecond);
+        benchmark::RegisterBenchmark(name.c_str(), cur->getFunc(), n)->Unit(benchmark::kMillisecond);
         cur = cur->getNext();
     }
 
     //benchmark::RegisterBenchmark(("apirwise.serial" + std::string("/") +std:: to_string(n)).c_str(), pairwise, n)->Unit(benchmark::kMillisecond);
     //benchmark::RegisterBenchmark(("pairwise.cuda" + std::string("/") +std:: to_string(n) ).c_str(), &pairwise_serial, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond)->UseManualTime();
-    
+    if (&run) {
+         benchmark::RegisterBenchmark(argv[0], run, n)->Unit(benchmark::kMillisecond);
+    }
+
+
+
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();
     ::benchmark::Shutdown();

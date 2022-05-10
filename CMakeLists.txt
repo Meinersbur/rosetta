@@ -29,15 +29,18 @@ FetchContent_MakeAvailable(googlebenchmark)
 
 
 # CUDA
-set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
-if (NOT DEFINED ROSETTA_ENABLE_CUDA OR ROSETTA_ENABLE_CUDA)
-  #message("Looking for CUDA...")
+if (NOT DEFINED ROSETTA_ENABLE_CUDA)
+  set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
-    #message("Enable CUDA...")
     enable_language(CUDA)
-  elseif (ROSETTA_ENABLE_CUDA)
-    message(FATAL_ERROR "ROSETTA_ENABLE_CUDA enabled but CUDA not found")
+  endif ()
+elseif (ROSETTA_ENABLE_CUDA)
+  set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
+  check_language(CUDA)
+  enable_language(CUDA)
+  if (NOT CMAKE_CUDA_COMPILER)
+    message(FATAL_ERROR "CUDA enabled but no CUDA not found")
   endif ()
 endif ()
 
@@ -47,6 +50,8 @@ endif ()
 
 
 # OpenMP
+
+
 if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
     OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK
     OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
@@ -104,24 +109,24 @@ endif ()
 
 ## Configuration ###############################################################
 
-option(XCELLENT_ENABLE_SERIAL ON)
+option(ROSETTA_ENABLE_SERIAL ON)
 
 set(_cuda_enabled_default OFF)
 if (CMAKE_CUDA_COMPILER AND CMAKE_CUDA_HOST_COMPILER)
     set(_cuda_enabled_default ON)
 endif ()
-option(XCELLENT_ENABLE_CUDA ${_cuda_enabled_default})
+option(ROSETTA_ENABLE_CUDA ${_cuda_enabled_default})
 
 
-option(XCELLENT_ENABLE_OPENMP_PARALLEL ON)
-option(XCELLENT_ENABLE_OPENMP_TASKS ON)
-option(XCELLENT_ENABLE_OPENMP_TARGET ON)
+option(ROSETTA_ENABLE_OPENMP_PARALLEL ON)
+option(ROSETTA_ENABLE_OPENMP_TASKS ON)
+option(ROSETTA_ENABLE_OPENMP_TARGET ON)
 
 set(_openacc_enabled_default OFF)
 if (OpenACC_CXX_FOUND)
   set(_openacc_enabled_default ON)
 endif ()
-option(XCELLENT_ENABLE_OPENACC ${_openacc_enabled_default})
+option(ROSETTA_ENABLE_OPENACC ${_openacc_enabled_default})
 
 
 
@@ -161,12 +166,35 @@ add_subdirectory(benchmarks)
 
 set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/runner.py")
 
+if (CMAKE_CONFIGURATION_TYPES)
+  set(_build_types ${CMAKE_CONFIGURATION_TYPES})
+elseif (CMAKE_BUILD_TYPE)
+  set(_build_types "${CMAKE_BUILD_TYPE}")
+endif ()
+
+if (CMAKE_BUILD_TYPE)
+  set(_default_build_type "${CMAKE_BUILD_TYPE}")
+elseif (CMAKE_DEFAULT_BUILD_TYPE) # Only Ninja Multi-Config Generator
+  set(_default_build_type "${CMAKE_DEFAULT_BUILD_TYPE}")
+elseif ("Release" IN _build_types)
+  set(_default_build_type "Release")
+elseif (CMAKE_CONFIGURATION_TYPES)
+  list(GET CMAKE_CONFIGURATION_TYPES 0 _default_build_type)
+else ()
+  set(_default_build_type)
+endif ()
+
+
+
+
+
 set(_benchmarks)
 set(_benchmarks_run "#! /usr/bin/env bash
-${Python_EXECUTABLE} ${RUNNER_EXECUTABLE}")
+${Python_EXECUTABLE} ${RUNNER_EXECUTABLE}") #TODO: use python instead
 
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
+message("_benchmarks_serial: ${_benchmarks_serial}")
 list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
 list(APPEND _benchmarks ${_benchmarks_cuda})
@@ -177,11 +205,16 @@ list(APPEND _benchmarks ${_benchmarks_openmp_task})
 get_property(_benchmarks_openmp_target GLOBAL PROPERTY benchmarks_openmp_target)
 list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
+set(_benchmarks_serial_run)
+foreach (_target IN LISTS _benchmarks_serial)
+  list(APPEND _benchmarks_serial_run "--serial=$<TARGET_FILE:${_target}>")
+  set(_benchmarks_run "${_benchmarks_run} \\\n  --serial=$<TARGET_FILE:${_target}>")
+endforeach ()
 foreach (_target IN LISTS _benchmarks_cuda)
-  set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda-exe $<TARGET_FILE:${_target}>")
+  set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda=$<TARGET_FILE:${_target}>")
 endforeach ()
 
-file(GENERATE 
+file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.sh"
     CONTENT "${_benchmarks_run}"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
@@ -189,25 +222,53 @@ file(GENERATE
 #file(CHMOD "${CMAKE_BINARY_DIR}/run.sh" FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
 #file (COPY ${CMAKE_BINARY_DIR}/tmp/somescript.sh DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
 
-execute_process(
-      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${CMAKE_DEFAULT_BUILD_TYPE}.sh" "run.sh" 
-      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-      )
+message("CMAKE_CONFIGURATION_TYPES = ${CMAKE_CONFIGURATION_TYPES}")
 
 
-add_custom_target(run
+
+
+
+foreach (_conftype IN LISTS _build_types)
+  add_custom_target(run-${_conftype}
+     DEPENDS gbench
+     COMMAND "run-${_conftype}.sh"
+     COMMENT "Run benchmarks ..."
+     USES_TERMINAL VERBATIM
+  )
+endforeach ()
+
+
+
+if (_default_build_type)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.sh" "run.sh"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+  add_custom_target(run
     DEPENDS gbench
-    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--exedir" "${CMAKE_CURRENT_BINARY_DIR}/src" 
+    COMMAND "./run.sh"
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
-)
+  )
+endif ()
 
-add_custom_target(run-cuda
-    DEPENDS gbench-cuda
-    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${_benchmarks_cuda_exe}
-    COMMENT "Run CUDA benchmarks ..."
-    USES_TERMINAL VERBATIM
-)
+
+
+
+# add_custom_target(run-serial
+#     DEPENDS gbench-cuda
+#     COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${_benchmarks_serial_run}
+#     COMMENT "Run Serial benchmarks ..."
+#     USES_TERMINAL VERBATIM
+# )
+
+
+# add_custom_target(run-cuda
+#     DEPENDS gbench-cuda
+#     COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${_benchmarks_cuda_exe}
+#     COMMENT "Run CUDA benchmarks ..."
+#     USES_TERMINAL VERBATIM
+# )
 
 
 
@@ -217,12 +278,18 @@ set(_disabled_ppm)
 
 set(_extra_flags)
 if (ROSETTA_NO_EXCEPTIONS)
- set(_extra_flags "-fno-exceptions")
+  set(_extra_flags "-fno-exceptions")
 endif ()
 
 message("")
 message("Configuration Summary")
 message("---------------------")
+if (CMAKE_BUILD_TYPE)
+  message("Build Configuration: ${CMAKE_BUILD_TYPE}")
+else ()
+  message("Build Configurations: ${CMAKE_CONFIGURATION_TYPES}")
+  message("Default Build Configuration: ${_default_build_type}")
+endif ()
 message("Enabled PPMs:")
 if (ROSETTA_ENABLE_SERIAL)
   message("  Serial: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
@@ -252,7 +319,7 @@ endif ()
 if (ROSETTA_ENABLE_OPENACC)
   message("  OpenACC: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION_MAJOR})")
 else ()
-  set(_disabled_ppm "OpenACC ${_disabled_ppm}")
+  set(_disabled_ppm "${_disabled_ppm} OpenACC")
 endif ()
 if (_disabled_ppm)
   message("Disabled PPMs:")

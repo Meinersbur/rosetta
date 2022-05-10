@@ -49,20 +49,25 @@ def run_gbench(exe):
         yield BenchResult(name=d['name'],wtime=wtime,rtime=datetime.timedelta(milliseconds=d['real_time']),maxrss=maxrss)
 
 
-def main(argv):
-    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    #parser.add_argument('--exe',    action='append', default=[], type=pathlib.Path,  help="Google Benchmark Executable")
-    #parser.add_argument('--exedir', action='append', default=[], type=pathlib.Path, help="Google Benchmark Executable")
-    parser.add_argument('gbenchexe',nargs='+', help="Google Benchmark Executables")
-    args = parser.parse_args(argv[1:])
-
+def run_benchs():
     results = []
-    for e in args.gbenchexe:
+    for e in args.serial:
         results += list(run_gbench(exe=e))
 
     print("Name: WallTime RealTime MaxRSS")
     for r in results:
         print(f"{r.name}: {r.wtime} {r.rtime} {r.maxrss}")
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
+    #parser.add_argument('--exe',    action='append', default=[], type=pathlib.Path,  help="Google Benchmark Executable")
+    #parser.add_argument('--exedir', action='append', default=[], type=pathlib.Path, help="Google Benchmark Executable")
+    #parser.add_argument('gbenchexe',nargs='+', help="Google Benchmark Executables")
+    parser.add_argument('--serial', action='append', default=[], help="Google Benchmark Executables")
+    args = parser.parse_args(argv[1:])
+
+
 
 
 if __name__ == '__main__':
