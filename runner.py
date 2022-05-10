@@ -57,11 +57,8 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
     results = []
-    for e in args.exe:
+    for e in args.gbenchexe:
         results += list(run_gbench(exe=e))
-    for p in args.exedir:
-        for e in p.glob("**/*.gbench"):
-            results += list(run_gbench(exe=e))
 
     print("Name: WallTime RealTime MaxRSS")
     for r in results:

@@ -14,14 +14,7 @@ include(CheckLanguage)
 
 
 
-## Configuration ###############################################################
 
-
-set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
-  CACHE STRING "Compiler arguments for OpenMP offloading")
-set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget"
-  CACHE STRING "Linker arguments for OpenMP offloading")
-set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
 
 
 ## Dependencies ################################################################
@@ -37,6 +30,14 @@ FetchContent_Declare(googlebenchmark
 )
 FetchContent_MakeAvailable(googlebenchmark)
 
+# CUDA
+if (NOT DEFINED CMAKE_CUDA_COMPILER OR CMAKE_CUDA_COMPILER)
+  check_language(CUDA)
+  if (CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+  endif ()
+endif ()
+
 # pthreads
 #find_package(Threads REQUIRED)
 
@@ -46,11 +47,8 @@ find_package(OpenMP REQUIRED)
 # OpenMP offloading
 find_package(OpenMPOffload REQUIRED)
 
-# CUDA
-check_language(CUDA)
-if (CMAKE_CUDA_COMPILER)
-  enable_language(CUDA)
-endif ()
+# OpenACC
+find_package(OpenACC REQUIRED)
 
 
 ## Introspection ################################################################
@@ -70,9 +68,7 @@ check_cxx_source_compiles("
     HAVE_CXX___RESTRICT
 )
 
-
-
-## Compiler-preconfigurations ##################################################
+## Configuration ###############################################################
 
 option(XCELLENT_ENABLE_SERIAL ON)
 
@@ -86,6 +82,21 @@ option(XCELLENT_ENABLE_CUDA ${_cuda_enabled_default})
 option(XCELLENT_ENABLE_OPENMP_PARALLEL ON)
 option(XCELLENT_ENABLE_OPENMP_TASKS ON)
 option(XCELLENT_ENABLE_OPENMP_TARGET ON)
+
+option(XCELLENT_ENABLE_OPENACC ON)
+
+
+set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
+  CACHE STRING "Compiler arguments for OpenMP offloading")
+set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget"
+  CACHE STRING "Linker arguments for OpenMP offloading")
+set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
+
+
+
+
+## Compiler-preconfigurations ##################################################
+
 
 
 
@@ -116,3 +127,7 @@ add_custom_target(run
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
 )
+
+
+## Summary #####################################################################
+
