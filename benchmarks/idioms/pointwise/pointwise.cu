@@ -1,4 +1,4 @@
-#include "pointwise.h"
+//#include "pointwise.h"
 #include "rosetta.h"
 //#include <benchmark/benchmark.h>
 //#include <cstdlib>
@@ -8,13 +8,17 @@
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
 __global__ void kernel(int n, double *B, double *A) {
-     int i = blockDim.x * blockIdx.x + threadIdx.x;
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < n)
-        B[i] = 42* A[i];
+        B[i] = 42 + A[i];
 }
 
 
-static void pointwise_cuda(benchmark::State& state, int n) {
+ void run(benchmark::State& state, int n) {
+    // default size
+    if (n < 0)
+        n = (DEFAULT_N);
+
     double *A = new double[n];
     double *B = new double[n];
 
@@ -22,7 +26,7 @@ static void pointwise_cuda(benchmark::State& state, int n) {
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_B, n * sizeof(double)));
 
-    cudaMemcpy(dev_A, A, N * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_A, A, n * sizeof(double), cudaMemcpyHostToDevice);
 
 // TODO: dim3 dimBlock(16, 16, 1);
     int threadsPerBlock = 256;
@@ -37,22 +41,12 @@ state.ResumeTiming();
         kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_B, dev_A);
 
 
-<<<<<<< HEAD:src/idioms/pointwise/pointwise.cu
-        //cudaMemcpy(B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost);
-        cudaDeviceSynchronize();
-    }
-||||||| 17c7cd3:src/idioms/pointwise/pointwise.cu
         // TODO: Is the invocation already blocking?
          cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
-    }
-=======
-        // TODO: Is the invocation already blocking?
-         cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
-         benchmark::ClobberMemory(); 
->>>>>>> meinersbur/master:benchmarks/idioms/pointwise/pointwise.cu
+            cudaDeviceSynchronize();
 
     }
- 
+
     cudaFree(dev_A);
     cudaFree(dev_B);
 
@@ -61,6 +55,7 @@ state.ResumeTiming();
 }
 
 
+#if 0
 int main(int argc, char* argv[]) {
     ::benchmark::Initialize(&argc, argv);
 
@@ -79,3 +74,5 @@ int main(int argc, char* argv[]) {
     ::benchmark::Shutdown();
     return EXIT_SUCCESS;
 }
+#endif
+

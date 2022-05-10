@@ -12,8 +12,15 @@ import datetime
 import json
 
 
+
+class BenchVariants:
+    def __init__(self, default_size, serial=None, cuda=None):
+        None
+
+
+
 class BenchResult:
-    def __init__(self,name:str,wtime : datetime.timedelta,rtime : datetime.timedelta,maxrss):
+    def __init__(self,name:str, wtime : datetime.timedelta, rtime : datetime.timedelta,maxrss):
         self.name=name
         self.wtime=wtime
         self.rtime=rtime

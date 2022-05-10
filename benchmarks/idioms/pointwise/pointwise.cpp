@@ -6,6 +6,10 @@ static void kernel(int n, double *B, double *A) {
 }
 
 void run(benchmark::State& state, int n) {
+    // default size
+    if (n < 0)
+        n = (DEFAULT_N);
+
     double *A = new double[n];
     double *B = new double[n];
 

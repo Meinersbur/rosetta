@@ -21,7 +21,8 @@ void run(benchmark::State& state, int n) ;
 int main(int argc, char* argv[]) {
     ::benchmark::Initialize(&argc, argv);
 
-    int n = 100; // N
+    // TODO: benchnark-specific default size
+    int n = 100;
     if (argc > 1) {
        n = std::atoi(argv[1]);
        argc -= 1;

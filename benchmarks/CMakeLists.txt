@@ -12,14 +12,17 @@ endfunction ()
 function (add_benchmark_serial basename)
   message("add_benchmark_serial(${basename})")
   if (NOT ROSETTA_ENABLE_SERIAL)
-      return ()
+    return ()
   endif ()
-  cmake_parse_arguments(_arg "" "DEFAULT_SIZE" "SOURCES"  ${ARGN} )
+  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
 
   set(_target "${basename}.serial")
   set(_sources "${basename}.cpp")
   add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE rosetta)
+  if (_arg_DEFAULT_N)
+    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+  endif ()
+  target_link_libraries("${_target}" PRIVATE rosetta-serial)
   add_dependencies(gbench-serial "${_target}")
 
   append_global_property(benchmarks_serial "${_target}")
@@ -28,22 +31,26 @@ endfunction ()
 
 
 
-
 function (add_benchmark_cuda basename)
   if (NOT ROSETTA_ENABLE_CUDA)
       return ()
   endif ()
-  cmake_parse_arguments(_arg "" "" "SOURCES"  ${ARGN} )
+  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
 
   set(_target "${basename}.cuda")
-  add_executable("${_target}" ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE rosetta)
+  set(_sources "${basename}.cu")
+  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
+  if (_arg_DEFAULT_N)
+    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+  endif ()
+  target_link_libraries("${_target}" PRIVATE rosetta-cuda)
   add_dependencies(gbench-cuda "${_target}")
 
-  get_property(_tmp GLOBAL PROPERTY benchmarks_cuda)
-  list(APPEND _tmp "${_target}")
-  set_property(GLOBAL PROPERTY benchmarks_cuda "${_tmp}")
+  append_global_property(benchmarks_cuda "${_target}")
 endfunction ()
+
+
+
 
 
 function (add_benchmark_openmp_parallel basename)

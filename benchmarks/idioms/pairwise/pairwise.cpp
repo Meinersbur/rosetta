@@ -4,8 +4,8 @@
 
 
 static void kernel(int n, double *C, double *B, double *A) {
-    for (int i = 0; i < n; i += 1) 
-        for (int j = 0; j < n; j += 1) 
+    for (int i = 0; i < n; i += 1)
+        for (int j = 0; j < n; j += 1)
             C[i * n + j] = A[i] * B[j];
 }
 

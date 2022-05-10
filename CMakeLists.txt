@@ -45,13 +45,19 @@ elseif (ROSETTA_ENABLE_CUDA)
 endif ()
 
 
+# OpenCL
+if (NOT DEFINED ROSETTA_ENABLE_OPENCL)
+  find_package(OpenCL)
+elseif (ROSETTA_ENABLE_OPENCL)
+  find_package(OpenCL REQUIRED)
+endif ()
+
+
 # pthreads
 #find_package(Threads REQUIRED)
 
 
 # OpenMP
-
-
 if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
     OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK
     OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
@@ -78,6 +84,7 @@ if (NOT DEFINED ROSETTA_ENABLE_OPENACC)
 elseif (ROSETTA_ENABLE_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
+
 
 
 
@@ -117,6 +124,11 @@ if (CMAKE_CUDA_COMPILER AND CMAKE_CUDA_HOST_COMPILER)
 endif ()
 option(ROSETTA_ENABLE_CUDA ${_cuda_enabled_default})
 
+set(_opencl_enabled_default OFF)
+if (OpenCL_FOUND)
+    set(_opencl_enabled_default ON)
+endif ()
+option(ROSETTA_ENABLE_OPENCL ${_opencl_enabled_default})
 
 option(ROSETTA_ENABLE_OPENMP_PARALLEL ON)
 option(ROSETTA_ENABLE_OPENMP_TASKS ON)
@@ -306,6 +318,11 @@ if (ROSETTA_ENABLE_CUDA)
 else ()
   set(_disabled_ppm "CUDA ${_disabled_ppm}")
 endif ()
+if (ROSETTA_ENABLE_OPENCL)
+  message("  OpenCL: ${CMAKE_CXX_COMPILER} ${OpenCL_LIBRARIES} ${_extra_flags} (${OpenCL_VERSION_STRING})")
+else ()
+  set(_disabled_ppm "OpenCL ${_disabled_ppm}")
+endif ()
 if (ROSETTA_ENABLE_OPENMP_PARALLEL)
   message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
@@ -324,7 +341,7 @@ endif ()
 if (ROSETTA_ENABLE_OPENACC)
   message("  OpenACC: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION_MAJOR})")
 else ()
-  set(_disabled_ppm "${_disabled_ppm} OpenACC")
+  set(_disabled_ppm "OpenACC ${_disabled_ppm}")
 endif ()
 if (_disabled_ppm)
   message("Disabled PPMs:")
