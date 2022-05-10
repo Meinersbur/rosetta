@@ -67,6 +67,24 @@ function (add_benchmark_openmp_task basename)
 endfunction ()
 
 
+function (add_benchmark_openmp_target basename)
+    if (NOT ROSETTA_ENABLE_OPENMP_TARGET)
+        return ()
+    endif ()
+    cmake_parse_arguments(_arg "" "" "SOURCES"  ${ARGN} )
+
+    set(_target "${basename}.openmp_target")
+    add_executable("${_target}" ${_arg_SOURCES})
+    target_link_libraries("${_target}" PRIVATE rosetta OpenMP::OpenMP_CXX)
+    add_dependencies(gbench-openmp_target "${_target}")
+
+    get_property(_tmp GLOBAL PROPERTY benchmarks_openmp_target)
+    list(APPEND _tmp "${_target}")
+    set_property(GLOBAL PROPERTY benchmarks_openmp_target "${_tmp}")
+endfunction ()
+
+
+
 function (add_benchmark basename)
     #cmake_parse_arguments(ARG "" "NAME" "SERIAL;CUDA;OMP_PARALLEL;OMP_TASK;OMP_TARGET" ${ARGN})
 
@@ -88,5 +106,10 @@ function (add_benchmark basename)
     set(_source_openmp_task "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.openmp_task.cpp")
     if (EXISTS "${_source_openmp_task}")
       add_benchmark_openmp_task("${basename}" SOURCES ${_source_openmp_task})
+    endif ()
+
+    set(_source_openmp_target "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.openmp_target.cpp")
+    if (EXISTS "${_source_openmp_target}")
+      add_benchmark_openmp_target("${basename}" SOURCES ${_source_openmp_target})
     endif ()
 endfunction ()

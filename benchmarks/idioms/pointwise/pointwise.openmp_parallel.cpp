@@ -10,7 +10,7 @@ static void kernel(int n, double *B, double *A) {
 }
 
 
-static void pointwise_omp_parallel(benchmark::State& state, int n) {
+static void pointwise_openmp_parallel(benchmark::State& state, int n) {
     double *A = new double[n];
     double *B = new double[n];
 
@@ -25,4 +25,4 @@ static void pointwise_omp_parallel(benchmark::State& state, int n) {
 
 
 
-ROSETTA_BENCHMARK(pointwise_omp_parallel)
+ROSETTA_BENCHMARK(pointwise_openmp_parallel)

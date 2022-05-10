@@ -50,7 +50,8 @@ endif ()
 
 # OpenMP
 if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
-  OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK)
+    OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK
+    OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
   if (ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_TASK)
     find_package(OpenMP REQUIRED)
   else ()
@@ -58,7 +59,13 @@ if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
   endif ()
 
   # OpenMP offloading
-  find_package(OpenMPOffload)
+  if (NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
+    if (ROSETTA_ENABLE_OPENMP_TARGET)
+     find_package(OpenMPOffload REQUIRED)
+    else ()
+      find_package(OpenMPOffload REQUIRED)
+    endif ()
+  endif()
 endif ()
 
 
@@ -103,7 +110,11 @@ endif ()
 option(ROSETTA_ENABLE_OPENMP_PARALLEL "Include PPM: #pragma omp parallel" ${_openmp_enabled_default})
 option(ROSETTA_ENABLE_OPENMP_TASK     "Include PPM: #pragma omp task"     ${_openmp_enabled_default})
 
-option(ROSETTA_ENABLE_OPENMP_TARGET "Include PPM: #pragma omp target" OFF)
+set(_openmp_offload_enabled_default OFF)
+if (OpenMP_FOUND)
+  set(_openmp_offload_enabled_default ON)
+endif ()
+option(ROSETTA_ENABLE_OPENMP_TARGET "Include PPM: #pragma omp target" ${_openmp_offload_enabled_default})
 
 
 
@@ -115,14 +126,16 @@ set_property(GLOBAL PROPERTY benchmarks_serial)
 set_property(GLOBAL PROPERTY benchmarks_cuda)
 set_property(GLOBAL PROPERTY benchmarks_openmp_parallel)
 set_property(GLOBAL PROPERTY benchmarks_openmp_task)
+set_property(GLOBAL PROPERTY benchmarks_openmp_target)
 
 add_custom_target(gbench-serial)
 add_custom_target(gbench-cuda)
 add_custom_target(gbench-openmp_parallel)
 add_custom_target(gbench-openmp_task)
+add_custom_target(gbench-openmp_target)
 
 add_custom_target(gbench)
-add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel gbench-openmp_task)
+add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel gbench-openmp_task gbench-openmp_target)
 
 add_subdirectory(benchmarks)
 
@@ -148,6 +161,8 @@ get_property(_benchmarks_openmp_parallel GLOBAL PROPERTY benchmarks_openmp_paral
 list(APPEND _benchmarks ${_benchmarks_openmp_parallel})
 get_property(_benchmarks_openmp_task GLOBAL PROPERTY benchmarks_openmp_task)
 list(APPEND _benchmarks ${_benchmarks_openmp_task})
+get_property(_benchmarks_openmp_target GLOBAL PROPERTY benchmarks_openmp_target)
+list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
 foreach (_target IN LISTS _benchmarks_cuda)
   set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda-exe $<TARGET_FILE:${_target}>")
@@ -209,16 +224,21 @@ endif ()
 if (ROSETTA_ENABLE_OPENMP_PARALLEL)
   message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "OpenMP-parallel ${_disabled_ppm}")
+  set(_disabled_ppm "OpenMP-Parallel ${_disabled_ppm}")
 endif ()
 if (ROSETTA_ENABLE_OPENMP_TASK)
   message("  OpenMP-Task: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "OpenMP-task ${_disabled_ppm}")
+  set(_disabled_ppm "OpenMP-Task ${_disabled_ppm}")
+endif ()
+if (ROSETTA_ENABLE_OPENMP_TARGET)
+  message("  OpenMP-Target: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "OpenMP-Target ${_disabled_ppm}")
 endif ()
 if (_disabled_ppm)
-message("Disabled PPMs: ${_disabled_ppm}")
+  message("Disabled PPMs: ${_disabled_ppm}")
 else ()
-message("Disabled PPMs: -none-")
+  message("Disabled PPMs: -none-")
 endif ()
 message("")
