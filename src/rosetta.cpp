@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
- printf("main()\n");
+fprintf(stderr,"main()\n");
     RosettaBenchmark *cur = benchmarkListFirst;
     while (cur) {
         std::string&& name = std::string(cur->getName()) + "/"+std:: to_string(n);

@@ -9,7 +9,7 @@ static void kernel(int n, double *C, double *B, double *A) {
             C[i * n + j] = A[i] * B[j];
 }
 
-static void pairwise_serial(benchmark::State& state, int n) {
+void run(benchmark::State& state, int n) {
     double *A = new double[n];
     double *B = new double[n];
     double *C = new double[n*n];
@@ -23,7 +23,3 @@ static void pairwise_serial(benchmark::State& state, int n) {
     delete[] B;
     delete[] C;
 }
-
-ROSETTA_BENCHMARK(pairwise_serial)
-
-

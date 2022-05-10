@@ -189,8 +189,14 @@ endif ()
 
 
 set(_benchmarks)
-set(_benchmarks_run "#! /usr/bin/env bash
-${Python_EXECUTABLE} ${RUNNER_EXECUTABLE}") #TODO: use python instead
+set(_benchmarks_run "#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+sys.path.insert(0, '${CMAKE_SOURCE_DIR}')
+from runner import run_benchs
+
+")
 
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
@@ -207,22 +213,21 @@ list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
 set(_benchmarks_serial_run)
 foreach (_target IN LISTS _benchmarks_serial)
-  list(APPEND _benchmarks_serial_run "--serial=$<TARGET_FILE:${_target}>")
-  set(_benchmarks_run "${_benchmarks_run} \\\n  --serial=$<TARGET_FILE:${_target}>")
+  list(APPEND _benchmarks_serial_run "\"$<TARGET_FILE:${_target}>\"")
 endforeach ()
+list(JOIN _benchmarks_serial_run ",\n  " _benchmarks_serial_pylist)
+set(_benchmarks_serial_pylist "serial=[\n  ${_benchmarks_serial_pylist}]")
+set(_benchmarks_serial_run "serial=[${_benchmarks_serial_run}]")
+
 foreach (_target IN LISTS _benchmarks_cuda)
   set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda=$<TARGET_FILE:${_target}>")
 endforeach ()
 
 file(GENERATE
-    OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.sh"
-    CONTENT "${_benchmarks_run}"
+    OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
+    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_serial_pylist})"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
-#file(CHMOD "${CMAKE_BINARY_DIR}/run.sh" FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
-#file (COPY ${CMAKE_BINARY_DIR}/tmp/somescript.sh DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
-
-message("CMAKE_CONFIGURATION_TYPES = ${CMAKE_CONFIGURATION_TYPES}")
 
 
 
@@ -231,8 +236,8 @@ message("CMAKE_CONFIGURATION_TYPES = ${CMAKE_CONFIGURATION_TYPES}")
 foreach (_conftype IN LISTS _build_types)
   add_custom_target(run-${_conftype}
      DEPENDS gbench
-     COMMAND "run-${_conftype}.sh"
-     COMMENT "Run benchmarks ..."
+     COMMAND  Python::Interpreter "run-${_conftype}.py"
+     COMMENT "Run benchmarks for ${_conftype} ..."
      USES_TERMINAL VERBATIM
   )
 endforeach ()
@@ -241,12 +246,12 @@ endforeach ()
 
 if (_default_build_type)
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.sh" "run.sh"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.py" "run.py"
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
   add_custom_target(run
     DEPENDS gbench
-    COMMAND "./run.sh"
+    COMMAND Python::Interpreter "run.py"
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
   )

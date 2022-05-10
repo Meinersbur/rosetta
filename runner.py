@@ -24,6 +24,7 @@ class BenchResult:
 def run_gbench(exe):
     start = datetime.datetime.now()
     p = subprocess.Popen([exe, '--benchmark_format=json'],stdout=subprocess.PIPE,text=True)
+    print([exe, '--benchmark_format=json'])
 
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
     stop = datetime.datetime.now()
@@ -49,14 +50,19 @@ def run_gbench(exe):
         yield BenchResult(name=d['name'],wtime=wtime,rtime=datetime.timedelta(milliseconds=d['real_time']),maxrss=maxrss)
 
 
-def run_benchs():
+def run_benchs(config:str=None,serial=[],cuda=[]):
     results = []
-    for e in args.serial:
+    for e in serial:
+        results += list(run_gbench(exe=e))
+
+    for e in cuda:
         results += list(run_gbench(exe=e))
 
     print("Name: WallTime RealTime MaxRSS")
     for r in results:
         print(f"{r.name}: {r.wtime} {r.rtime} {r.maxrss}")
+
+
 
 
 def main(argv):
