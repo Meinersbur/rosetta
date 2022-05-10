@@ -25,3 +25,9 @@ set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_COMPILE_OPTION
 set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_LINK_OPTIONS ${OPENMP_OFFLOADING_LDFLAGS})
 
 set(OpenMPOffload_FOUND TRUE)
+
+
+set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
+  CACHE STRING "Compiler arguments for OpenMP offloading")
+set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget"
+  CACHE STRING "Linker arguments for OpenMP offloading")

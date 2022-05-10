@@ -66,5 +66,6 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    if retcode := main(argv=sys.argv):
+    retcode = main(argv=sys.argv)
+    if retcode:
         exit(retcode)

@@ -1,4 +1,5 @@
 #include "pointwise.h"
+<<<<<<< HEAD:src/idioms/pointwise/pointwise.cpp
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <string>
@@ -46,3 +47,31 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
 }
 
+||||||| 17c7cd3:benchmarks/idioms/pointwise/pointwise.cpp
+=======
+#include "rosetta.h"
+
+static void kernel(int n, double *B, double *A) {
+    for (int i = 0; i < n; i += 1) 
+        B[i] = 42 * A[i];
+} 
+
+
+static void pointwise_serial(benchmark::State& state, int n) {
+    double *A = new double[n];
+    double *B = new double[n];
+
+    for (auto &&_ : state) {
+        kernel(n, B, A);
+        benchmark::ClobberMemory();
+    }
+
+    delete[] A;
+    delete[] B;
+}
+
+
+
+
+ROSETTA_BENCHMARK(pointwise_serial)
+>>>>>>> meinersbur/master:benchmarks/idioms/pointwise/pointwise.cpp

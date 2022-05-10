@@ -1,16 +1,16 @@
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.21.3)
+project(rosetta
+  VERSION 0.0.1
+  LANGUAGES CXX
+)
+
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
 
-project(rosetta
-  VERSION 0.0.1
-  LANGUAGES C CXX
-)
-
-
-
+include(FetchContent)
 include(CheckLanguage)
+
 
 
 
@@ -20,35 +20,59 @@ include(CheckLanguage)
 ## Dependencies ################################################################
 
 # Python
-find_package(Python 3.8.10 REQUIRED)
+find_package(Python 3.6.13 REQUIRED)
+
 
 # Google Benchmark
-include(FetchContent)
 set(BENCHMARK_ENABLE_TESTING OFF)
 FetchContent_Declare(googlebenchmark
     GIT_REPOSITORY https://github.com/google/benchmark.git
 )
 FetchContent_MakeAvailable(googlebenchmark)
 
+
 # CUDA
-if (NOT DEFINED CMAKE_CUDA_COMPILER OR CMAKE_CUDA_COMPILER)
+set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
+if (NOT DEFINED ROSETTA_ENABLE_CUDA OR ROSETTA_ENABLE_CUDA)
+  #message("Looking for CUDA...")
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
+    #message("Enable CUDA...")
     enable_language(CUDA)
+  elseif (ROSETTA_ENABLE_CUDA)
+    message(FATAL_ERROR "ROSETTA_ENABLE_CUDA enabled but CUDA not found")
   endif ()
 endif ()
+
 
 # pthreads
 #find_package(Threads REQUIRED)
 
-# OpenMP
-find_package(OpenMP REQUIRED)
 
-# OpenMP offloading
-find_package(OpenMPOffload REQUIRED)
+# OpenMP
+if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
+    OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK
+    OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
+  if (ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_TASK)
+    find_package(OpenMP REQUIRED)
+  else ()
+    find_package(OpenMP)
+  endif ()
+
+  # OpenMP offloading
+  if (NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
+    if (ROSETTA_ENABLE_OPENMP_TARGET)
+     find_package(OpenMPOffload REQUIRED)
+    else ()
+      find_package(OpenMPOffload REQUIRED)
+    endif ()
+  endif()
+endif ()
+
 
 # OpenACC
 find_package(OpenACC REQUIRED)
+
 
 
 ## Introspection ################################################################
@@ -62,11 +86,20 @@ check_cxx_source_compiles("
 )
 
 check_cxx_source_compiles("
-        int f(void *restrict x);
+        int f(void *__restrict x);
         int main(void) {return 0;}
     "
     HAVE_CXX___RESTRICT
 )
+if (HAVE_CXX_RESTRICT)
+  set (KEYWORD_RESTRICT "restrict")
+elif (HAVE_CXX___RESTRICT)
+  set (KEYWORD_RESTRICT "__restrict")
+else ()
+  set (KEYWORD_RESTRICT "")
+endif ()
+
+
 
 ## Configuration ###############################################################
 
@@ -86,13 +119,6 @@ option(XCELLENT_ENABLE_OPENMP_TARGET ON)
 option(XCELLENT_ENABLE_OPENACC ON)
 
 
-set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
-  CACHE STRING "Compiler arguments for OpenMP offloading")
-set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget"
-  CACHE STRING "Linker arguments for OpenMP offloading")
-set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
-
-
 
 
 ## Compiler-preconfigurations ##################################################
@@ -102,32 +128,125 @@ set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
 
 ## Build #######################################################################
 
-set_property(GLOBAL PROPERTY GBENCHS_SERIAL_EXE)
-add_custom_target(gbench.serial)
-
-set_property(GLOBAL PROPERTY GBENCHS_CUDA_EXE)
-add_custom_target(gbench.cuda)
-
-set_property(GLOBAL PROPERTY GBENCHS_EXE)
-add_custom_target(gbench)
-add_dependencies(gbench gbench.serial gbench.cuda)
-
-
 add_subdirectory(src)
+
+
+set_property(GLOBAL PROPERTY benchmarks)
+set_property(GLOBAL PROPERTY benchmarks_serial)
+set_property(GLOBAL PROPERTY benchmarks_cuda)
+set_property(GLOBAL PROPERTY benchmarks_openmp_parallel)
+set_property(GLOBAL PROPERTY benchmarks_openmp_task)
+set_property(GLOBAL PROPERTY benchmarks_openmp_target)
+
+add_custom_target(gbench-serial)
+add_custom_target(gbench-cuda)
+add_custom_target(gbench-openmp_parallel)
+add_custom_target(gbench-openmp_task)
+add_custom_target(gbench-openmp_target)
+
+add_custom_target(gbench)
+add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel gbench-openmp_task gbench-openmp_target)
+
+add_subdirectory(benchmarks)
 
 
 
 ## Run #########################################################################
 
+
 set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/runner.py")
-get_property(exefiles GLOBAL PROPERTY GBENCHS_EXE)
+
+set(_benchmarks)
+set(_benchmarks_run "#! /usr/bin/env bash
+${Python_EXECUTABLE} ${RUNNER_EXECUTABLE}")
+
+
+get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
+list(APPEND _benchmarks ${_benchmarks_serial})
+get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
+list(APPEND _benchmarks ${_benchmarks_cuda})
+get_property(_benchmarks_openmp_parallel GLOBAL PROPERTY benchmarks_openmp_parallel)
+list(APPEND _benchmarks ${_benchmarks_openmp_parallel})
+get_property(_benchmarks_openmp_task GLOBAL PROPERTY benchmarks_openmp_task)
+list(APPEND _benchmarks ${_benchmarks_openmp_task})
+get_property(_benchmarks_openmp_target GLOBAL PROPERTY benchmarks_openmp_target)
+list(APPEND _benchmarks ${_benchmarks_openmp_target})
+
+foreach (_target IN LISTS _benchmarks_cuda)
+  set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda-exe $<TARGET_FILE:${_target}>")
+endforeach ()
+
+file(GENERATE 
+    OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.sh"
+    CONTENT "${_benchmarks_run}"
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  )
+#file(CHMOD "${CMAKE_BINARY_DIR}/run.sh" FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+#file (COPY ${CMAKE_BINARY_DIR}/tmp/somescript.sh DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+
+execute_process(
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${CMAKE_DEFAULT_BUILD_TYPE}.sh" "run.sh" 
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+      )
+
+
 add_custom_target(run
     DEPENDS gbench
-    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${exefiles}
+    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--exedir" "${CMAKE_CURRENT_BINARY_DIR}/src" 
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
 )
 
+add_custom_target(run-cuda
+    DEPENDS gbench-cuda
+    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${_benchmarks_cuda_exe}
+    COMMENT "Run CUDA benchmarks ..."
+    USES_TERMINAL VERBATIM
+)
 
-## Summary #####################################################################
 
+
+## Summary #########################################################################
+
+set(_disabled_ppm)
+
+set(_extra_flags)
+if (ROSETTA_NO_EXCEPTIONS)
+ set(_extra_flags "-fno-exceptions")
+endif ()
+
+message("")
+message("Configuration summary")
+message("---------------------")
+message("Enabled PPMs:")
+if (ROSETTA_ENABLE_SERIAL)
+  message("  Serial: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "Serial ${_disabled_ppm}")
+endif ()
+if (ROSETTA_ENABLE_CUDA)
+  message("  CUDA: ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "CUDA ${_disabled_ppm}")
+endif ()
+if (ROSETTA_ENABLE_OPENMP_PARALLEL)
+  message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "OpenMP-Parallel ${_disabled_ppm}")
+endif ()
+if (ROSETTA_ENABLE_OPENMP_TASK)
+  message("  OpenMP-Task: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "OpenMP-Task ${_disabled_ppm}")
+endif ()
+if (ROSETTA_ENABLE_OPENMP_TARGET)
+  message("  OpenMP-Target: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else ()
+  set(_disabled_ppm "OpenMP-Target ${_disabled_ppm}")
+endif ()
+if (_disabled_ppm)
+  message("Disabled PPMs: ${_disabled_ppm}")
+else ()
+  message("Disabled PPMs: -none-")
+endif ()
+message("")

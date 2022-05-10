@@ -4,10 +4,11 @@
 #include <string>
 
 static void kernel(int n, double *B, double *A) {
-    #pragma omp parallel for
+    #pragma omp target teams distribute parallel for map(from:B) map(to:A) 
     for (int i = 0; i < n; i += 1) {
         B[i] = 42 * A[i];
     }
+    #pragma omp taskwait
 }
 
 
@@ -25,8 +26,6 @@ static void pointwise_seq(benchmark::State& state, int n) {
 }
 
 
-
-
 int main(int argc, char* argv[]) {
     ::benchmark::Initialize(&argc, argv);
 
@@ -37,7 +36,9 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-    benchmark::RegisterBenchmark(("pointwise.omp_parallel" + std::string("/") +std:: to_string(n)).c_str(), pointwise_seq, n)->Unit(benchmark::kMillisecond);
+
+    benchmark::RegisterBenchmark(("pointwise.omp_target" + std::string("/") +std:: to_string(n)).c_str(), pointwise_seq, n)->Unit(benchmark::kMillisecond);
+
 
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
     ::benchmark::RunSpecifiedBenchmarks();
