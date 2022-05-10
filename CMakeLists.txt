@@ -14,9 +14,6 @@ include(CheckLanguage)
 
 
 
-
-
-
 ## Dependencies ################################################################
 
 # Python
@@ -71,7 +68,11 @@ endif ()
 
 
 # OpenACC
-find_package(OpenACC REQUIRED)
+if (NOT DEFINED ROSETTA_ENABLE_OPENACC)
+  find_package(OpenACC)
+elseif (ROSETTA_ENABLE_OPENACC)
+  find_package(OpenACC REQUIRED)
+endif ()
 
 
 
@@ -116,7 +117,11 @@ option(XCELLENT_ENABLE_OPENMP_PARALLEL ON)
 option(XCELLENT_ENABLE_OPENMP_TASKS ON)
 option(XCELLENT_ENABLE_OPENMP_TARGET ON)
 
-option(XCELLENT_ENABLE_OPENACC ON)
+set(_openacc_enabled_default OFF)
+if (OpenACC_CXX_FOUND)
+  set(_openacc_enabled_default ON)
+endif ()
+option(XCELLENT_ENABLE_OPENACC ${_openacc_enabled_default})
 
 
 
@@ -216,7 +221,7 @@ if (ROSETTA_NO_EXCEPTIONS)
 endif ()
 
 message("")
-message("Configuration summary")
+message("Configuration Summary")
 message("---------------------")
 message("Enabled PPMs:")
 if (ROSETTA_ENABLE_SERIAL)
@@ -244,8 +249,14 @@ if (ROSETTA_ENABLE_OPENMP_TARGET)
 else ()
   set(_disabled_ppm "OpenMP-Target ${_disabled_ppm}")
 endif ()
+if (ROSETTA_ENABLE_OPENACC)
+  message("  OpenACC: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION_MAJOR})")
+else ()
+  set(_disabled_ppm "OpenACC ${_disabled_ppm}")
+endif ()
 if (_disabled_ppm)
-  message("Disabled PPMs: ${_disabled_ppm}")
+  message("Disabled PPMs:")
+  message("  ${_disabled_ppm}")
 else ()
   message("Disabled PPMs: -none-")
 endif ()

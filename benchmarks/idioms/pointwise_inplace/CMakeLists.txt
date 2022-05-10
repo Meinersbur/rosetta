@@ -1,1 +1,1 @@
-add_test_serial(pointwise_inplace)
+add_benchmark_serial(pointwise_inplace)

@@ -1,1 +1,1 @@
-add_test_serial(roofline_double_1)
+add_benchmark_serial(roofline_double_1)

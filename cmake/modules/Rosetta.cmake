@@ -2,10 +2,10 @@
 
 function (append_global_property propname)
   get_property(propval GLOBAL PROPERTY ${propname})
-  message("${propname} ${propval}")
   list(APPEND propval ${ARGN})
   set_property(GLOBAL PROPERTY ${propname} "${propval}")
 endfunction ()
+
 
 # function (add_test_serial name)
 #   if (NOT XCELLENT_ENABLE_SERIAL)
@@ -53,7 +53,8 @@ function (add_benchmark_serial basename)
     cmake_parse_arguments(_arg "" "" "SOURCES"  ${ARGN} )
 
     set(_target "${basename}.serial")
-    add_executable("${_target}" ${_arg_SOURCES})
+    set(_sources "${basename}.cpp")
+    add_executable("${_target}" ${_sources} ${_arg_SOURCES})
     target_link_libraries("${_target}" PRIVATE rosetta)
     add_dependencies(gbench-serial "${_target}")
 
