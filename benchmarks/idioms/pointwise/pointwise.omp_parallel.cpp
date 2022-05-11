@@ -1,5 +1,4 @@
 #include "pointwise.h"
-#include "rosetta.h"
 
 
 static void kernel(int n, double *B, double *A) {
@@ -22,7 +21,3 @@ static void pointwise_openmp_parallel(benchmark::State& state, int n) {
     delete[] A;
     delete[] B;
 }
-
-
-
-ROSETTA_BENCHMARK(pointwise_openmp_parallel)

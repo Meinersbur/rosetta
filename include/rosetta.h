@@ -6,6 +6,10 @@
 #include <string>
 #include <benchmark/benchmark.h>
 
+#ifndef DEFAULT_N
+  #define DEFAULT_N 128
+#endif
+
 #define BENCH_CUDA_TRY(call)                                                         \
   do {                                                                               \
     auto const status = (call);                                                      \
@@ -15,12 +19,12 @@
      } \
   } while (0);
 
-typedef void BenchmarkFuncTy(benchmark::State& , int );
+typedef void BenchmarkFuncTy(benchmark::State& , int);
 
 class RosettaBenchmark {
 private:
 const char *name;
-  BenchmarkFuncTy*func;
+  BenchmarkFuncTy *func;
   RosettaBenchmark *next;
 public:
     RosettaBenchmark(const char *name, BenchmarkFuncTy &func);

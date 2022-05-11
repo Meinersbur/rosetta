@@ -1,2 +1,2 @@
 
-add_benchmark(pairwise)
+add_benchmark_serial(pairwise)

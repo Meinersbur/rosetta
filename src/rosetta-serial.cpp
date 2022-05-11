@@ -41,7 +41,8 @@ fprintf(stderr,"main()\n");
     //benchmark::RegisterBenchmark(("apirwise.serial" + std::string("/") +std:: to_string(n)).c_str(), pairwise, n)->Unit(benchmark::kMillisecond);
     //benchmark::RegisterBenchmark(("pairwise.cuda" + std::string("/") +std:: to_string(n) ).c_str(), &pairwise_serial, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond)->UseManualTime();
     if (&run) {
-         benchmark::RegisterBenchmark(argv[0], run, n)->Unit(benchmark::kMillisecond);
+        BenchmarkFuncTy *func = &run;
+        benchmark::RegisterBenchmark(argv[0], func, n)->Unit(benchmark::kMillisecond);
     }
 
 

@@ -30,7 +30,7 @@ class BenchResult:
 
 def run_gbench(exe):
     start = datetime.datetime.now()
-    p = subprocess.Popen([exe, '--benchmark_format=json'],stdout=subprocess.PIPE,text=True)
+    p = subprocess.Popen([exe, '--benchmark_format=json'],stdout=subprocess.PIPE,universal_newlines=True)
     print([exe, '--benchmark_format=json'])
 
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
@@ -78,6 +78,7 @@ def main(argv):
     #parser.add_argument('--exedir', action='append', default=[], type=pathlib.Path, help="Google Benchmark Executable")
     #parser.add_argument('gbenchexe',nargs='+', help="Google Benchmark Executables")
     parser.add_argument('--serial', action='append', default=[], help="Google Benchmark Executables")
+    parser.add_argument('--cuda', action='append', default=[], help="Google Benchmark Executables")
     args = parser.parse_args(argv[1:])
 
 

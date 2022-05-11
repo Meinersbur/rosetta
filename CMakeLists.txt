@@ -116,29 +116,38 @@ endif ()
 
 ## Configuration ###############################################################
 
-option(ROSETTA_ENABLE_SERIAL ON)
+option(ROSETTA_ENABLE_SERIAL "Enable serial reference" ON)
 
 set(_cuda_enabled_default OFF)
 if (CMAKE_CUDA_COMPILER AND CMAKE_CUDA_HOST_COMPILER)
     set(_cuda_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_CUDA ${_cuda_enabled_default})
+option(ROSETTA_ENABLE_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
 
 set(_opencl_enabled_default OFF)
 if (OpenCL_FOUND)
     set(_opencl_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENCL ${_opencl_enabled_default})
+option(ROSETTA_ENABLE_OPENCL "Enable OpenCL PPM" ${_opencl_enabled_default})
 
-option(ROSETTA_ENABLE_OPENMP_PARALLEL ON)
-option(ROSETTA_ENABLE_OPENMP_TASKS ON)
-option(ROSETTA_ENABLE_OPENMP_TARGET ON)
+set(_openmp_thread_enabled_default OFF)
+if (OpenMP_CXX_FOUND)
+  set(_openmp_thread_enabled_default ON)
+endif ()
+option(ROSETTA_ENABLE_OPENMP_PARALLEL "Enable OpenMP '#pragma omp parallel' PPM" ${_openmp_thread_enabled_default})
+option(ROSETTA_ENABLE_OPENMP_TASKS "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
+
+set(_openmp_target_enabled_default OFF)
+if (OpenMP_CXX_FOUND AND OpenMPOffload_FOUND)
+  set(_openmp_target_enabled_default ON)
+endif ()
+option(ROSETTA_ENABLE_OPENMP_TARGET "Enable OpenMP '#pragma omp target' PPM" ${_openmp_target_enabled_default})
 
 set(_openacc_enabled_default OFF)
 if (OpenACC_CXX_FOUND)
   set(_openacc_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENACC ${_openacc_enabled_default})
+option(ROSETTA_ENABLE_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
 
 
@@ -212,7 +221,6 @@ from runner import run_benchs
 
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
-message("_benchmarks_serial: ${_benchmarks_serial}")
 list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
 list(APPEND _benchmarks ${_benchmarks_cuda})
@@ -223,25 +231,37 @@ list(APPEND _benchmarks ${_benchmarks_openmp_task})
 get_property(_benchmarks_openmp_target GLOBAL PROPERTY benchmarks_openmp_target)
 list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
-set(_benchmarks_serial_run)
-foreach (_target IN LISTS _benchmarks_serial)
-  list(APPEND _benchmarks_serial_run "\"$<TARGET_FILE:${_target}>\"")
-endforeach ()
-list(JOIN _benchmarks_serial_run ",\n  " _benchmarks_serial_pylist)
-set(_benchmarks_serial_pylist "serial=[\n  ${_benchmarks_serial_pylist}]")
-set(_benchmarks_serial_run "serial=[${_benchmarks_serial_run}]")
+set(_benchmarks_run_arglist) 
 
-foreach (_target IN LISTS _benchmarks_cuda)
-  set(_benchmarks_run "${_benchmarks_run} \\\n  --cuda=$<TARGET_FILE:${_target}>")
-endforeach ()
+if (ROSETTA_ENABLE_SERIAL)
+  set(_benchmarks_serial_run)
+  foreach (_target IN LISTS _benchmarks_serial)
+    list(APPEND _benchmarks_serial_run "\"$<TARGET_FILE:${_target}>\"")
+  endforeach ()
+  list(JOIN _benchmarks_serial_run ",\n  " _benchmarks_serial_pylist)
+  set(_benchmarks_serial_pylist "serial=[\n  ${_benchmarks_serial_pylist}]")
+  list(APPEND _benchmarks_run_arglist "${_benchmarks_serial_pylist}")
+endif ()
+
+if (ROSETTA_ENABLE_CUDA)
+  set(_benchmarks_cuda_run)
+  foreach (_target IN LISTS _benchmarks_cuda)
+    list(APPEND _benchmarks_cuda_run "\"$<TARGET_FILE:${_target}>\"")
+  endforeach ()
+  list(JOIN _benchmarks_cuda_run ",\n  " _benchmarks_cuda_pylist)
+  set(_benchmarks_cuda_pylist "cuda=[\n  ${_benchmarks_cuda_pylist}]")
+  list(APPEND _benchmarks_run_arglist "${_benchmarks_cuda_pylist}")
+endif ()
+
+list(JOIN _benchmarks_run_arglist ",\n  " _benchmarks_run_pyarglist)
+
+
 
 file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_serial_pylist})"
+    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_run_pyarglist})"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
-
-
 
 
 
@@ -309,12 +329,12 @@ else ()
 endif ()
 message("Enabled PPMs:")
 if (ROSETTA_ENABLE_SERIAL)
-  message("  Serial: ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  Serial:   ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "Serial ${_disabled_ppm}")
 endif ()
 if (ROSETTA_ENABLE_CUDA)
-  message("  CUDA: ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION})")
+  message("  CUDA:     ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "CUDA ${_disabled_ppm}")
 endif ()
@@ -329,12 +349,12 @@ else ()
   set(_disabled_ppm "OpenMP-Parallel ${_disabled_ppm}")
 endif ()
 if (ROSETTA_ENABLE_OPENMP_TASK)
-  message("  OpenMP-Task: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  OpenMP-Task:    ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "OpenMP-Task ${_disabled_ppm}")
 endif ()
 if (ROSETTA_ENABLE_OPENMP_TARGET)
-  message("  OpenMP-Target: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  OpenMP-Target:  ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
   set(_disabled_ppm "OpenMP-Target ${_disabled_ppm}")
 endif ()
