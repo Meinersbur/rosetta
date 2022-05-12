@@ -15,8 +15,12 @@ RosettaBenchmark::RosettaBenchmark(const char *name, BenchmarkFuncTy &func) : na
       }
  }
 
- __attribute__((weak))
-void run(benchmark::State& state, int n) ;
+#ifdef _MSC_VER
+//__declspec(selectany)
+#else
+__attribute__((weak))
+#endif
+void run(benchmark::State& state, int n);
 
 int main(int argc, char* argv[]) {
     ::benchmark::Initialize(&argc, argv);
@@ -42,7 +46,9 @@ fprintf(stderr,"main()\n");
     //benchmark::RegisterBenchmark(("pairwise.cuda" + std::string("/") +std:: to_string(n) ).c_str(), &pairwise_serial, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond)->UseManualTime();
     if (&run) {
         BenchmarkFuncTy *func = &run;
-        benchmark::RegisterBenchmark(argv[0], func, n)->Unit(benchmark::kMillisecond);
+        benchmark::RegisterBenchmark(argv[0], func, n)->Unit(benchmark::kMillisecond)->ComputeStatistics("count", [](const std::vector<double>& v) -> double {
+            return  std::end(v) - std::begin(v);
+            }, benchmark::StatisticUnit::kTime);
     }
 
 
