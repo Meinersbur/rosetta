@@ -5,12 +5,11 @@ project(rosetta
 )
 
 list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/system/rosetta/cmake/modules"
   )
 
-include(FetchContent)
 include(CheckLanguage)
-
+include(CheckCXXSourceCompiles)
 
 
 
@@ -18,15 +17,6 @@ include(CheckLanguage)
 
 # Python
 find_package(Python 3.6.13 REQUIRED)
-
-
-# Google Benchmark
-set(BENCHMARK_ENABLE_TESTING OFF)
-FetchContent_Declare(googlebenchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-)
-FetchContent_MakeAvailable(googlebenchmark)
-
 
 # CUDA
 if (NOT DEFINED ROSETTA_ENABLE_CUDA)
@@ -159,8 +149,12 @@ option(ROSETTA_ENABLE_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
 ## Build #######################################################################
 
-add_subdirectory(src)
+# Library ----------------------------------------------------------------------
 
+add_subdirectory(system)
+
+
+# Benchmarks -------------------------------------------------------------------
 
 set_property(GLOBAL PROPERTY benchmarks)
 set_property(GLOBAL PROPERTY benchmarks_serial)
@@ -201,7 +195,6 @@ endif ()
 
 
 add_subdirectory(benchmarks)
-
 
 
 ## Run #########################################################################
@@ -318,7 +311,7 @@ if (_default_build_type)
     USES_TERMINAL VERBATIM
   )
   add_dependencies(run build)
-    
+
   if (ROSETTA_ENABLE_SERIAL)
     execute_process(
       COMMAND ${CMAKE_COMMAND} -E create_symlink "run-serial-${_default_build_type}.py" "run-serial.py"

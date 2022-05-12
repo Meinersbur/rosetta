@@ -4,7 +4,7 @@ add_library(rosetta-serial
   rosetta-serial.cpp
   rosetta-common.cpp
   )
-target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/system/rosetta/include")
 target_link_libraries(rosetta-serial PUBLIC benchmark::benchmark)
 
 if (ROSETTA_NO_EXCEPTIONS)
