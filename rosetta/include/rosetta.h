@@ -6,18 +6,22 @@
 #include <string>
 
 // From Google benchmark
-// TODO: remove
+// TODO: remove, make standalone
 #include "benchmark.h"
 
 using benchmark::ClobberMemory;
 
 class Iteration;
+class AutoIteration;
+template <typename I>
 class Iterator;
+class Range;
 class State;
 
 
 
 class Iteration {
+  template <typename I>
   friend class Iterator;
    friend class State;
       friend class Rosetta;
@@ -26,15 +30,29 @@ public :
 
 
 
-private:
+protected:
   Iteration() {}
 };
 
 
+class AutoIteration : public Iteration {
+public :
+  ~AutoIteration () {}
+
+  private:
+  AutoIteration() {}
+};
+
+
+
+
+template <typename I>
 class Iterator {
     friend class Iteration;
+   friend class Range;
    friend class State;
       friend class Rosetta;
+
 public :
   typedef std::forward_iterator_tag iterator_category;
   typedef  Iteration value_type;
@@ -43,14 +61,14 @@ public :
   typedef std::ptrdiff_t difference_type;
 
 
-  Iteration operator*() const {     }
+  Iteration operator*() const {
+      return Iteration();
+      }
 
-  
   Iterator& operator++() {
     return *this;
   }
 
-  
   bool operator!=(Iterator const& that) const {  return false; }
 
 private:
@@ -62,13 +80,30 @@ private:
 
 
 
+
+class Range {
+friend class State;
+  public:
+    Iterator<Iteration> begin() { return Iterator<Iteration>(state, false); }
+    Iterator<Iteration> end()   { return Iterator<Iteration>(state, true); };
+
+    private:
+explicit Range(State &state) : state(state) {}
+
+    State &state;
+};
+
+
 class State {
+  template <typename I>
       friend class Iterator;
    friend class Iteration;
    friend class Rosetta;
 public:
-   Iterator begin() { return Iterator(*this, false); }
-   Iterator end()   { return Iterator(*this, true);};
+   Iterator<AutoIteration>  begin() { return Iterator<AutoIteration>(*this, false); }
+  Iterator<AutoIteration>  end()   { return Iterator<AutoIteration>(*this, true);};
+
+Range manual() { return Range(*this) ; }
 
 private:
   State () {}
