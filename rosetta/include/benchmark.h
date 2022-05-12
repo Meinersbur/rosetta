@@ -187,7 +187,8 @@ BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 #include <utility>
 #include <vector>
 
-#include "benchmark/export.h"
+//#include "benchmark/export.h"
+#define BENCHMARK_EXPORT
 
 #if defined(BENCHMARK_HAS_CXX11)
 #include <atomic>

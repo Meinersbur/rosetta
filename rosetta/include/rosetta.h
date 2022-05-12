@@ -9,6 +9,7 @@
 // TODO: remove
 #include "benchmark.h"
 
+using benchmark::ClobberMemory;
 
 class Iteration;
 class Iterator;
