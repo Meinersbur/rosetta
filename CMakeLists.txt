@@ -169,14 +169,36 @@ set_property(GLOBAL PROPERTY benchmarks_openmp_parallel)
 set_property(GLOBAL PROPERTY benchmarks_openmp_task)
 set_property(GLOBAL PROPERTY benchmarks_openmp_target)
 
-add_custom_target(gbench-serial)
-add_custom_target(gbench-cuda)
-add_custom_target(gbench-openmp_parallel)
-add_custom_target(gbench-openmp_task)
-add_custom_target(gbench-openmp_target)
+add_custom_target(build)
 
-add_custom_target(gbench)
-add_dependencies(gbench gbench-serial gbench-cuda gbench-openmp_parallel gbench-openmp_task gbench-openmp_target)
+if (ROSETTA_ENABLE_SERIAL)
+  add_custom_target(serial)
+  add_dependencies(build serial)
+endif ()
+if (ROSETTA_ENABLE_CUDA)
+  add_custom_target(cuda)
+  add_dependencies(build cuda)
+endif ()
+
+if (ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TARGET)
+  add_custom_target(openmp)
+endif ()
+if (ROSETTA_ENABLE_OPENMP_PARALLEL)
+  add_custom_target(openmp-parallel)
+  add_dependencies(build openmp-parallel)
+  add_dependencies(openmp openmp-parallel)
+endif ()
+if (ROSETTA_ENABLE_OPENMP_TASK)
+  add_custom_target(openmp-task)
+  add_dependencies(build openmp-task)
+  add_dependencies(openmp openmp-task)
+endif ()
+if (ROSETTA_ENABLE_OPENMP_TARGET)
+  add_custom_target(openmp-target)
+  add_dependencies(build openmp-target)
+  add_dependencies(openmp openmp-target)
+endif ()
+
 
 add_subdirectory(benchmarks)
 
@@ -241,6 +263,12 @@ if (ROSETTA_ENABLE_SERIAL)
   list(JOIN _benchmarks_serial_run ",\n  " _benchmarks_serial_pylist)
   set(_benchmarks_serial_pylist "serial=[\n  ${_benchmarks_serial_pylist}]")
   list(APPEND _benchmarks_run_arglist "${_benchmarks_serial_pylist}")
+
+  file(GENERATE
+    OUTPUT "${CMAKE_BINARY_DIR}/run-serial-$<CONFIG>.py"
+    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_serial_pylist})"
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  )
 endif ()
 
 if (ROSETTA_ENABLE_CUDA)
@@ -251,12 +279,15 @@ if (ROSETTA_ENABLE_CUDA)
   list(JOIN _benchmarks_cuda_run ",\n  " _benchmarks_cuda_pylist)
   set(_benchmarks_cuda_pylist "cuda=[\n  ${_benchmarks_cuda_pylist}]")
   list(APPEND _benchmarks_run_arglist "${_benchmarks_cuda_pylist}")
+
+  file(GENERATE
+    OUTPUT "${CMAKE_BINARY_DIR}/run-cuda-$<CONFIG>.py"
+    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_cuda_pylist})"
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  )
 endif ()
 
 list(JOIN _benchmarks_run_arglist ",\n  " _benchmarks_run_pyarglist)
-
-
-
 file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
     CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_run_pyarglist})"
@@ -282,30 +313,41 @@ if (_default_build_type)
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
   add_custom_target(run
-    DEPENDS gbench
     COMMAND Python::Interpreter "run.py"
-    COMMENT "Run benchmarks ..."
+    COMMENT "Run all benchmarks ..."
     USES_TERMINAL VERBATIM
   )
+  add_dependencies(run build)
+    
+  if (ROSETTA_ENABLE_SERIAL)
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-serial-${_default_build_type}.py" "run-serial.py"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+    add_custom_target(run-serial
+      COMMAND Python::Interpreter "run-serial.py"
+      COMMENT "Run serial benchmarks ..."
+      USES_TERMINAL VERBATIM
+    )
+    add_dependencies(run-serial serial)
+  endif ()
+
+  if (ROSETTA_ENABLE_CUDA)
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-cuda-${_default_build_type}.py" "run-cuda.py"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+    add_custom_target(run-cuda
+      COMMAND Python::Interpreter "run-cuda.py"
+      COMMENT "Run CUDA benchmarks ..."
+      USES_TERMINAL VERBATIM
+    )
+    add_dependencies(run-cuda cuda)
+  endif ()
 endif ()
 
 
 
-
-# add_custom_target(run-serial
-#     DEPENDS gbench-cuda
-#     COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${_benchmarks_serial_run}
-#     COMMENT "Run Serial benchmarks ..."
-#     USES_TERMINAL VERBATIM
-# )
-
-
-# add_custom_target(run-cuda
-#     DEPENDS gbench-cuda
-#     COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" ${_benchmarks_cuda_exe}
-#     COMMENT "Run CUDA benchmarks ..."
-#     USES_TERMINAL VERBATIM
-# )
 
 
 
