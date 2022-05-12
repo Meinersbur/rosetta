@@ -5,7 +5,7 @@ project(rosetta
 )
 
 list(INSERT CMAKE_MODULE_PATH 0
-  "${CMAKE_CURRENT_SOURCE_DIR}/system/rosetta/cmake/modules"
+  "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules"
   )
 
 include(CheckLanguage)
@@ -17,6 +17,15 @@ include(CheckCXXSourceCompiles)
 
 # Python
 find_package(Python 3.6.13 REQUIRED)
+
+# Google Benchmark
+set(BENCHMARK_ENABLE_TESTING OFF)
+include(FetchContent)
+FetchContent_Declare(googlebenchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+)
+FetchContent_MakeAvailable(googlebenchmark)
+
 
 # CUDA
 if (NOT DEFINED ROSETTA_ENABLE_CUDA)
@@ -151,7 +160,7 @@ option(ROSETTA_ENABLE_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
 # Library ----------------------------------------------------------------------
 
-add_subdirectory(system)
+add_subdirectory(rosetta)
 
 
 # Benchmarks -------------------------------------------------------------------
