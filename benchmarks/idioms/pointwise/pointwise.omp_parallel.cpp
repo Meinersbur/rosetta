@@ -1,4 +1,4 @@
-#include "pointwise.h"
+#include "rosetta.h"
 
 
 static void kernel(int n, double *B, double *A) {

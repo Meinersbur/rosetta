@@ -8,7 +8,6 @@
 
 
 class CudaState {
-
 public:
 struct StateIterator;
 
@@ -51,23 +50,33 @@ BENCHMARK_ALWAYS_INLINE
     BENCHMARK_ALWAYS_INLINE
   int64_t range(std::size_t pos = 0) const {return gstate.range(pos);}
 
+
+
+  BENCHMARK_ALWAYS_INLINE
+  int threads() const { return gstate.threads(); }
+
+  BENCHMARK_ALWAYS_INLINE
+  int thread_index() const { return gstate.thread_index(); }
+
   BENCHMARK_ALWAYS_INLINE
  benchmark::  IterationCount iterations() const {return gstate.iterations();}
 
 
-  benchmark::UserCounters &getUsetCounters () {return gstate.counters; }
-  int getThreadIndex() const  { return gstate.thread_index; }
-int getNumThreads() const  { return gstate.threads; }
+  benchmark::UserCounters &getUserCounters () {return gstate.counters; }
+
 
 struct StateIterator {
   typedef struct Value {
    explicit Value(CudaState &parent) : parent(parent) {
-     // printf("start\n");   
-     auto status = cudaEventCreate(&start);   
+     #if ROSETTA_CUDA
+     // printf("start\n");
+     auto status = cudaEventCreate(&start);
      cudaEventRecord(start);
+     #endif
     }
     ~Value() {
-       //  printf("stop\n");           
+#if ROSETTA_CUDA
+       //  printf("stop\n");
       cudaEvent_t stop;
        auto status = cudaEventCreate(&stop);
        cudaEventRecord(stop);
@@ -76,15 +85,18 @@ struct StateIterator {
 
        float msecs = 0;
        cudaEventElapsedTime(&msecs, start, stop);
-       parent.getUsetCounters()["GPU"] =  msecs; // FIXME: This is for the entire run, not a single iteration
+       parent.getUserCounters()["GPU"] =  msecs; // FIXME: This is for the entire run, not a single iteration
 
 
          cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif
     }
 
   private:
+#if ROSETTA_CUDA
   cudaEvent_t start;
+#endif
     CudaState &parent;
   } Value;
   typedef std::forward_iterator_tag iterator_category;
@@ -123,10 +135,18 @@ struct StateIterator {
 
   private:
     benchmark::State &gstate;
+#if ROSETTA_CUDA
     cudaEvent_t start;
+#endif
 };
 
 
+
+#if ROSETTA_CUDA
+typedef  CudaState State;
+#else
+typedef  benchmark::State State;
+#endif
 
 
 #ifndef DEFAULT_N
