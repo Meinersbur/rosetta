@@ -61,20 +61,26 @@ public :
   typedef std::ptrdiff_t difference_type;
 
 
+BENCHMARK_ALWAYS_INLINE
   Iteration operator*() const {
       return Iteration();
       }
 
+BENCHMARK_ALWAYS_INLINE
   Iterator& operator++() {
+        assert(remaining > 0 );
+    remaining -= 1;
     return *this;
   }
 
-  bool operator!=(Iterator const& that) const {  return false; }
+BENCHMARK_ALWAYS_INLINE inline
+  bool operator!=(Iterator const& that) const ;
 
 private:
   explicit Iterator(State &state, bool IsEnd) : state(state), isEnd(IsEnd) {}
 
   State &state;
+  mutable int remaining = 0;
   bool isEnd;
 };
 
@@ -105,14 +111,25 @@ public:
 
 Range manual() { return Range(*this) ; }
 
+
+
 private:
   State () {}
+
+  int refresh() {return 0;}
 
 };
 
 
 
 
+template <typename I>
+  bool Iterator<I>::operator!=(Iterator const& that) const {
+    if (BENCHMARK_BUILTIN_EXPECT(remaining != 0, true)) return true;
+    remaining = state.refresh();
+    assert(remaining >= 0 );
+    return remaining != 0;
+  }
 
 
 
