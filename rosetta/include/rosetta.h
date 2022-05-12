@@ -50,13 +50,13 @@ BENCHMARK_ALWAYS_INLINE
     BENCHMARK_ALWAYS_INLINE
   int64_t range(std::size_t pos = 0) const {return gstate.range(pos);}
 
-
-
+#if 0
   BENCHMARK_ALWAYS_INLINE
   int threads() const { return gstate.threads(); }
 
   BENCHMARK_ALWAYS_INLINE
   int thread_index() const { return gstate.thread_index(); }
+#endif
 
   BENCHMARK_ALWAYS_INLINE
  benchmark::  IterationCount iterations() const {return gstate.iterations();}

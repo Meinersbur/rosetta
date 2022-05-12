@@ -3,7 +3,7 @@ add_library(rosetta-serial
   rosetta-common.cpp
   )
 target_compile_definitions(rosetta-serial PUBLIC ROSETTA_SERIAL=1)
-target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/system/rosetta/include")
+target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
 target_link_libraries(rosetta-serial PUBLIC benchmark::benchmark)
 
 
@@ -31,5 +31,5 @@ add_library(rosetta-openmp
   rosetta-common.cpp
   )
 target_compile_definitions(rosetta-openmp PUBLIC ROSETTA_SERIAL=1)
-target_include_directories(rosetta-openmp PUBLIC "${CMAKE_SOURCE_DIR}/system/rosetta/include")
+target_include_directories(rosetta-openmp PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
 target_link_libraries(rosetta-openmp PUBLIC benchmark::benchmark)
