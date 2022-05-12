@@ -18,7 +18,7 @@ add_library(rosetta-cuda
   rosetta-common.cpp
   )
   target_compile_definitions(rosetta-cuda PUBLIC ROSETTA_CUDA=1)
-target_include_directories(rosetta-cuda PUBLIC "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(rosetta-cuda PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
 target_link_libraries(rosetta-cuda PUBLIC benchmark::benchmark)
 if (ROSETTA_NO_EXCEPTIONS)
   # TODO: Introspection

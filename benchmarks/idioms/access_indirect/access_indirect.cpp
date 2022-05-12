@@ -5,7 +5,7 @@ static void kernel(int n, double *A, int *Index) {
         A[Index[i]] += 1;
 }
 
-void run(benchmark::State& state, int n) {
+void run(State& state, int n) {
     double *A = new double[n];
     int *Index = new int[n];
 
@@ -14,7 +14,7 @@ void run(benchmark::State& state, int n) {
 
     for (auto &&_ : state) {
         kernel(n, A, Index);
-        benchmark::ClobberMemory();
+        ClobberMemory();
     }
 
     delete[] A;

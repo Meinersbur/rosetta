@@ -4,9 +4,85 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string>
-#include <benchmark/benchmark.h>
+
+// From Google benchmark
+// TODO: remove
+#include "benchmark.h"
 
 
+class Iteration;
+class Iterator;
+class State;
+
+
+
+class Iteration {
+  friend class Iterator;
+   friend class State;
+      friend class Rosetta;
+public :
+  ~Iteration () {}
+
+
+
+private:
+  Iteration() {}
+};
+
+
+class Iterator {
+    friend class Iteration;
+   friend class State;
+      friend class Rosetta;
+public :
+  typedef std::forward_iterator_tag iterator_category;
+  typedef  Iteration value_type;
+  typedef  Iteration &reference;
+  typedef  Iteration *pointer;
+  typedef std::ptrdiff_t difference_type;
+
+
+  Iteration operator*() const {     }
+
+  
+  Iterator& operator++() {
+    return *this;
+  }
+
+  
+  bool operator!=(Iterator const& that) const {  return false; }
+
+private:
+  explicit Iterator(State &state, bool IsEnd) : state(state), isEnd(IsEnd) {}
+
+  State &state;
+  bool isEnd;
+};
+
+
+
+class State {
+      friend class Iterator;
+   friend class Iteration;
+   friend class Rosetta;
+public:
+   Iterator begin() { return Iterator(*this, false); }
+   Iterator end()   { return Iterator(*this, true);};
+
+private:
+  State () {}
+
+};
+
+
+
+
+
+
+
+
+
+#if 0
 class CudaState {
 public:
 struct StateIterator;
@@ -179,5 +255,7 @@ public:
 
 #define ROSETTA_BENCHMARK(NAME) \
   static RosettaBenchmark StaticInitializer{#NAME, NAME};
+
+#endif
 
 #endif /* ROSETTA_H_ */

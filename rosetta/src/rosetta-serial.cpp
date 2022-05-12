@@ -1,3 +1,4 @@
+#if 0
 #include "rosetta.h"
 #include <vector>
 #include <cstdio>
@@ -56,3 +57,4 @@ fprintf(stderr,"main()\n");
     ::benchmark::Shutdown();
     return EXIT_SUCCESS;
 }
+#endif
