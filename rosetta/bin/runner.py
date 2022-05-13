@@ -63,22 +63,6 @@ def run_gbench(exe):
         
 
 
-    #data = json.loads(stdout)
-
-    #name = data['benchmarks'][0]['name']
-    #reps = data['benchmarks'][0]['repetitions']
-    #iters = data['benchmarks'][0]['iterations']
-    #ctime = data['benchmarks'][0]['cpu_time']
-    #rtime = data['benchmarks'][0]['real_time']
-    #tunit = data['benchmarks'][0]['time_unit']
-
-    #benchmarks = data['benchmarks']
-    #assert len(benchmarks)==1,"For accurate results, just one benchmark per executable"
-
-    #print(f"maxrss={ru.ru_maxrss}, stdout={data['benchmarks'][0]}")
-    #for d in data['benchmarks']:
-    #    yield BenchResult(name=d['name'],wtime=wtime,rtime=datetime.timedelta(milliseconds=d['real_time']),maxrss=maxrss)
-
 
 def run_benchs(config:str=None,serial=[],cuda=[]):
     results = []

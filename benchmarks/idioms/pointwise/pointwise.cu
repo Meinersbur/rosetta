@@ -3,7 +3,7 @@
 //#include <benchmark/benchmark.h>
 //#include <cstdlib>
 //#include <string>
-//#include "synchronization.hpp" 
+#include "synchronization.hpp" 
 
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
@@ -14,7 +14,7 @@ __global__ void kernel(int n, double *B, double *A) {
 }
 
 
- void run(CudaState& state, int n) {
+ void run(State& state, int n) {
     // default size
     if (n < 0)
         n = (DEFAULT_N);
@@ -41,13 +41,16 @@ cudaEventCreate(&stop);
     int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
 
 //state.PauseTiming();
-    for (auto &&_ : state) {
-state.PauseTiming();
+    for (auto &&_ : state.manual()) {
+//state.PauseTiming();
        cudaStream_t stream = 0;
     //    cuda_event_timer raii(state, true, stream); 
-state.ResumeTiming();
-        kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_B, dev_A);
+//state.ResumeTiming();
 
+{
+        auto &&scope = _.scope();
+        kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_B, dev_A);
+        }
 
         // TODO: Is the invocation already blocking?
          cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );

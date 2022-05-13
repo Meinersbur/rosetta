@@ -8,7 +8,7 @@ endfunction ()
 
 
 function (add_benchmark_serial basename)
-  if (NOT ROSETTA_ENABLE_SERIAL)
+  if (NOT ROSETTA_PPM_SERIAL)
     return ()
   endif ()
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
@@ -29,7 +29,7 @@ endfunction ()
 
 
 function (add_benchmark_cuda basename)
-  if (NOT ROSETTA_ENABLE_CUDA)
+  if (NOT ROSETTA_PPM_CUDA)
       return ()
   endif ()
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
@@ -51,7 +51,7 @@ endfunction ()
 
 
 function (add_benchmark_openmp_parallel basename)
-  if (NOT ROSETTA_ENABLE_OPENMP_PARALLEL)
+  if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
   endif ()
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
@@ -70,7 +70,7 @@ endfunction ()
 
 
 function (add_benchmark_openmp_task basename)
-  if (NOT ROSETTA_ENABLE_OPENMP_TASK)
+  if (NOT ROSETTA_PPM_OPENMP_TASK)
       return ()
   endif ()
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
@@ -89,7 +89,7 @@ endfunction ()
 
 
 function (add_benchmark_openmp_target basename)
-  if (NOT ROSETTA_ENABLE_OPENMP_TARGET)
+  if (NOT ROSETTA_PPM_OPENMP_TARGET)
       return ()
   endif ()
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
@@ -99,7 +99,6 @@ function (add_benchmark_openmp_target basename)
   add_executable("${_target}" ${_sources} ${_arg_SOURCES})
   target_link_libraries("${_target}" PRIVATE rosetta-openmp OpenMP::OpenMP_CXX)
   if (_arg_DEFAULT_N)
-  message("ARGN} ${ARGN}")
     target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
   endif ()
   add_dependencies(build-openmp-target "${_target}")

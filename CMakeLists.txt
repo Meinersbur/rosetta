@@ -30,13 +30,13 @@ FetchContent_MakeAvailable(googlebenchmark)
 
 
 # CUDA
-if (NOT DEFINED ROSETTA_ENABLE_CUDA)
+if (NOT DEFINED ROSETTA_PPM_CUDA)
   set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
   check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
   endif ()
-elseif (ROSETTA_ENABLE_CUDA)
+elseif (ROSETTA_PPM_CUDA)
   set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
   check_language(CUDA)
   enable_language(CUDA)
@@ -45,11 +45,14 @@ elseif (ROSETTA_ENABLE_CUDA)
   endif ()
 endif ()
 
+# For nvidia platform
+find_package(CUDAToolkit)
+
 
 # OpenCL
-if (NOT DEFINED ROSETTA_ENABLE_OPENCL)
+if (NOT DEFINED ROSETTA_PPM_OPENCL)
   find_package(OpenCL)
-elseif (ROSETTA_ENABLE_OPENCL)
+elseif (ROSETTA_PPM_OPENCL)
   find_package(OpenCL REQUIRED)
 endif ()
 
@@ -59,18 +62,18 @@ endif ()
 
 
 # OpenMP
-if (NOT DEFINED ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_PARALLEL
-    OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TASK
-    OR NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
-  if (ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_TASK)
+if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_PARALLEL
+    OR NOT DEFINED ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP_TASK
+    OR NOT DEFINED ROSETTA_PPM_OPENMP_TARGET OR ROSETTA_PPM_OPENMP_TARGET)
+  if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK)
     find_package(OpenMP REQUIRED)
   else ()
     find_package(OpenMP)
   endif ()
 
   # OpenMP offloading
-  if (NOT DEFINED ROSETTA_ENABLE_OPENMP_TARGET OR ROSETTA_ENABLE_OPENMP_TARGET)
-    if (ROSETTA_ENABLE_OPENMP_TARGET)
+  if (NOT DEFINED ROSETTA_PPM_OPENMP_TARGET OR ROSETTA_PPM_OPENMP_TARGET)
+    if (ROSETTA_PPM_OPENMP_TARGET)
      find_package(OpenMPOffload REQUIRED)
     else ()
       find_package(OpenMPOffload REQUIRED)
@@ -80,9 +83,9 @@ endif ()
 
 
 # OpenACC
-if (NOT DEFINED ROSETTA_ENABLE_OPENACC)
+if (NOT DEFINED ROSETTA_PPM_OPENACC)
   find_package(OpenACC)
-elseif (ROSETTA_ENABLE_OPENACC)
+elseif (ROSETTA_PPM_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
 
@@ -117,38 +120,45 @@ endif ()
 
 ## Configuration ###############################################################
 
-option(ROSETTA_ENABLE_SERIAL "Enable serial reference" ON)
+option(ROSETTA_PPM_SERIAL "Enable serial reference" ON)
 
 set(_cuda_enabled_default OFF)
-if (CMAKE_CUDA_COMPILER AND CMAKE_CUDA_HOST_COMPILER)
-    set(_cuda_enabled_default ON)
+if (CMAKE_CUDA_COMPILER)
+  set(_cuda_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
+option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
+
+
+set(ROSETTA_PLATFORM_NVIDIA OFF)
+if (TARGET CUDA::cudart)
+  set(ROSETTA_PLATFORM_NVIDIA ON)
+endif ()
+
 
 set(_opencl_enabled_default OFF)
 if (OpenCL_FOUND)
     set(_opencl_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENCL "Enable OpenCL PPM" ${_opencl_enabled_default})
+option(ROSETTA_PPM_OPENCL "Enable OpenCL PPM" ${_opencl_enabled_default})
 
 set(_openmp_thread_enabled_default OFF)
 if (OpenMP_CXX_FOUND)
   set(_openmp_thread_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENMP_PARALLEL "Enable OpenMP '#pragma omp parallel' PPM" ${_openmp_thread_enabled_default})
-option(ROSETTA_ENABLE_OPENMP_TASKS "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
+option(ROSETTA_PPM_OPENMP_PARALLEL "Enable OpenMP '#pragma omp parallel' PPM" ${_openmp_thread_enabled_default})
+option(ROSETTA_PPM_OPENMP_TASKS "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
 
 set(_openmp_target_enabled_default OFF)
 if (OpenMP_CXX_FOUND AND OpenMPOffload_FOUND)
   set(_openmp_target_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENMP_TARGET "Enable OpenMP '#pragma omp target' PPM" ${_openmp_target_enabled_default})
+option(ROSETTA_PPM_OPENMP_TARGET "Enable OpenMP '#pragma omp target' PPM" ${_openmp_target_enabled_default})
 
 set(_openacc_enabled_default OFF)
 if (OpenACC_CXX_FOUND)
   set(_openacc_enabled_default ON)
 endif ()
-option(ROSETTA_ENABLE_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
+option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
 
 
@@ -176,29 +186,29 @@ set_property(GLOBAL PROPERTY benchmarks_openmp_target)
 
 add_custom_target(build)
 
-if (ROSETTA_ENABLE_SERIAL)
+if (ROSETTA_PPM_SERIAL)
   add_custom_target(build-serial)
   add_dependencies(build build-serial)
 endif ()
-if (ROSETTA_ENABLE_CUDA)
+if (ROSETTA_PPM_CUDA)
   add_custom_target(build-cuda)
   add_dependencies(build build-cuda)
 endif ()
 
-if (ROSETTA_ENABLE_OPENMP_PARALLEL OR ROSETTA_ENABLE_OPENMP_TASK OR ROSETTA_ENABLE_OPENMP_TARGET)
+if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP_TARGET)
   add_custom_target(build-openmp)
 endif ()
-if (ROSETTA_ENABLE_OPENMP_PARALLEL)
+if (ROSETTA_PPM_OPENMP_PARALLEL)
   add_custom_target(build-openmp-parallel)
   add_dependencies(build build-openmp-parallel)
   add_dependencies(build-openmp build-openmp-parallel)
 endif ()
-if (ROSETTA_ENABLE_OPENMP_TASK)
+if (ROSETTA_PPM_OPENMP_TASK)
   add_custom_target(build-openmp-task)
   add_dependencies(build build-openmp-task)
   add_dependencies(build-openmp build-openmp-task)
 endif ()
-if (ROSETTA_ENABLE_OPENMP_TARGET)
+if (ROSETTA_PPM_OPENMP_TARGET)
   add_custom_target(build-openmp-target)
   add_dependencies(build build-openmp-target)
   add_dependencies(build-openmp build-openmp-target)
@@ -259,7 +269,7 @@ list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
 set(_benchmarks_run_arglist)
 
-if (ROSETTA_ENABLE_SERIAL)
+if (ROSETTA_PPM_SERIAL)
   set(_benchmarks_serial_run)
   foreach (_target IN LISTS _benchmarks_serial)
     list(APPEND _benchmarks_serial_run "\"$<TARGET_FILE:${_target}>\"")
@@ -275,7 +285,7 @@ if (ROSETTA_ENABLE_SERIAL)
   )
 endif ()
 
-if (ROSETTA_ENABLE_CUDA)
+if (ROSETTA_PPM_CUDA)
   set(_benchmarks_cuda_run)
   foreach (_target IN LISTS _benchmarks_cuda)
     list(APPEND _benchmarks_cuda_run "\"$<TARGET_FILE:${_target}>\"")
@@ -323,7 +333,7 @@ if (_default_build_type)
   )
   add_dependencies(run build)
 
-  if (ROSETTA_ENABLE_SERIAL)
+  if (ROSETTA_PPM_SERIAL)
     execute_process(
       COMMAND ${CMAKE_COMMAND} -E create_symlink "run-serial-${_default_build_type}.py" "run-serial.py"
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -336,7 +346,7 @@ if (_default_build_type)
     add_dependencies(run-serial build-serial)
   endif ()
 
-  if (ROSETTA_ENABLE_CUDA)
+  if (ROSETTA_PPM_CUDA)
     execute_process(
       COMMAND ${CMAKE_COMMAND} -E create_symlink "run-cuda-${_default_build_type}.py" "run-cuda.py"
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -358,6 +368,7 @@ endif ()
 ## Summary #########################################################################
 
 set(_disabled_ppm)
+set(_disabled_platform)
 
 set(_extra_flags)
 if (ROSETTA_NO_EXCEPTIONS)
@@ -374,45 +385,49 @@ else ()
   message("Default Build Configuration: ${_default_build_type}")
 endif ()
 message("Enabled PPMs:")
-if (ROSETTA_ENABLE_SERIAL)
+if (ROSETTA_PPM_SERIAL)
   message("  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "Serial ${_disabled_ppm}")
+  list(APPEND _disabled_ppm "Serial")
 endif ()
-if (ROSETTA_ENABLE_CUDA)
+if (ROSETTA_PPM_CUDA)
   message("  CUDA:            ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "CUDA ${_disabled_ppm}")
+list(APPEND _disabled_ppm "CUDA")
 endif ()
-if (ROSETTA_ENABLE_OPENCL)
+if (ROSETTA_PPM_OPENCL)
   message("  OpenCL:          ${CMAKE_CXX_COMPILER} ${OpenCL_LIBRARIES} ${_extra_flags} (${OpenCL_VERSION_STRING})")
 else ()
-  set(_disabled_ppm "OpenCL ${_disabled_ppm}")
+list(APPEND _disabled_ppm "OpenCL")
 endif ()
-if (ROSETTA_ENABLE_OPENMP_PARALLEL)
+if (ROSETTA_PPM_OPENMP_PARALLEL)
   message("  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "OpenMP-Parallel ${_disabled_ppm}")
+list(APPEND _disabled_ppm "OpenMP-Parallel")
 endif ()
-if (ROSETTA_ENABLE_OPENMP_TASK)
+if (ROSETTA_PPM_OPENMP_TASK)
   message("  OpenMP-Task:    ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "OpenMP-Task ${_disabled_ppm}")
+list(APPEND _disabled_ppm "OpenMP-Task")
 endif ()
-if (ROSETTA_ENABLE_OPENMP_TARGET)
+if (ROSETTA_PPM_OPENMP_TARGET)
   message("  OpenMP-Target:   ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
-  set(_disabled_ppm "OpenMP-Target ${_disabled_ppm}")
+list(APPEND _disabled_ppm "OpenMP-Target")
 endif ()
-if (ROSETTA_ENABLE_OPENACC)
+if (ROSETTA_PPM_OPENACC)
   message("  OpenACC:         ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION} ${OpenACC_CXX_SPEC_DATE})")
 else ()
-  set(_disabled_ppm "OpenACC ${_disabled_ppm}")
+list(APPEND _disabled_ppm "OpenACC")
 endif ()
-if (_disabled_ppm)
-  message("Disabled PPMs:")
-  message("  ${_disabled_ppm}")
+list(JOIN _disabled_ppm " " _disabled_ppm_str)
+message("Disabled PPMs: ${_disabled_ppm_str}")
+message("Enabled Platforms:")
+if (ROSETTA_PLATFORM_NVIDIA)
+  message("  NVIDIA")
 else ()
-  message("Disabled PPMs: -none-")
+  list(APPEND _disabled_platform "NVIDIA")
 endif ()
+list(JOIN _disabled_platform " " _disabled_platform_str)
+message("Disabled Platforms: ${_disabled_platform_str}")
 message("")
