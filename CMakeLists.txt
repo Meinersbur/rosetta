@@ -15,6 +15,8 @@ include(CheckCXXSourceCompiles)
 
 ## Dependencies ################################################################
 
+set(CMAKE_CXX_STANDARD 17)
+
 # Python
 find_package(Python 3.6.13 REQUIRED)
 

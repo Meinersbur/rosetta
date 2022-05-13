@@ -5,7 +5,7 @@ static void kernel(int n, double *B, double *A) {
         B[i] = 42 + A[i];
 }
 
-void run(benchmark::State& state, int n) {
+void run(State& state, int n) {
     // default size
     if (n < 0)
         n = (DEFAULT_N);
@@ -13,8 +13,13 @@ void run(benchmark::State& state, int n) {
     double *A = new double[n];
     double *B = new double[n];
 
-    for (auto &&_ : state) {
-        kernel(n, B, A);
+    for (auto &&_ : state.manual()) {
+
+        {
+            auto &&Scope = _.scope();
+            kernel(n, B, A);
+        }
+
         benchmark::ClobberMemory();
     }
 
