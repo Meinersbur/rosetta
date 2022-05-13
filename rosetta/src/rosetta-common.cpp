@@ -200,7 +200,7 @@ void Iteration::stop() {
    m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
    m.values[UserTime] = durationUser;
    m.values[KernelTime] = durationKernel;
-   state.measurements.push_back( m );
+   state.measurements.push_back( std::move (m) );
 }
 
 
@@ -209,9 +209,9 @@ void Iteration::stop() {
 
 int State::refresh() {
     auto now = std::chrono::steady_clock::now();
-    auto duration = startTime - now;
+    auto duration =  now - startTime;
 
-    if (duration >= 5s)
+    if (duration >= 5s) // TODO: configure, until stability, max/min number iterations, ...
         return 0;
 
     int howManyMoreIterations = 1;

@@ -56,8 +56,8 @@ class Iteration {
       friend class Rosetta;
       friend class Scope;
 public :
-  ~Iteration () {}
-
+  ~Iteration () {   // TODO: stop if not yet stopped
+  }
    Scope scope() ;
 
 void start();
