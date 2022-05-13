@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <string>
 #include <chrono>
+#include <cmath>
 
 // From Google benchmark
 // TODO: remove, make standalone
@@ -33,6 +34,7 @@ enum  Measure {
 constexpr int MeasureCount = MeasureLast+1;
 
 
+
 class IterationMeasurement {
     friend class Iteration;
     template <typename I>
@@ -44,7 +46,7 @@ public:
 
 private:
     // TODO: Make extendable (register user measures in addition to predefined ones)
-    double values[MeasureCount];
+    double values[MeasureCount] = { NAN, NAN, NAN, NAN};
 };
 
 

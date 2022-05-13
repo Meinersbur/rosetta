@@ -10,7 +10,7 @@ import os
 import resource
 import datetime
 import json
-
+import xml.etree.ElementTree
 
 
 class BenchVariants:

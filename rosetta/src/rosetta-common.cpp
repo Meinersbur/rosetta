@@ -1,7 +1,8 @@
 #include "rosetta.h"
 #include <cassert>
-
-
+#include <algorithm>
+#include <numeric>
+#include <iostream>
 
 
 #ifdef BENCHMARK_OS_WINDOWS
@@ -174,7 +175,6 @@ std::pair<double,double> ThreadCPUUsage() {
 using namespace std::chrono;
 
 
-
 void Iteration::start() {
     startWall = std::chrono::high_resolution_clock::now();
    std::tie(startUser, startKernel) = ProcessCPUUsage();
@@ -186,7 +186,7 @@ void Iteration::stop() {
     //TODO: Throw away warmup
 
    auto stopWall = std::chrono::high_resolution_clock::now();
-   auto  [stopUser, stopKernel] = ProcessCPUUsage();
+   auto [stopUser, stopKernel] = ProcessCPUUsage();
 
    auto durationWall = stopWall-startWall;
    auto durationUser = stopUser - startUser;
@@ -236,16 +236,41 @@ void run(State& state, int n);
 
 
 struct  Rosetta {
-        static void run(int n) {
-            if (&::run) {
-                std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock ::now();
+    static constexpr const char* measureDesc[MeasureCount] = {"Wall Clock", "User", "Kernel", "GPU"};
 
+    static std::string  escape(std::string s) {
+        return s; // TODO
+    }
+
+        static void run(const char *program, int n) {          
+                std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock ::now();
                 State state{startTime};
+
                 ::run(state, n);
-            }
+            
+                auto count = state.measurements.size();
+                double sums[MeasureCount] ;
+                for (int i = 0; i < MeasureCount;  i+=1 ) {
+                    double sum = 0;
+                    for (auto &m : state.measurements) {
+                          auto val  = m.values[i];
+                          sum += val;
+                    }
+                    sums[i]  = sum;
+                }
+
+                std::cout << R"(<?xml version="1.0"?>)" <<std::endl;
+                std::cout << R"(<benchmarks>)" <<std::endl;
+                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << R"(">)"<<std::endl;
+                for (auto &m : state.measurements) {
+                    // TODO: custom times and units
+                    std::cout << R"(    <iteration walltime=")" << m.values[WallTime] << R"(" usertime=")" << m.values[UserTime] << R"(" kerneltime=")" << m.values[KernelTime] << R"(" acceltime=")" << m.values[AccelTime] << R"("/>)"<<std::endl;  
+                }
+                // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
+                std::cout << R"(  </benchmark>)" <<std::endl;
+                std::cout << R"(</benchmarks>)" <<std::endl;
         }
 };
-
 
 
 
@@ -258,7 +283,7 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-Rosetta::run( n );
+Rosetta::run( argv[0], n );
 
     return EXIT_SUCCESS;
 }
