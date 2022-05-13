@@ -10,7 +10,7 @@ import os
 import resource
 import datetime
 import json
-import xml.etree.ElementTree
+import xml.etree.ElementTree as et
 
 
 class BenchVariants:
@@ -30,31 +30,54 @@ class BenchResult:
 
 def run_gbench(exe):
     start = datetime.datetime.now()
-    p = subprocess.Popen([exe, '--benchmark_format=json'],stdout=subprocess.PIPE,universal_newlines=True)
-    print([exe, '--benchmark_format=json'])
+    p = subprocess.Popen([exe],stdout=subprocess.PIPE,universal_newlines=True)
+    #print([exe])
 
+    
+
+    stdout = p.stdout.read()
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
     stop = datetime.datetime.now()
     wtime = max(stop - start,datetime.timedelta(0))
     utime = ru.ru_utime
     stime = ru.ru_stime
     maxrss = ru.ru_maxrss
-    stdout = p.stdout.read()
-    data = json.loads(stdout)
 
-    name = data['benchmarks'][0]['name']
-    reps = data['benchmarks'][0]['repetitions']
-    iters = data['benchmarks'][0]['iterations']
-    ctime = data['benchmarks'][0]['cpu_time']
-    rtime = data['benchmarks'][0]['real_time']
-    tunit = data['benchmarks'][0]['time_unit']
+    benchmarks = et.fromstring(stdout)
 
-    benchmarks = data['benchmarks']
-    assert len(benchmarks)==1,"For accurate results, just one benchmark per executable"
+    for benchmark in benchmarks:
+        name = benchmark.attrib['name']
+        n = benchmark.attrib['n']
+        wallsum = 0
+        usersum = 0
+        kernelsum = 0
+        count = len(benchmark)
+        for it in benchmark:
+            walltime = float(it.attrib['walltime'])
+            wallsum += walltime
+            usertime =float( it.attrib['usertime'])
+            usersum += usertime
+            kerneltime = float(it.attrib['kerneltime'])
+            kernelsum += kerneltime
+        yield BenchResult(name=name,wtime=walltime/count,rtime=usersum/count,maxrss=maxrss) 
+        
+
+
+    #data = json.loads(stdout)
+
+    #name = data['benchmarks'][0]['name']
+    #reps = data['benchmarks'][0]['repetitions']
+    #iters = data['benchmarks'][0]['iterations']
+    #ctime = data['benchmarks'][0]['cpu_time']
+    #rtime = data['benchmarks'][0]['real_time']
+    #tunit = data['benchmarks'][0]['time_unit']
+
+    #benchmarks = data['benchmarks']
+    #assert len(benchmarks)==1,"For accurate results, just one benchmark per executable"
 
     #print(f"maxrss={ru.ru_maxrss}, stdout={data['benchmarks'][0]}")
-    for d in data['benchmarks']:
-        yield BenchResult(name=d['name'],wtime=wtime,rtime=datetime.timedelta(milliseconds=d['real_time']),maxrss=maxrss)
+    #for d in data['benchmarks']:
+    #    yield BenchResult(name=d['name'],wtime=wtime,rtime=datetime.timedelta(milliseconds=d['real_time']),maxrss=maxrss)
 
 
 def run_benchs(config:str=None,serial=[],cuda=[]):

@@ -211,7 +211,7 @@ int State::refresh() {
     auto now = std::chrono::steady_clock::now();
     auto duration =  now - startTime;
 
-    if (duration >= 5s) // TODO: configure, until stability, max/min number iterations, ...
+    if (duration >= 1s) // TODO: configure, until stability, max/min number iterations, ...
         return 0;
 
     int howManyMoreIterations = 1;
@@ -275,15 +275,21 @@ struct  Rosetta {
 
 
 int main(int argc, char* argv[]) {
-    // TODO: benchnark-specific default size
+    auto program = argv[0];
+   // std::cerr <<program << "\n";
+    argc-=1;
+    argv += 1;
+
+    // TODO: benchmark-specific default size
     int n = 100;
-    if (argc > 1) {
-       n = std::atoi(argv[1]);
+    if (argc > 0) {
+       // std::cerr <<argv[0] << "\n";
+       n = std::atoi(argv[0]);
        argc -= 1;
        argv += 1;
     }
 
-Rosetta::run( argv[0], n );
+Rosetta::run( program, n );
 
     return EXIT_SUCCESS;
 }
