@@ -1,5 +1,7 @@
 #include "rosetta.h"
 
+
+
 static void kernel(int n, double *B, double *A) {
     for (int i = 0; i < n; i += 1)
         B[i] = 42 + A[i];
@@ -19,6 +21,8 @@ void run(State& state, int n) {
             auto &&Scope = _.scope();
             kernel(n, B, A);
         }
+
+        
 
         benchmark::ClobberMemory();
     }
