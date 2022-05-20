@@ -312,10 +312,10 @@ file(GENERATE
 
 foreach (_conftype IN LISTS _build_types)
   add_custom_target(run-${_conftype}
-     DEPENDS gbench
-     COMMAND  Python::Interpreter "run-${_conftype}.py"
-     COMMENT "Run benchmarks for ${_conftype} ..."
-     USES_TERMINAL VERBATIM
+    DEPENDS gbench
+    COMMAND  Python::Interpreter "run-${_conftype}.py"
+    COMMENT "Run benchmarks for ${_conftype} ..."
+    USES_TERMINAL VERBATIM
   )
 endforeach ()
 
