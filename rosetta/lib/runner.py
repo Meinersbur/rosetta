@@ -11,6 +11,85 @@ import resource
 import datetime
 import json
 import xml.etree.ElementTree as et
+import termcolor 
+
+
+
+class Table :
+    def __init__(self):
+        self.columns = []
+        self.column_titles = dict()
+        self.column_formatters = dict()
+        self.rows = []
+
+    def add_column(self, name, title=None, formatter=None):
+        self.columns.append(name)
+        if title is not None:
+            self.column_titles[name] = title
+        if formatter is not None:
+            self.column_formatters[name] = formatter
+
+    def add_row(self, **kwargs):
+        self.rows .append(kwargs)
+
+    def print(self):
+        # Content table
+        #matrix = [[r.get(k) for r in self .rows] for k in self.columns] 
+        matrix=[]
+        nrows = len(self.rows)
+        ncols = len(self.columns)
+
+        collen = []
+        titles = []
+        for i,name in enumerate(self,self.columns):
+            vals = [r.get(name) for r in self.rows] 
+
+            title = self.column_titles.get(name) or name
+            titles.append(titles)
+            formatter = self.column_formatters.get(name)
+            maxlen = len(title) # FIXME: Number of unicode characters as printed to console
+            
+            while True:
+                strs = []
+                redo = False
+                for v in vals:  
+                    if v is None:
+                        s = None
+                    if formatter:
+                        s = formatter(v, maxlen=maxlen)
+                        s =  f"{s}"
+                        if len(s) > maxlen :
+                            maxlen = len(s)
+                            redo = True 
+                    else:
+                        s = f"{v}"
+                        maxlen = max(maxlen, len(s))
+                    strs.append(s)
+                if not redo:
+                    matrix.append(strs)
+                    collen.append(maxlen)
+                    break
+
+        # Printing...
+        for i,name in enumerate(self.columns):
+            if i:
+                print(" ")
+            maxlen  = collen[i]
+            print(f"{title:^{maxlen}}")
+        for i,name in enumerate(self.columns):
+            if i:
+                print(" ")
+            maxlen = collen[i]
+            print("-" * maxlen)
+        for j in range(nrows):
+            for i,name in enumerate(self.columns):
+                if i:
+                    print(" ") 
+                maxlen = collen[i]
+                s = matrix[j][i]
+                print(f"{s:^{maxlen}}")
+            
+
 
 
 class BenchVariants:
@@ -79,10 +158,20 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
     for e in cuda:
         results += list(run_gbench(exe=e))
 
-    print("Name: WallTime RealTime AccelTime MaxRSS")
-    for r in results:
-        print(f"{r.name}: {r.wtime} {r.rtime} {r.acceltime} {r.maxrss}")
+    table = Table()
+    def path_formatter(v:pathlib.Path, maxlen):
+        return v.name
+    def duration_formatter(v:pathlib.Path, maxlen):
+        return v.name
+    table.add_column('program', title="Benchmark", formatter=path_formatter)
+    table.add_column('wtime', title="Wall time" formatter=duration_formatter)
 
+    #print("Name: WallTime RealTime AccelTime MaxRSS")
+    for r in results:
+        table.add_row(program=r.name,wtime=r.wtime)
+        #print(f"{r.name}: {r.wtime} {r.rtime} {r.acceltime} {r.maxrss}")
+
+    table.print()
 
 
 
