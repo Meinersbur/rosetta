@@ -9,7 +9,7 @@ static void kernel(int n, double *B, double *A) {
 }
 
 
-void run(benchmark::State& state, int n) {
+void run(State& state, int n) {
     if (n < 0)
         n = (DEFAULT_N);
 

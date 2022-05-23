@@ -3,7 +3,7 @@
 //#include <benchmark/benchmark.h>
 //#include <cstdlib>
 //#include <string>
-#include "synchronization.hpp" 
+//#include "synchronization.hpp" 
 
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
@@ -24,9 +24,9 @@ __global__ void kernel(int n, double *B, double *A) {
 
    // cuptiSubscribe() ;
 
-cudaEvent_t start, stop;
-cudaEventCreate(&start);
-cudaEventCreate(&stop);
+//cudaEvent_t start, stop;
+//cudaEventCreate(&start);
+//cudaEventCreate(&stop);
 
     double *dev_A, *dev_B;
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
@@ -53,8 +53,7 @@ cudaEventCreate(&stop);
         }
 
         // TODO: Is the invocation already blocking?
-         cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost );
-            cudaDeviceSynchronize();
+        // cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost ); cudaDeviceSynchronize();
 
     }
 

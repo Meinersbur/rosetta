@@ -46,14 +46,22 @@
 #include <mutex>
 
 
-#include "check.h"
-#include "log.h"
-#include "sleep.h"
-#include "string_util.h"
+//#include "check.h"
+//#include "log.h"
+//#include "sleep.h"
+//#include "string_util.h"
 // Suppress unused warnings on helper functions.
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
+
+
+namespace benchmark::internal {
+int InitializeStreams() {
+  static std::ios_base::Init init;
+  return 0;
+}
+}
 
 namespace {
 #if defined(BENCHMARK_OS_WINDOWS)
@@ -175,9 +183,20 @@ std::pair<double,double> ThreadCPUUsage() {
 using namespace std::chrono;
 
 
+
 void Iteration::start() {
+#if ROSETTA_PPM_CUDA
+// TODO: Don't every time
+    BENCH_CUDA_TRY(cudaEventCreate(&startCuda));
+ BENCH_CUDA_TRY(cudaEventCreate(&stopCuda));
+   // TODO:  flush all of L2$ as NVIDIA suggestions in synchronization.h?
+#endif 
+
     startWall = std::chrono::high_resolution_clock::now();
    std::tie(startUser, startKernel) = ProcessCPUUsage();
+ #if ROSETTA_PPM_CUDA
+  cudaEventRecord(startCuda);
+#endif
 }
 
 
@@ -185,12 +204,29 @@ void Iteration::start() {
 void Iteration::stop() {
     //TODO: Throw away warmup
 
+#if ROSETTA_PPM_CUDA
+  cudaEventRecord(stopCuda);
+#endif
+
    auto stopWall = std::chrono::high_resolution_clock::now();
    auto [stopUser, stopKernel] = ProcessCPUUsage();
+
+#if ROSETTA_PPM_CUDA
+BENCH_CUDA_TRY(cudaEventRecord(stopCuda));
+#endif
 
    auto durationWall = stopWall-startWall;
    auto durationUser = stopUser - startUser;
    auto durationKernel = stopKernel - startKernel;
+#if ROSETTA_PPM_CUDA
+float durationCuda; // ms
+BENCH_CUDA_TRY(cudaEventSynchronize(stopCuda));
+BENCH_CUDA_TRY(cudaEventElapsedTime (&durationCuda, startCuda, stopCuda));
+    BENCH_CUDA_TRY(cudaEventDestroy(startCuda)); 
+    BENCH_CUDA_TRY(cudaEventDestroy(stopCuda));
+#else 
+float  durationCuda = 0;
+#endif 
 
    durationWall = std::max(decltype(durationWall)::zero(), durationWall);
    durationUser = std::max(0.0, durationUser);
@@ -200,6 +236,7 @@ void Iteration::stop() {
    m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
    m.values[UserTime] = durationUser;
    m.values[KernelTime] = durationKernel;
+   m.values[AccelTime] = durationCuda / 1000.0d;
    state.measurements.push_back( std::move (m) );
 }
 
@@ -211,7 +248,8 @@ int State::refresh() {
     auto now = std::chrono::steady_clock::now();
     auto duration =  now - startTime;
 
-    if (duration >= 1s) // TODO: configure, until stability, max/min number iterations, ...
+    // TODO: configure, until stability, max/min number iterations, ...
+    if (duration >= 1s) 
         return 0;
 
     int howManyMoreIterations = 1;

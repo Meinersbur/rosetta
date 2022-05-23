@@ -7,10 +7,25 @@
 #include <chrono>
 #include <cmath>
 
+// TODO: ROSETTA_PLATFORM_NVIDIA
+// TODO: Get out of header
+#if ROSETTA_PPM_CUDA
+#include <cuda_runtime_api.h>
+#endif
+
 // From Google benchmark
 // TODO: remove, make standalone
 #include "benchmark.h"
 #include "internal_macros.h"
+
+
+
+#define BENCH_CUDA_TRY(call)                                                         \
+  do {                                                                               \
+    auto const status = (call);                                                      \
+    if (cudaSuccess != status) { printf("CUDA call '" #call "' returned %d\n", status);  abort(); } \
+  } while (0);
+
 
 using benchmark::ClobberMemory;
 
@@ -68,10 +83,16 @@ void stop();
 protected:
   explicit Iteration(State &state) : state(state) {}
 
+// TODO: Get implementation detail out of header file
   State &state;
   std::chrono::high_resolution_clock::time_point startWall;
   double startUser; // in seconds; TODO: use native type
   double startKernel; // in seconds; TODO: use native type
+
+#if ROSETTA_PPM_CUDA
+cudaEvent_t startCuda;
+cudaEvent_t stopCuda;
+#endif
 };
 
 
@@ -141,7 +162,7 @@ Range manual() { return Range(*this) ; }
 
 
 private:
-  State (  std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}
+  State (std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}
 
   void start();
   void stop();
@@ -149,6 +170,8 @@ private:
 
   std::vector<IterationMeasurement> measurements;
   std::chrono::steady_clock::time_point startTime;
+
+  // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
 };
 
 
@@ -198,13 +221,12 @@ private:
 };
 
 
-inline Iterator<Iteration> Range:: begin() { return Iterator<Iteration>(state, false); }
-inline Iterator<Iteration> Range::end()   { return Iterator<Iteration>(state, true); };
+inline Iterator<Iteration> Range::begin() { return Iterator<Iteration>(state, false); }
+inline Iterator<Iteration> Range::end()   { return Iterator<Iteration>(state, true);  }
 
 
 inline Iterator<AutoIteration>  State::begin() { return Iterator<AutoIteration>(*this, false); }
-inline Iterator<AutoIteration>State::  end()   { return Iterator<AutoIteration>(*this, true);};
-
+inline Iterator<AutoIteration>State::end()   { return Iterator<AutoIteration>(*this, true);}
 
 
 
@@ -215,7 +237,7 @@ struct StateIterator;
 
 CudaState (benchmark::State &gstate) : gstate(gstate) {}
 
-  BENCHMARK_ALWAYS_INLINE StateIterator begin() { return StateIterator(*this,  gstate.begin()); }
+  BENCHMARK_ALWAYS_INLINE StateIterator begin() { return StateIterator(*this, gstate.begin()); }
   BENCHMARK_ALWAYS_INLINE StateIterator end()   { return StateIterator(*this, gstate.end());};
 
     bool KeepRunning() { return  gstate.KeepRunning(); }

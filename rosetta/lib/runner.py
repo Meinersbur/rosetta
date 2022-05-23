@@ -20,10 +20,11 @@ class BenchVariants:
 
 
 class BenchResult:
-    def __init__(self,name:str, wtime : datetime.timedelta, rtime : datetime.timedelta,maxrss):
+    def __init__(self,name:str, wtime : datetime.timedelta, rtime : datetime.timedelta,acceltime: datetime.timedelta ,maxrss):
         self.name=name
         self.wtime=wtime
         self.rtime=rtime
+        self.acceltime=acceltime
         self.maxrss=maxrss
 
 
@@ -51,6 +52,7 @@ def run_gbench(exe):
         wallsum = 0
         usersum = 0
         kernelsum = 0
+        acceltimesum = None
         count = len(benchmark)
         for it in benchmark:
             walltime = float(it.attrib['walltime'])
@@ -59,7 +61,12 @@ def run_gbench(exe):
             usersum += usertime
             kerneltime = float(it.attrib['kerneltime'])
             kernelsum += kerneltime
-        yield BenchResult(name=name,wtime=walltime/count,rtime=usersum/count,maxrss=maxrss) 
+            if 'acceltime' in it.attrib:
+                if acceltimesum is  None:
+                    acceltimesum = 0
+                acceltime  = float(it.attrib['acceltime'])
+                acceltimesum += acceltime
+        yield BenchResult(name=name,wtime=walltime/count,rtime=usersum/count,acceltime=None if acceltime is None else acceltimesum/count, maxrss=maxrss) 
         
 
 
@@ -72,9 +79,9 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
     for e in cuda:
         results += list(run_gbench(exe=e))
 
-    print("Name: WallTime RealTime MaxRSS")
+    print("Name: WallTime RealTime AccelTime MaxRSS")
     for r in results:
-        print(f"{r.name}: {r.wtime} {r.rtime} {r.maxrss}")
+        print(f"{r.name}: {r.wtime} {r.rtime} {r.acceltime} {r.maxrss}")
 
 
 

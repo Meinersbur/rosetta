@@ -6,7 +6,7 @@ if (ROSETTA_PPM_SERIAL)
     )
   target_compile_definitions(rosetta-serial PUBLIC ROSETTA_SERIAL=1)
   target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  target_link_libraries(rosetta-serial PUBLIC benchmark::benchmark)
+  #target_link_libraries(rosetta-serial PUBLIC benchmark::benchmark)
 
 
   if (ROSETTA_NO_EXCEPTIONS)
@@ -22,9 +22,10 @@ if (ROSETTA_PPM_CUDA)
     rosetta-common.cpp
     rosetta-nvidia.cpp
     )
-    target_compile_definitions(rosetta-cuda PUBLIC ROSETTA_CUDA=1)
+    target_compile_definitions(rosetta-cuda PUBLIC ROSETTA_PPM_CUDA=1)
   target_include_directories(rosetta-cuda PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  target_link_libraries(rosetta-cuda PUBLIC benchmark::benchmark)
+  #target_link_libraries(rosetta-cuda PUBLIC benchmark::benchmark)
+  target_link_libraries(rosetta-cuda PUBLIC CUDA::cudart)
   if (ROSETTA_NO_EXCEPTIONS)
     # TODO: Introspection
     target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
@@ -39,7 +40,7 @@ if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP
     )
   target_compile_definitions(rosetta-openmp PUBLIC ROSETTA_SERIAL=1)
   target_include_directories(rosetta-openmp PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  target_link_libraries(rosetta-openmp PUBLIC benchmark::benchmark)
+  #target_link_libraries(rosetta-openmp PUBLIC benchmark::benchmark)
   if (ROSETTA_PLATFORM_NVIDIA)
   target_sources(rosetta-openmp PRIVATE rosetta-nvidia.cpp)
   endif ()

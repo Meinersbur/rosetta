@@ -5,3 +5,5 @@ print ("importing ...")
 
 from cmdtool import *
 import invoke
+from runner import run_benchs
+

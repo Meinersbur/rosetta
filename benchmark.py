@@ -57,15 +57,20 @@ def main(argv):
     # TODO: Recognize some famous machines (Summit, Aurora, Frontier, ...)
 
     libbuilddir = builddir/'rosetta-build'
-    if  (libbuilddir / 'build.ninja').exists():
+    if (libbuilddir / 'build.ninja').exists():
         print_verbose("Already configured (Ninja will reconfigure when necessary automatically)")
     else:
         libbuilddir.mkdir(exist_ok=True)
         # TODO: Support other generators as well
-        invoke_verbose('cmake', srcdir, '-GNinja Multi-Config', cwd=libbuilddir)
+        invoke_verbose('cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', cwd=libbuilddir)
 
+    if args.build and not args.run:
+        invoke_verbose('ninja', cwd=libbuilddir)
 
-    invoke_verbose('ninja', cwd=libbuilddir)
+    if args.run:
+        invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=libbuilddir)
+    
+
 
 
 if __name__ == '__main__':

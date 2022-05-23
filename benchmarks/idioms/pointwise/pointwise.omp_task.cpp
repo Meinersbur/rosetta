@@ -10,7 +10,7 @@ static void kernel(int n, double *B, double *A) {
 }
 
 
-static void pointwise_openmp_task(benchmark::State& state, int n) {
+ void run(State& state, int n) {
     double *A = new double[n];
     double *B = new double[n];
 

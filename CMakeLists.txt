@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21.3)
+cmake_minimum_required(VERSION 3.17) # CMAKE_CROSS_CONFIGS
 project(rosetta
   VERSION 0.0.1
   LANGUAGES CXX
@@ -21,12 +21,12 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(Python 3.6.13 REQUIRED)
 
 # Google Benchmark
-set(BENCHMARK_ENABLE_TESTING OFF)
-include(FetchContent)
-FetchContent_Declare(googlebenchmark
-    GIT_REPOSITORY https://github.com/google/benchmark.git
-)
-FetchContent_MakeAvailable(googlebenchmark)
+#set(BENCHMARK_ENABLE_TESTING OFF)
+#include(FetchContent)
+#FetchContent_Declare(googlebenchmark
+#    GIT_REPOSITORY https://github.com/google/benchmark.git
+#)
+#FetchContent_MakeAvailable(googlebenchmark)
 
 
 # CUDA
@@ -253,8 +253,8 @@ set(_benchmarks_run "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
-sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/bin')
-from runner import run_benchs
+sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+from rosetta import run_benchs
 
 ")
 
