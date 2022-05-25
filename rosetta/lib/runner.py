@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from cmath import exp
+from itertools import count
 import sys
 import argparse
 import psutil
@@ -13,18 +15,24 @@ import json
 import xml.etree.ElementTree as et
 import colorama  
 import cwcwidth
+import math
+from collections import defaultdict
+import bisect
 
 # FIXME: Hack
 colorama.Fore.BWHITE = colorama.ansi.code_to_chars(97)
 
 
-class StrConcat:
+
+
+
+class StrConcat: # Rename: Twine
     def __init__(self, args):
         self.args = list(args)
 
     def __add__(self, other):
         common = self.args + [other]
-        return str_concat(self,*common)
+        return str_concat(*common)
 
     def printlength(self):
         return sum(printlength(a) for a in self.args)
@@ -229,6 +237,268 @@ class Table:
 
 
 
+
+# Summary statistics
+class Statistic:
+    studentt_density_95 = list( {
+1: 12.706, # 1
+2: 4.303, # 2
+3: 3.182, # 3
+4: 2.776, # 4
+5: 2.571, # 5
+6: 2.447, # 6
+7: 2.365, # 7
+8: 2.306, # 8
+9: 2.262, # 9
+10: 2.228, # 10
+11: 2.201, # 11
+12: 2.179, # 12
+13: 2.160, # 13
+14: 2.145, # 14
+15: 2.131, # 15
+16: 2.120, # 16
+17: 2.110, # 17
+18: 2.101, # 18
+19: 2.093, # 19
+20: 2.086, # 20
+21: 2.080, # 21
+22: 2.074, # 22
+23: 2.069, # 23
+24: 2.064, # 24
+25: 2.060, # 25
+26: 2.056, # 26
+27: 2.052, # 27
+28: 2.048, # 28
+29: 2.045, # 29
+30: 2.042, # 30
+35: 2.030, # 35
+40: 2.021, # 40
+45: 2.014, # 45
+50: 2.009, # 50
+60: 2.000, # 
+70: 1.994, # 
+80: 1.990, # 
+90: 1.987, # 
+100: 1.984, # 
+150: 1.976, # 
+200: 1.972, # 
+250: 1.969, # 
+300: 1.968, # 
+400: 1.966, # 
+500: 1.965, # 
+600: 1.964, # 
+800: 1.963, # 
+1000: 1.962, # 
+100000: 1.960, # 
+    }.items())
+
+    def __init__(self,samples,sum,sumabs,sumsqr,sumreciproc,geomean):
+        self._samples = list(samples) # Assumed sorted
+        self._sum = sum
+        self._sumabs = sumabs
+        self._sumsqr = sumsqr
+        self._sumreciproc = sumreciproc
+        self._geomean = geomean
+ 
+    @property
+    def is_empty(self):
+        return not not self._samples
+
+    @property
+    def count(self):
+        return len(self._samples)
+
+    @property
+    def minimum(self):
+        return self._samples[0]
+
+    @property
+    def maximum(self):
+        return self._samples[-1]
+
+
+    # Location
+
+    @property
+    def mean(self):
+        return self._sum/self.count
+
+    @property
+    def geomean(self):
+        return self._geomean
+
+    @property
+    def harmonicmean(self):
+        return self.count  / self._sumreciproc  
+
+    @property
+    def median(self):
+        return self.quantile(1,2)
+        n = self.count
+        if n % 2 == 0:
+            return (self.vals[n//2] + self.vals[n//2+1])/2
+        else:
+            return self.vals[n//2]
+
+    @property 
+    def midrange(self):
+        return (self.minimum + self.maximum)/2
+
+    def mode(self, boxsize):
+        boxes = defaultdict(0)
+        for v in self._samples:
+            boxidx = round(v / boxsize)
+            boxes[boxidx] += 1
+
+        maxcount = 0
+        boxids = []
+        for boxidx,count in boxes.items():
+            if count < maxcount:
+                continue
+            if count > maxcount:
+                maxcount = count
+                boxids.clear()
+                continue
+            boxids.append(boxids)
+            
+        if len(boxids) % 2 == 0:
+            midboxid = (boxids[len(boxids)//2] + boxids[len(boxids)//2+1])/2
+        else:
+            midboxid = boxids[len(boxids)//2] 
+        return midboxid * boxsize
+
+
+    # Spread
+
+    @property
+    def variance(self):
+        def sqr(x):
+            return x * x
+        n = self.count
+        return self._sumsqr / n - sqr(self.mean)
+
+    @property
+    def corrected_variance(self):
+        n = self.count
+        return self.variance * n / (n-1)
+
+
+    @property
+    def stddev(self):
+        return math.sqrt(self.variance)
+
+    @property
+    def corrected_stddev(self):
+        return math.sqrt(self.corrected_variance)
+
+    @property
+    def relative_stddev(self):
+        return self.stddev / abs(self.mean)
+
+    @property 
+    def range(self):        
+        return self.maximum - self.minimum
+
+    # Mean squared error/deviation
+    @property 
+    def mse(self):
+        def sqr(x):
+            return x * x
+        e = self.median # Using median as estimator
+        return  sum(sqr(x - e) for x in self._vals) / self.count
+
+    # Root mean squared error/deviation
+    @property 
+    def rmse(self):
+        return math.sqrt(self.mse)
+
+    @property 
+    def relative_rmse(self):
+        return self.rmse / abs(self.median)
+
+    # Mean absolute error/deviation
+    @property 
+    def mad(self):
+        median = self.median
+        return sum(abs(x - median) for x in self._vals) / self.count
+
+    # Symmetric confidence interval around mean, assuming normal distributed samples
+    def abserr(self,ratio=0.95):
+        assert ratio == 0.95, r"Only supporting two-sided 95% confidence interval"
+        n = self.count
+        if n < 2:
+            return None
+        c = bisect.bisect_left(Statistic.studentt_density_95, n - 1,key=lambda p: p[0])
+        # TODO: linear interpolation with next
+        return Statistic.studentt_density_95[c][1] * self.corrected_variance / math.sqrt(n)
+
+    def relerr(self,ratio=0.95):
+        mean = self.mean 
+        if not mean :
+            return None
+        return self.abserr(ratio=ratio) / self.mean 
+
+
+    # Other
+
+    def quantile(self,k,d):
+        assert d >=1
+        assert k >= 0 <= d
+  
+        if not self._vals:
+            return None
+
+        if k == 0:
+            return self._vals[0]
+        if k == n:
+            return self._vals[-1]
+
+        n = self.count
+        if (k*n-1) % d == 0:
+            return self._vals[(k*n-1)//d]
+    
+
+    def quartile(self,k:int):
+        return self.quantile(k,4)
+
+    def decile(self,k:int):
+        return self.quantile(k,10)
+
+    def percentile(self,k:int):
+        return self.quantile(k,100)
+
+
+def statistic(data):
+    vals = sorted(d for d in data if d is not None)
+    n = 0
+    hasnonpos = False
+    sum = 0
+    sumabs = 0
+    sumsqr = 0
+    sumreciproc = 0
+    prod = 1
+    for v in vals:
+        if v <= 0:
+            hasnonpos = True
+        sum += v
+        sumabs = abs(v)
+        sumsqr += v*v
+        if not hasnonpos:
+            sumreciproc += 1//v
+            prod *= v
+        n += 1
+    
+    if hasnonpos:
+        geomean = None
+        sumreciproc = None
+    else:
+        geomean = prod**(1/n)
+    
+    
+    return Statistic(samples=vals,sum=sum,sumabs=sumabs,sumsqr=sumsqr,geomean=geomean,sumreciproc=sumreciproc)
+
+
+
 class BenchVariants:
     def __init__(self, default_size, serial=None, cuda=None):
         None
@@ -264,31 +534,23 @@ def run_gbench(exe):
 
     benchmarks = et.fromstring(stdout)
 
+    count = 0
     for benchmark in benchmarks:
         name = benchmark.attrib['name']
         n = benchmark.attrib['n']
-        wallsum = 0
-        usersum = 0
-        kernelsum = 0
-        acceltimesum = None
-        count = len(benchmark)
-        for it in benchmark:
-            walltime = float(it.attrib['walltime'])
-            wallsum += walltime
-            usertime = float(it.attrib['usertime'])
-            usersum += usertime
-            kerneltime = float(it.attrib['kerneltime'])
-            kernelsum += kerneltime
-            if 'acceltime' in it.attrib:
-                if acceltimesum is  None:
-                    acceltimesum = 0
-                acceltime  = float(it.attrib['acceltime'])
-                acceltimesum += acceltime
-        yield BenchResult(name=name, count=count,wtime=walltime/count,utime=usersum/count,ktime=kernelsum/count,acceltime=None if acceltime is None else acceltimesum/count, maxrss=maxrss) 
+        count = len( benchmark)
+
+        walltime = statistic( float(b.attrib['walltime']) for b in  benchmark)
+        usertime = statistic ( float(b.attrib['usertime']) for b in  benchmark)
+        kerneltime  = statistic ( float(b.attrib['kerneltime']) for b in  benchmark)
+        acceltime  = statistic ( float(b.attrib['acceltime']) for b in  benchmark)
+
+        yield BenchResult(name=name, count=count,wtime=walltime,utime=usertime,ktime=kerneltime,acceltime=acceltime, maxrss=maxrss) 
         
 
 
 def align_decimal(s):
+    # FIXME: Don't align in scientific notation?
     pos = s.find('.')
     if pos >= 0:
         return StrAlign(s, pos)
@@ -304,28 +566,53 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
     for e in cuda:
         results += list(run_gbench(exe=e))
 
+    walltime_stat = statistic(r.wtime.mean for r in results)
+
     table = Table()
     def path_formatter(v:pathlib.Path):
         if v is None:
             return None
-        return  StrColor( pathlib.Path(v).name,colorama.Fore.GREEN)
-    def duration_formatter(v):
-        if v is None:
-            return None
-        if v >= 1:
-            return align_decimal(f"{v:.2}") +StrColor( "s", colorama.Style.DIM)
-        if v*1000 >= 1:
-            return align_decimal(f"{v*1000:.2}") + StrColor("ms", colorama.Style.DIM)
-        if v*1000*1000 >= 1:
-            return align_decimal(f"{v*1000*1000:.2}") + StrColor("µs", colorama.Style.DIM)
-        return align_decimal(f"{v*1000*1000*1000:.2}") + StrColor( "ns", colorama.Style.DIM)
+        return StrColor(pathlib.Path(v).name,colorama.Fore.GREEN)
+    def count_formatter(v:int):
+        return StrColor(str(v),colorama.Fore.BLUE)
+    def duration_formatter(best,worst):
+        def formatter(s: Statistic):
+            if s is None:
+                return None
+            v = s.mean
+            d = s.relerr()
+            def highlight_extremes(s):
+                if best is not None and worst is not None and best < worst:
+                    if v <= best:
+                        return StrColor(s, colorama.Fore.GREEN)
+                    if v >= worst:
+                        return StrColor(s, colorama.Fore.RED)
+                return s
+        
+            if d and d >= 0.0001:
+                errstr = f"(±{d:.1%})"
+                if d > 0.1:
+                    errstr = StrColor(errstr, colorama.Fore.RED)
+                errstr = str_concat(' ',errstr)
+            else:
+                errstr = ''
+
+
+            if v >= 1:
+                return highlight_extremes(align_decimal(f"{v:.2}")) +StrColor("s", colorama.Style.DIM) + (str_concat(' ', errstr) if errstr else '')
+            if v*1000 >= 1:
+                return highlight_extremes(align_decimal(f"{v*1000:.2f}") )+ StrColor("ms", colorama.Style.DIM) + errstr
+            if v*1000*1000 >= 1:
+                return highlight_extremes(align_decimal(f"{v*1000*1000:.2f}")) + StrColor("µs", colorama.Style.DIM) + errstr
+            return highlight_extremes(align_decimal(f"{v*1000*1000*1000:.2f}")) + StrColor( "ns", colorama.Style.DIM) + errstr
+        return formatter
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
-    table.add_column('n', title=StrColor( "n", colorama.Style.BRIGHT))
-    table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter)
-    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter)
-    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter)
-    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter)
+    table.add_column('n', title=StrColor( "n", colorama.Style.BRIGHT),formatter=count_formatter)
+    table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
+    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
+    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
+    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
     
 
     #print("Name: WallTime RealTime AccelTime MaxRSS")
