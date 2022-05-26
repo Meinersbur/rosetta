@@ -334,11 +334,32 @@ class Statistic:
     @property
     def median(self):
         return self.quantile(1,2)
+
+    def quantile(self,k,d):
+        assert d >=1
+        assert k >= 0 <= d
+  
+        if not self._vals:
+            return None
+
+        if k == 0:
+            return self._vals[0]
+        if k == n:
+            return self._vals[-1]
+
         n = self.count
-        if n % 2 == 0:
-            return (self.vals[n//2] + self.vals[n//2+1])/2
-        else:
-            return self.vals[n//2]
+        if (k*n-1) % d == 0:
+            return self._vals[(k*n-1)//d]
+    
+
+    def quartile(self,k:int):
+        return self.quantile(k,4)
+
+    def decile(self,k:int):
+        return self.quantile(k,10)
+
+    def percentile(self,k:int):
+        return self.quantile(k,100)
 
     @property 
     def midrange(self):
@@ -423,6 +444,7 @@ class Statistic:
         return sum(abs(x - median) for x in self._vals) / self.count
 
     # Symmetric confidence interval around mean, assuming normal distributed samples
+    # TODO: Asymetric confidence interval
     def abserr(self,ratio=0.95):
         assert ratio == 0.95, r"Only supporting two-sided 95% confidence interval"
         n = self.count
@@ -449,34 +471,10 @@ class Statistic:
             return None
         return self.abserr(ratio=ratio) / self.mean 
 
+    # TODO: signal/noise ratio (relative_rmse?)
 
-    # Other
 
-    def quantile(self,k,d):
-        assert d >=1
-        assert k >= 0 <= d
-  
-        if not self._vals:
-            return None
 
-        if k == 0:
-            return self._vals[0]
-        if k == n:
-            return self._vals[-1]
-
-        n = self.count
-        if (k*n-1) % d == 0:
-            return self._vals[(k*n-1)//d]
-    
-
-    def quartile(self,k:int):
-        return self.quantile(k,4)
-
-    def decile(self,k:int):
-        return self.quantile(k,10)
-
-    def percentile(self,k:int):
-        return self.quantile(k,100)
 
 
 def statistic(data):
@@ -619,7 +617,6 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp
                 errstr = str_concat(' ',errstr)
             else:
                 errstr = ''
-
 
             if v >= 1:
                 return highlight_extremes(align_decimal(f"{v:.2}")) +StrColor("s", colorama.Style.DIM) + (str_concat(' ', errstr) if errstr else '')
