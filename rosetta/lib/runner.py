@@ -569,12 +569,15 @@ def align_decimal(s):
 
 
 
-def run_benchs(config:str=None,serial=[],cuda=[]):
+def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
     results = []
     for e in serial:
         results += list(run_gbench(exe=e))
 
     for e in cuda:
+        results += list(run_gbench(exe=e))
+
+    for e in omp_parallel:
         results += list(run_gbench(exe=e))
 
     walltime_stat = statistic(r.wtime.mean for r in results)
@@ -619,7 +622,7 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
         return formatter
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
-    table.add_column('n', title=StrColor( "n", colorama.Style.BRIGHT),formatter=count_formatter)
+    table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
     table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
     table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
     table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))

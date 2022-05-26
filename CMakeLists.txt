@@ -238,16 +238,21 @@ elseif (CMAKE_DEFAULT_BUILD_TYPE) # Only Ninja Multi-Config Generator
   set(_default_build_type "${CMAKE_DEFAULT_BUILD_TYPE}")
 elseif ("Release" IN_LIST _build_types)
   set(_default_build_type "Release")
+  # By default, Debug is first in CMAKE_CONFIGURATION_TYPES and becomes the implicit default. But we want Release to be the default by default.
+  set(CMAKE_DEFAULT_BUILD_TYPE "Release")
 elseif (CMAKE_CONFIGURATION_TYPES)
   list(GET CMAKE_CONFIGURATION_TYPES 0 _default_build_type)
 else ()
   set(_default_build_type)
 endif ()
+message("CMAKE_DEFAULT_BUILD_TYPE: ${CMAKE_DEFAULT_BUILD_TYPE}")
+message("__default_build_type: ${_default_build_type}")
 
 
 
 
 
+# TODO: allow use as config file; run only with __name__ = '__main__'
 set(_benchmarks)
 set(_benchmarks_run "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -272,37 +277,41 @@ list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
 set(_benchmarks_run_arglist)
 
-if (ROSETTA_PPM_SERIAL)
-  set(_benchmarks_serial_run)
-  foreach (_target IN LISTS _benchmarks_serial)
-    list(APPEND _benchmarks_serial_run "\"$<TARGET_FILE:${_target}>\"")
+
+function (enable_ppm name)
+  cmake_parse_arguments(_arg "" "" "TARGETS"  ${ARGN} )
+
+  set(_benchmarks_run)
+  foreach (_target IN LISTS _arg_TARGETS)
+    list(APPEND _benchmarks_run "\"$<TARGET_FILE:${_target}>\"")
   endforeach ()
-  list(JOIN _benchmarks_serial_run ",\n  " _benchmarks_serial_pylist)
-  set(_benchmarks_serial_pylist "serial=[\n  ${_benchmarks_serial_pylist}]")
-  list(APPEND _benchmarks_run_arglist "${_benchmarks_serial_pylist}")
+  list(JOIN _benchmarks_run ",\n  " _benchmarks_pylist)
+  set(_benchmarks_pylist "${name}=[\n  ${_benchmarks_pylist}]")
+
+  # Add to list that runs all benchmarks
+  list(APPEND _benchmarks_run_arglist "${_benchmarks_pylist}")
+  set(_benchmarks_run_arglist "${_benchmarks_run_arglist}" PARENT_SCOPE)
 
   file(GENERATE
-    OUTPUT "${CMAKE_BINARY_DIR}/run-serial-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_serial_pylist})"
+    OUTPUT "${CMAKE_BINARY_DIR}/run-${name}-$<CONFIG>.py"
+    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_pylist})"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
+endfunction()
+
+
+if (ROSETTA_PPM_SERIAL)
+  enable_ppm(serial TARGETS ${_benchmarks_serial})
 endif ()
 
 if (ROSETTA_PPM_CUDA)
-  set(_benchmarks_cuda_run)
-  foreach (_target IN LISTS _benchmarks_cuda)
-    list(APPEND _benchmarks_cuda_run "\"$<TARGET_FILE:${_target}>\"")
-  endforeach ()
-  list(JOIN _benchmarks_cuda_run ",\n  " _benchmarks_cuda_pylist)
-  set(_benchmarks_cuda_pylist "cuda=[\n  ${_benchmarks_cuda_pylist}]")
-  list(APPEND _benchmarks_run_arglist "${_benchmarks_cuda_pylist}")
-
-  file(GENERATE
-    OUTPUT "${CMAKE_BINARY_DIR}/run-cuda-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_cuda_pylist})"
-    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-  )
+  enable_ppm(cuda TARGETS ${_benchmarks_cuda})
 endif ()
+
+if (ROSETTA_PPM_OPENMP_PARALLEL)
+  enable_ppm(omp_parallel TARGETS ${_benchmarks_openmp_parallel})
+endif ()
+
 
 list(JOIN _benchmarks_run_arglist ",\n  " _benchmarks_run_pyarglist)
 file(GENERATE
