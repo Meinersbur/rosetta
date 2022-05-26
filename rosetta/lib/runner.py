@@ -569,7 +569,7 @@ def align_decimal(s):
 
 
 
-def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[]):
+def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp_target=[]):
     results = []
     for e in serial:
         results += list(run_gbench(exe=e))
@@ -581,6 +581,9 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[]):
         results += list(run_gbench(exe=e))
 
     for e in omp_task:
+        results += list(run_gbench(exe=e))
+
+    for e in omp_target:
         results += list(run_gbench(exe=e))
 
     walltime_stat = statistic(r.wtime.mean for r in results)

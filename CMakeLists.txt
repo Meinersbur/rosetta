@@ -74,7 +74,7 @@ if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_PARALLEL
   # OpenMP offloading
   if (NOT DEFINED ROSETTA_PPM_OPENMP_TARGET OR ROSETTA_PPM_OPENMP_TARGET)
     if (ROSETTA_PPM_OPENMP_TARGET)
-     find_package(OpenMPOffload REQUIRED)
+      find_package(OpenMPOffload REQUIRED)
     else ()
       find_package(OpenMPOffload REQUIRED)
     endif ()
@@ -88,7 +88,6 @@ if (NOT DEFINED ROSETTA_PPM_OPENACC)
 elseif (ROSETTA_PPM_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
-
 
 
 
@@ -128,12 +127,10 @@ if (CMAKE_CUDA_COMPILER)
 endif ()
 option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
 
-
 set(ROSETTA_PLATFORM_NVIDIA OFF)
 if (TARGET CUDA::cudart)
   set(ROSETTA_PLATFORM_NVIDIA ON)
 endif ()
-
 
 set(_opencl_enabled_default OFF)
 if (OpenCL_FOUND)
@@ -146,7 +143,7 @@ if (OpenMP_CXX_FOUND)
   set(_openmp_thread_enabled_default ON)
 endif ()
 option(ROSETTA_PPM_OPENMP_PARALLEL "Enable OpenMP '#pragma omp parallel' PPM" ${_openmp_thread_enabled_default})
-option(ROSETTA_PPM_OPENMP_TASKS "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
+option(ROSETTA_PPM_OPENMP_TASK "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
 
 set(_openmp_target_enabled_default OFF)
 if (OpenMP_CXX_FOUND AND OpenMPOffload_FOUND)
@@ -300,6 +297,7 @@ function (enable_ppm name)
 endfunction()
 
 
+
 if (ROSETTA_PPM_SERIAL)
   enable_ppm(serial TARGETS ${_benchmarks_serial})
 endif ()
@@ -315,6 +313,11 @@ endif ()
 if (ROSETTA_PPM_OPENMP_TASK)
   enable_ppm(omp_task TARGETS ${_benchmarks_openmp_task})
 endif ()
+
+if (ROSETTA_PPM_OPENMP_TARGET)
+  enable_ppm(omp_target TARGETS ${_benchmarks_openmp_target})
+endif ()
+
 
 
 
@@ -423,7 +426,7 @@ else ()
 list(APPEND _disabled_ppm "OpenMP-Parallel")
 endif ()
 if (ROSETTA_PPM_OPENMP_TASK)
-  message("  OpenMP-Task:    ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  OpenMP-Task:     ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
 list(APPEND _disabled_ppm "OpenMP-Task")
 endif ()
@@ -433,7 +436,7 @@ else ()
 list(APPEND _disabled_ppm "OpenMP-Target")
 endif ()
 if (ROSETTA_PPM_OPENACC)
-  message("  OpenACC:         ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION} ${OpenACC_CXX_SPEC_DATE})")
+  message("  OpenACC:         ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${OPENMP_OFFLOADING_CFLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION} ${OpenACC_CXX_SPEC_DATE})")
 else ()
 list(APPEND _disabled_ppm "OpenACC")
 endif ()

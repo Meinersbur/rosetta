@@ -33,15 +33,26 @@ if (ROSETTA_PPM_CUDA)
 endif ()
 
 
-if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP_TARGET)
+if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK)
   add_library(rosetta-openmp
     rosetta-openmp.cpp
     rosetta-common.cpp
     )
-  target_compile_definitions(rosetta-openmp PUBLIC ROSETTA_SERIAL=1)
+  target_compile_definitions(rosetta-openmp PUBLIC ROSETTA_PPM_OPENMP=1)
   target_include_directories(rosetta-openmp PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  #target_link_libraries(rosetta-openmp PUBLIC benchmark::benchmark)
+  target_link_libraries( rosetta-openmp PUBLIC OpenMP::OpenMP_CXX)
+endif ()
+
+
+if (ROSETTA_PPM_OPENMP_TARGET)
+  add_library(rosetta-openmp-target
+    rosetta-openmp.cpp
+    rosetta-common.cpp
+  )
+  target_compile_definitions(rosetta-openmp-target PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1)
+  target_include_directories(rosetta-openmp-target PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
+  target_link_libraries(rosetta-openmp-target PUBLIC OpenMP::OpenMP_Offload_CXX)
   if (ROSETTA_PLATFORM_NVIDIA)
-  target_sources(rosetta-openmp PRIVATE rosetta-nvidia.cpp)
+    target_sources(rosetta-openmp-target PRIVATE rosetta-nvidia.cpp)
   endif ()
 endif ()

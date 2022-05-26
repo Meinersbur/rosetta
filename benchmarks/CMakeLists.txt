@@ -97,13 +97,13 @@ function (add_benchmark_openmp_target basename)
   set(_target "${basename}.openmp_target")
   set(_sources "${basename}.omp_target.cpp")
   add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE rosetta-openmp OpenMP::OpenMP_CXX)
+  target_link_libraries("${_target}" PRIVATE rosetta-openmp-target)
   if (_arg_DEFAULT_N)
     target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
   endif ()
   add_dependencies(build-openmp-target "${_target}")
 
-  append_global_property(benchmarks_openmp_task "${_target}")
+  append_global_property(benchmarks_openmp_target "${_target}")
 endfunction ()
 
 
