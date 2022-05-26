@@ -569,7 +569,7 @@ def align_decimal(s):
 
 
 
-def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
+def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[]):
     results = []
     for e in serial:
         results += list(run_gbench(exe=e))
@@ -578,6 +578,9 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
         results += list(run_gbench(exe=e))
 
     for e in omp_parallel:
+        results += list(run_gbench(exe=e))
+
+    for e in omp_task:
         results += list(run_gbench(exe=e))
 
     walltime_stat = statistic(r.wtime.mean for r in results)
@@ -631,8 +634,6 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
     table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
     table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(acceltime_stat.minimum,acceltime_stat.maximum))
     
-
-    #print("Name: WallTime RealTime AccelTime MaxRSS")
     for r in results:
         # TODO: acceltime doesn't always apply
         table.add_row(program=r.name,n=r.count,wtime=r.wtime,utime=r.utime,ktime=r.ktime,acceltime=r.acceltime)

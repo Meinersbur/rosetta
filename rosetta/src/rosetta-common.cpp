@@ -185,6 +185,8 @@ using namespace std::chrono;
 
 
 void Iteration::start() {
+//printf("start\n");
+
 #if ROSETTA_PPM_CUDA
 // TODO: Don't every time
     BENCH_CUDA_TRY(cudaEventCreate(&startCuda));

@@ -48,8 +48,6 @@ endfunction ()
 
 
 
-
-
 function (add_benchmark_openmp_parallel basename)
   if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
@@ -69,6 +67,7 @@ function (add_benchmark_openmp_parallel basename)
 endfunction ()
 
 
+
 function (add_benchmark_openmp_task basename)
   if (NOT ROSETTA_PPM_OPENMP_TASK)
       return ()
@@ -86,6 +85,7 @@ function (add_benchmark_openmp_task basename)
 
   append_global_property(benchmarks_openmp_task "${_target}")
 endfunction ()
+
 
 
 function (add_benchmark_openmp_target basename)

@@ -312,6 +312,11 @@ if (ROSETTA_PPM_OPENMP_PARALLEL)
   enable_ppm(omp_parallel TARGETS ${_benchmarks_openmp_parallel})
 endif ()
 
+if (ROSETTA_PPM_OPENMP_TASK)
+  enable_ppm(omp_task TARGETS ${_benchmarks_openmp_task})
+endif ()
+
+
 
 list(JOIN _benchmarks_run_arglist ",\n  " _benchmarks_run_pyarglist)
 file(GENERATE
