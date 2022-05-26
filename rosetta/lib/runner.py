@@ -17,7 +17,7 @@ import colorama
 import cwcwidth
 import math
 from collections import defaultdict
-import bisect
+
 
 # FIXME: Hack
 colorama.Fore.BWHITE = colorama.ansi.code_to_chars(97)
@@ -428,9 +428,20 @@ class Statistic:
         n = self.count
         if n < 2:
             return None
-        c = bisect.bisect_left(Statistic.studentt_density_95, n - 1,key=lambda p: p[0])
-        # TODO: linear interpolation with next
-        return Statistic.studentt_density_95[c][1] * self.corrected_variance / math.sqrt(n)
+
+        # Table lookup
+        # TODO: bisect
+        c = None
+        for (n1,p1),(n2,p2) in zip(Statistic.studentt_density_95, Statistic.studentt_density_95[1:]):
+            if n1 <= n <= n2:
+                # Linear interpolation
+                r = (n - n1) / (n2 - n1)
+                c = r * p2 + (1 - r) * p1
+                break
+        if c is None:
+            c = Statistic.studentt_density_95[-1][1]
+
+        return c * self.corrected_variance / math.sqrt(n)
 
     def relerr(self,ratio=0.95):
         mean = self.mean 
