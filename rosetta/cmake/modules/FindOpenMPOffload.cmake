@@ -57,3 +57,5 @@ if (HAVE_PRAGMA_OMP_TARGET)
   set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_COMPILE_OPTIONS ${OPENMP_OFFLOADING_CFLAGS})
   set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_LINK_OPTIONS ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_LDFLAGS}) # FIXME: OpenMP_CXX_FLAGS (-fopenmp) already be added by target_link_libraries
 endif ()
+
+
