@@ -581,6 +581,9 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
         results += list(run_gbench(exe=e))
 
     walltime_stat = statistic(r.wtime.mean for r in results)
+    usertime_stat = statistic(r.utime.mean for r in results)
+    kerneltime_stat = statistic(r.ktime.mean for r in results)
+    acceltime_stat = statistic(r.acceltime.mean for r in results)
 
     table = Table()
     def path_formatter(v:pathlib.Path):
@@ -605,7 +608,7 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
         
             if d and d >= 0.0001:
                 errstr = f"(±{d:.1%})"
-                if d > 0.1:
+                if d >= 0.02:
                     errstr = StrColor(errstr, colorama.Fore.RED)
                 errstr = str_concat(' ',errstr)
             else:
@@ -624,15 +627,15 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[]):
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
     table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
     table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
-    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
-    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
-    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
+    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(usertime_stat.minimum,usertime_stat.maximum))
+    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
+    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(acceltime_stat.minimum,acceltime_stat.maximum))
     
 
     #print("Name: WallTime RealTime AccelTime MaxRSS")
     for r in results:
+        # TODO: acceltime doesn't always apply
         table.add_row(program=r.name,n=r.count,wtime=r.wtime,utime=r.utime,ktime=r.ktime,acceltime=r.acceltime)
-        #print(f"{r.name}: {r.wtime} {r.rtime} {r.acceltime} {r.maxrss}")
 
     
     table.print()
