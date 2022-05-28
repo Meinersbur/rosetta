@@ -25,6 +25,9 @@ include(CheckCXXSourceCompiles)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   #set(OPENMP_OFFLOADING_CFLAGS "-foffload=default") # default anyway
   #set(OPENMP_OFFLOADING_LDFLAGS "-foffload=default")
+  set(OPENMP_OFFLOADING_CFLAGS "-foffload=nvptx-none") 
+  set(OPENMP_OFFLOADING_LDFLAGS "-foffload=nvptx-none") 
+
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
     CACHE STRING "Compiler arguments for OpenMP offloading")

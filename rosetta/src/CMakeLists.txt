@@ -1,4 +1,19 @@
 
+function(enable_platform_nvidia target)
+if (NOT ROSETTA_PLATFORM_NVIDIA)
+  return ()
+endif ()
+
+  target_sources("${target}" PRIVATE rosetta-nvidia.cpp)
+  target_compile_definitions("${target}" PUBLIC ROSETTA_PLATFORM_NVIDIA=1)
+  target_link_libraries("${target}" PUBLIC CUDA::cudart_static CUDA::cupti_static CUDA::cuda_driver)
+  message("CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
+  target_include_directories("${target}" PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+  target_include_directories("${target}" PUBLIC "${CUDAToolkit_LIBRARY_ROOT}/extras/CUPTI/include") # For unknown reasons on JLSE
+endfunction()
+
+
+
 if (ROSETTA_PPM_SERIAL)
   add_library(rosetta-serial
     rosetta-serial.cpp
@@ -30,7 +45,10 @@ if (ROSETTA_PPM_CUDA)
     # TODO: Introspection
     target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
   endif ()
+
+  enable_platform_nvidia(rosetta-cuda)
 endif ()
+
 
 
 if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK)
@@ -52,7 +70,5 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   target_compile_definitions(rosetta-openmp-target PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1)
   target_include_directories(rosetta-openmp-target PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-target PUBLIC OpenMP::OpenMP_Offload_CXX)
-  if (ROSETTA_PLATFORM_NVIDIA)
-    target_sources(rosetta-openmp-target PRIVATE rosetta-nvidia.cpp)
-  endif ()
+  enable_platform_nvidia(rosetta-openmp-target)
 endif ()

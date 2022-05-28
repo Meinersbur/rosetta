@@ -282,15 +282,17 @@ list(APPEND _benchmarks ${_benchmarks_openmp_target})
 set(_benchmarks_run_arglist)
 
 
-function (enable_ppm name)
+function (enable_ppm name shortname displayname)
   cmake_parse_arguments(_arg "" "" "TARGETS"  ${ARGN} )
+
+  #string(REPLACE "-" "_" pythonized_name "${name}")
 
   set(_benchmarks_run)
   foreach (_target IN LISTS _arg_TARGETS)
     list(APPEND _benchmarks_run "\"$<TARGET_FILE:${_target}>\"")
   endforeach ()
   list(JOIN _benchmarks_run ",\n  " _benchmarks_pylist)
-  set(_benchmarks_pylist "${name}=[\n  ${_benchmarks_pylist}]")
+  set(_benchmarks_pylist "${shortname}=[\n  ${_benchmarks_pylist}]")
 
   # Add to list that runs all benchmarks
   list(APPEND _benchmarks_run_arglist "${_benchmarks_pylist}")
@@ -298,31 +300,44 @@ function (enable_ppm name)
 
   file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-${name}-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_pylist})"
+    CONTENT "${_benchmarks_run}\nrun_benchs(config='$<CONFIG>',${_benchmarks_pylist})"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
+
+  if (_default_build_type)
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${name}-${_default_build_type}.py" "run-${name}.py"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+    add_custom_target("run-${name}"
+      COMMAND Python::Interpreter "run-${name}.py"
+      COMMENT "Run ${displayname} benchmarks ..."
+      USES_TERMINAL VERBATIM
+    )
+    add_dependencies("run-${name}" "build-${name}")
+  endif ()
 endfunction()
 
 
 
 if (ROSETTA_PPM_SERIAL)
-  enable_ppm(serial TARGETS ${_benchmarks_serial})
+  enable_ppm(serial serial Serial TARGETS ${_benchmarks_serial})
 endif ()
 
 if (ROSETTA_PPM_CUDA)
-  enable_ppm(cuda TARGETS ${_benchmarks_cuda})
+  enable_ppm(cuda cuda CUDA TARGETS ${_benchmarks_cuda})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL)
-  enable_ppm(omp_parallel TARGETS ${_benchmarks_openmp_parallel})
+  enable_ppm(openmp-parallel omp_parallel "OpenMP parallel" TARGETS ${_benchmarks_openmp_parallel})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TASK)
-  enable_ppm(omp_task TARGETS ${_benchmarks_openmp_task})
+  enable_ppm(openmp-task omp_task "OpenMP Tasks" TARGETS ${_benchmarks_openmp_task})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TARGET)
-  enable_ppm(omp_target TARGETS ${_benchmarks_openmp_target})
+  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" TARGETS ${_benchmarks_openmp_target})
 endif ()
 
 
@@ -331,7 +346,7 @@ endif ()
 list(JOIN _benchmarks_run_arglist ",\n  " _benchmarks_run_pyarglist)
 file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}run_benchs(config='$<CONFIG>',${_benchmarks_run_pyarglist})"
+    CONTENT "${_benchmarks_run}\nrun_benchs(config='$<CONFIG>',${_benchmarks_run_pyarglist})"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 
@@ -360,31 +375,7 @@ if (_default_build_type)
   )
   add_dependencies(run build)
 
-  if (ROSETTA_PPM_SERIAL)
-    execute_process(
-      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-serial-${_default_build_type}.py" "run-serial.py"
-      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-    )
-    add_custom_target(run-serial
-      COMMAND Python::Interpreter "run-serial.py"
-      COMMENT "Run serial benchmarks ..."
-      USES_TERMINAL VERBATIM
-    )
-    add_dependencies(run-serial build-serial)
-  endif ()
 
-  if (ROSETTA_PPM_CUDA)
-    execute_process(
-      COMMAND ${CMAKE_COMMAND} -E create_symlink "run-cuda-${_default_build_type}.py" "run-cuda.py"
-      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-    )
-    add_custom_target(run-cuda
-      COMMAND Python::Interpreter "run-cuda.py"
-      COMMENT "Run CUDA benchmarks ..."
-      USES_TERMINAL VERBATIM
-    )
-    add_dependencies(run-cuda build-cuda)
-  endif ()
 endif ()
 
 

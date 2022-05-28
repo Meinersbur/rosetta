@@ -563,7 +563,7 @@ def align_decimal(s):
     pos = s.find('.')
     if pos >= 0:
         return StrAlign(s, pos)
-    return StrAlign(s, len(s))
+    return StrAlign(s, printlength(s))
 
 
 
@@ -595,7 +595,8 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp
             return None
         return StrColor(pathlib.Path(v).name,colorama.Fore.GREEN)
     def count_formatter(v:int):
-        return StrColor(str(v),colorama.Fore.BLUE)
+        s = str(v)
+        return StrAlign( StrColor(str(v),colorama.Fore.BLUE), printlength(s))
     def duration_formatter(best,worst):
         def formatter(s: Statistic):
             if s is None:
@@ -628,7 +629,7 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp
         return formatter
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
-    table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
+    table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter) 
     table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
     table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(usertime_stat.minimum,usertime_stat.maximum))
     table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
