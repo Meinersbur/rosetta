@@ -39,12 +39,17 @@ class State;
 
 
 
-enum  Measure {
+enum Measure {
      WallTime,
      UserTime,
-     KernelTime,
-     AccelTime, //TODO: computation and data transfer time
-     MeasureLast = AccelTime
+     KernelTime, // TODO:
+     OpenMPWTime,
+     AccelTime,  // CUDA Event
+     Cupti, // CUPTI duration from first to last event
+     CuptiCompute, // CUPTI duration from first kernel launch to last kernel finish
+     CuptiTransferToDevice, // CUPTI duration from start of first transfer to device start to last to finish
+     CuptiTransferToHost, // CUPTI duration from start of first transfer from device start to last to finish
+     MeasureLast = CuptiTransferToHost
 };
 constexpr int MeasureCount = MeasureLast+1;
 
