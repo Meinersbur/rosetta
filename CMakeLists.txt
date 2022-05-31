@@ -20,6 +20,7 @@ set(CMAKE_CXX_STANDARD 17)
 # Python
 find_package(Python 3.6.13 REQUIRED)
 
+
 # Google Benchmark
 #set(BENCHMARK_ENABLE_TESTING OFF)
 #include(FetchContent)
@@ -45,8 +46,13 @@ elseif (ROSETTA_PPM_CUDA)
   endif ()
 endif ()
 
-# For nvidia platform
-find_package(CUDAToolkit)
+
+# For Nvidia platform
+if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
+  find_package(CUDAToolkit)
+else (ROSETTA_PLATFORM_NVIDIA)
+  find_package(CUDAToolkit REQUIRED)
+endif ()
 
 
 # OpenCL
@@ -127,10 +133,11 @@ if (CMAKE_CUDA_COMPILER)
 endif ()
 option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
 
-set(ROSETTA_PLATFORM_NVIDIA OFF)
+set(_nvidia_enabled_default OFF)
 if (TARGET CUDA::cudart)
-  set(ROSETTA_PLATFORM_NVIDIA ON)
+  set(_nvidia_enabled_default ON)
 endif ()
+option(ROSETTA_PLATFORM_NVIDIA "Enable NVIDIA CUDA Toolkit/SDK as a platorm" ${_nvidia_enabled_default})
 
 set(_opencl_enabled_default OFF)
 if (OpenCL_FOUND)

@@ -228,7 +228,7 @@ BENCH_CUDA_TRY(cudaEventElapsedTime (&durationCuda, startCuda, stopCuda));
     BENCH_CUDA_TRY(cudaEventDestroy(stopCuda));
 #else 
 float  durationCuda = 0;
-#endif 
+#endif
 
    durationWall = std::max(decltype(durationWall)::zero(), durationWall);
    durationUser = std::max(0.0, durationUser);
@@ -238,7 +238,7 @@ float  durationCuda = 0;
    m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
    m.values[UserTime] = durationUser;
    m.values[KernelTime] = durationKernel;
-   m.values[AccelTime] = durationCuda / 1000.0d;
+   m.values[AccelTime] = durationCuda / 1000.0;
    state.measurements.push_back( std::move (m) );
 }
 
