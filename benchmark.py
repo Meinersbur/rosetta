@@ -39,7 +39,7 @@ def main(argv):
         if verbose :
             invoke.diag(*args, **kwargs)
         else:
-            invoke.call(*args, **kwargs)
+            invoke.run(*args, **kwargs)
 
     srcdir = script.parent
     builddir = srcdir / 'build'

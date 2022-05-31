@@ -17,7 +17,7 @@ import colorama
 import cwcwidth
 import math
 from collections import defaultdict
-import bisect
+
 
 # FIXME: Hack
 colorama.Fore.BWHITE = colorama.ansi.code_to_chars(97)
@@ -450,9 +450,20 @@ class Statistic:
         n = self.count
         if n < 2:
             return None
-        c = bisect.bisect_left(Statistic.studentt_density_95, n - 1,key=lambda p: p[0])
-        # TODO: linear interpolation with next
-        return Statistic.studentt_density_95[c][1] * self.corrected_variance / math.sqrt(n)
+
+        # Table lookup
+        # TODO: bisect
+        c = None
+        for (n1,p1),(n2,p2) in zip(Statistic.studentt_density_95, Statistic.studentt_density_95[1:]):
+            if n1 <= n <= n2:
+                # Linear interpolation
+                r = (n - n1) / (n2 - n1)
+                c = r * p2 + (1 - r) * p1
+                break
+        if c is None:
+            c = Statistic.studentt_density_95[-1][1]
+
+        return c * self.corrected_variance / math.sqrt(n)
 
     def relerr(self,ratio=0.95):
         mean = self.mean 
@@ -552,11 +563,11 @@ def align_decimal(s):
     pos = s.find('.')
     if pos >= 0:
         return StrAlign(s, pos)
-    return StrAlign(s, len(s))
+    return StrAlign(s, printlength(s))
 
 
 
-def run_benchs(config:str=None,serial=[],cuda=[]):
+def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp_target=[]):
     results = []
     for e in serial:
         results += list(run_gbench(exe=e))
@@ -564,7 +575,19 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
     for e in cuda:
         results += list(run_gbench(exe=e))
 
+    for e in omp_parallel:
+        results += list(run_gbench(exe=e))
+
+    for e in omp_task:
+        results += list(run_gbench(exe=e))
+
+    for e in omp_target:
+        results += list(run_gbench(exe=e))
+
     walltime_stat = statistic(r.wtime.mean for r in results)
+    usertime_stat = statistic(r.utime.mean for r in results)
+    kerneltime_stat = statistic(r.ktime.mean for r in results)
+    acceltime_stat = statistic(r.acceltime.mean for r in results)
 
     table = Table()
     def path_formatter(v:pathlib.Path):
@@ -572,7 +595,8 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
             return None
         return StrColor(pathlib.Path(v).name,colorama.Fore.GREEN)
     def count_formatter(v:int):
-        return StrColor(str(v),colorama.Fore.BLUE)
+        s = str(v)
+        return StrAlign( StrColor(str(v),colorama.Fore.BLUE), printlength(s))
     def duration_formatter(best,worst):
         def formatter(s: Statistic):
             if s is None:
@@ -589,7 +613,7 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
         
             if d and d >= 0.0001:
                 errstr = f"(±{d:.1%})"
-                if d > 0.1:
+                if d >= 0.02:
                     errstr = StrColor(errstr, colorama.Fore.RED)
                 errstr = str_concat(' ',errstr)
             else:
@@ -605,17 +629,15 @@ def run_benchs(config:str=None,serial=[],cuda=[]):
         return formatter
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
-    table.add_column('n', title=StrColor( "n", colorama.Style.BRIGHT),formatter=count_formatter)
+    table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter) 
     table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
-    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
-    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
-    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(None,None))
+    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(usertime_stat.minimum,usertime_stat.maximum))
+    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
+    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(acceltime_stat.minimum,acceltime_stat.maximum))
     
-
-    #print("Name: WallTime RealTime AccelTime MaxRSS")
     for r in results:
+        # TODO: acceltime doesn't always apply
         table.add_row(program=r.name,n=r.count,wtime=r.wtime,utime=r.utime,ktime=r.ktime,acceltime=r.acceltime)
-        #print(f"{r.name}: {r.wtime} {r.rtime} {r.acceltime} {r.maxrss}")
 
     
     table.print()

@@ -39,12 +39,17 @@ class State;
 
 
 
-enum  Measure {
+enum Measure {
      WallTime,
      UserTime,
-     KernelTime,
-     AccelTime, //TODO: computation and data transfer time
-     MeasureLast = AccelTime
+     KernelTime, // TODO:
+     OpenMPWTime,
+     AccelTime,  // CUDA Event
+     Cupti, // CUPTI duration from first to last event
+     CuptiCompute, // CUPTI duration from first kernel launch to last kernel finish
+     CuptiTransferToDevice, // CUPTI duration from start of first transfer to device start to last to finish
+     CuptiTransferToHost, // CUPTI duration from start of first transfer from device start to last to finish
+     MeasureLast = CuptiTransferToHost
 };
 constexpr int MeasureCount = MeasureLast+1;
 
@@ -122,12 +127,20 @@ Scope Iteration::scope() {
 }
 
 
+
+
 class AutoIteration : public Iteration {
+    template <typename I>
+    friend class Iterator;
 public :
   ~AutoIteration () {}
 
 private:
-  AutoIteration(State &state) : Iteration(state) {}
+  AutoIteration(State &state) : Iteration(state), scope(*this) {
+//printf("AutoIteration\n");
+  }
+
+  Scope scope;
 };
 
 
@@ -179,22 +192,22 @@ private:
 
 template <typename I>
 class Iterator {
-    friend class Iteration;
     friend class Range;
     friend class State;
     friend class Rosetta;
 
 public :
     typedef std::forward_iterator_tag iterator_category;
-    typedef  Iteration value_type;
-    typedef  Iteration &reference;
-    typedef  Iteration *pointer;
+    typedef  I value_type;
+    typedef  I &reference;
+    typedef  I *pointer;
     typedef std::ptrdiff_t difference_type;
 
 
     BENCHMARK_ALWAYS_INLINE
-        Iteration operator*() const {
-        return Iteration(state);
+        I operator*() const {
+         //  printf("operator*()\n");  
+        return I(state);
     }
 
     BENCHMARK_ALWAYS_INLINE
@@ -226,7 +239,7 @@ inline Iterator<Iteration> Range::end()   { return Iterator<Iteration>(state, tr
 
 
 inline Iterator<AutoIteration>  State::begin() { return Iterator<AutoIteration>(*this, false); }
-inline Iterator<AutoIteration>State::end()   { return Iterator<AutoIteration>(*this, true);}
+inline Iterator<AutoIteration>State::end()     { return Iterator<AutoIteration>(*this, true);}
 
 
 

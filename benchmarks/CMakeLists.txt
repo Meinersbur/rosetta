@@ -48,8 +48,6 @@ endfunction ()
 
 
 
-
-
 function (add_benchmark_openmp_parallel basename)
   if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
@@ -67,6 +65,7 @@ function (add_benchmark_openmp_parallel basename)
 
   append_global_property(benchmarks_openmp_parallel "${_target}")
 endfunction ()
+
 
 
 function (add_benchmark_openmp_task basename)
@@ -88,6 +87,7 @@ function (add_benchmark_openmp_task basename)
 endfunction ()
 
 
+
 function (add_benchmark_openmp_target basename)
   if (NOT ROSETTA_PPM_OPENMP_TARGET)
       return ()
@@ -97,13 +97,13 @@ function (add_benchmark_openmp_target basename)
   set(_target "${basename}.openmp_target")
   set(_sources "${basename}.omp_target.cpp")
   add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE rosetta-openmp OpenMP::OpenMP_CXX)
+  target_link_libraries("${_target}" PRIVATE rosetta-openmp-target)
   if (_arg_DEFAULT_N)
     target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
   endif ()
   add_dependencies(build-openmp-target "${_target}")
 
-  append_global_property(benchmarks_openmp_task "${_target}")
+  append_global_property(benchmarks_openmp_target "${_target}")
 endfunction ()
 
 
