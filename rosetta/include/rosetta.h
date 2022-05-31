@@ -6,6 +6,7 @@
 #include <string>
 #include <chrono>
 #include <cmath>
+#include <variant>
 
 // TODO: ROSETTA_PLATFORM_NVIDIA
 // TODO: Get out of header
@@ -53,6 +54,8 @@ enum Measure {
 };
 constexpr int MeasureCount = MeasureLast+1;
 
+
+using duration_t = std::variant<double, uint64_t>;
 
 
 class IterationMeasurement {

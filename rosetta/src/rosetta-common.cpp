@@ -612,75 +612,10 @@ static void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *max
   *maxNumRecords = 0;
 }
 
-void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize)
-{
-  CUptiResult status;
-  CUpti_Activity *record = NULL;
-
-  if (validSize > 0) {
-    do {
-      status = cuptiActivityGetNextRecord(buffer, validSize, &record);
-      if (status == CUPTI_SUCCESS) {
-        printActivity(record);
-      }
-      else if (status == CUPTI_ERROR_MAX_LIMIT_REACHED)
-        break;
-      else {
-        CUPTI_CALL(status);
-      }
-    } while (1);
-
-    // report any records dropped from the queue
-    size_t dropped;
-    CUPTI_CALL(cuptiActivityGetNumDroppedRecords(ctx, streamId, &dropped));
-    if (dropped != 0) {
-      printf("Dropped %u activity records\n", (unsigned int) dropped);
-    }
-  }
-
-  free(buffer);
-}
-
-void
-initTrace() {
-  size_t attrValue = 0, attrValueSize = sizeof(size_t);
-  // Device activity record is created when CUDA initializes, so we
-  // want to enable it before cuInit() or any CUDA runtime call.
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
-  // Enable all other activity record kinds.
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_NAME));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MARKER));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));
-  CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
-
-  // Register callbacks for buffer requests and for buffers completed by CUPTI.
-  CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
+static
+void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize);
 
 
-#if 0
-  // Get and set activity attributes.
-  // Attributes can be set by the CUPTI client to change behavior of the activity API.
-  // Some attributes require to be set before any CUDA context is created to be effective,
-  // e.g. to be applied to all device buffer allocations (see documentation).
-  CUPTI_CALL(cuptiActivityGetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_SIZE, &attrValueSize, &attrValue));
-  printf("%s = %llu\n", "CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_SIZE", (long long unsigned)attrValue);
-  attrValue *= 2;
-  CUPTI_CALL(cuptiActivitySetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_SIZE, &attrValueSize, &attrValue));
-
-  CUPTI_CALL(cuptiActivityGetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_POOL_LIMIT, &attrValueSize, &attrValue));
-  printf("%s = %llu\n", "CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_POOL_LIMIT", (long long unsigned)attrValue);
-  attrValue *= 2;
-  CUPTI_CALL(cuptiActivitySetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_POOL_LIMIT, &attrValueSize, &attrValue));
-#endif
-
-
-  CUPTI_CALL(cuptiGetTimestamp(&startTimestamp));
-}
 
 void finiTrace()
 {
@@ -690,10 +625,6 @@ void finiTrace()
 
 
 using namespace std::chrono;
-
-
-
-
 
 
 
@@ -721,6 +652,8 @@ private:
     // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
 
 public:
+
+
     void run(const char *program, int n) {       
         startTime = std::chrono::steady_clock::now();
         State state{this};
@@ -737,10 +670,46 @@ public:
         // DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
 
 
-        //CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+        // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
         // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
 
-        initTrace();
+        size_t attrValue = 0, attrValueSize = sizeof(size_t);
+        // Device activity record is created when CUDA initializes, so we
+        // want to enable it before cuInit() or any CUDA runtime call.
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
+        // Enable all other activity record kinds.
+        //CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
+        //CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
+        //CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_NAME));
+        //CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MARKER));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));
+        //CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
+
+        // Register callbacks for buffer requests and for buffers completed by CUPTI.
+        CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
+
+#if 0
+        // Get and set activity attributes.
+        // Attributes can be set by the CUPTI client to change behavior of the activity API.
+        // Some attributes require to be set before any CUDA context is created to be effective,
+        // e.g. to be applied to all device buffer allocations (see documentation).
+        CUPTI_CALL(cuptiActivityGetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_SIZE, &attrValueSize, &attrValue));
+        printf("%s = %llu\n", "CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_SIZE", (long long unsigned)attrValue);
+        attrValue *= 2;
+        CUPTI_CALL(cuptiActivitySetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_SIZE, &attrValueSize, &attrValue));
+
+        CUPTI_CALL(cuptiActivityGetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_POOL_LIMIT, &attrValueSize, &attrValue));
+        printf("%s = %llu\n", "CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_POOL_LIMIT", (long long unsigned)attrValue);
+        attrValue *= 2;
+        CUPTI_CALL(cuptiActivitySetAttribute(CUPTI_ACTIVITY_ATTR_DEVICE_BUFFER_POOL_LIMIT, &attrValueSize, &attrValue));
+#endif
+
+        uint64_t cuptiStart;
+        CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
+        startTimestamp = cuptiStart;
 #endif 
 
         // TODO: make flexible, this is just on way to find a run function
@@ -750,7 +719,7 @@ public:
         // display timestamps collected in the callback
         // displayTimestamps(trace);
 
-        finiTrace();
+       // finiTrace();
 
         // CUPTI_CALL(cuptiUnsubscribe(subscriber));
 
@@ -771,6 +740,7 @@ public:
      
     }
 
+    // TODO: Per-iteration data in separate object?
     bool started = false;
     std::chrono::high_resolution_clock::time_point startWall;
     double startUser; // in seconds; TODO: use native type
@@ -781,12 +751,28 @@ public:
     cudaEvent_t stopCuda;
 #endif
 
+#if ROSETTA_PLATFORM_NVIDIA
+    uint64_t cuptiStartHtoD, cuptiStopHtoD;
+    uint64_t cuptiStartDtoH, cuptiStopDtoH;
+    uint64_t cuptiStartCompute, cuptiStopCompute;
+    uint64_t cuptiStartOther, cuptiStopOther;
+#endif 
 
     void start() {
         //printf("start\n");
         assert(!started && "Must not interleave interation scope");
         started = true;
 
+#ifdef ROSETTA_PLATFORM_NVIDIA
+        cuptiStartHtoD = std::numeric_limits<uint64_t>::max();
+        cuptiStopHtoD = std::numeric_limits<uint64_t>::min();
+        cuptiStartDtoH=  std::numeric_limits<uint64_t>::max();
+        cuptiStopDtoH = std::numeric_limits<uint64_t>::min();
+        cuptiStartCompute =  std::numeric_limits<uint64_t>::max();
+        cuptiStopCompute = std::numeric_limits<uint64_t>::min();
+        cuptiStartOther =  std::numeric_limits<uint64_t>::max();
+        cuptiStopOther = std::numeric_limits<uint64_t>::min();
+#endif 
 
 #if ROSETTA_PPM_CUDA
         // TODO: Don't every time
@@ -804,7 +790,7 @@ public:
 
     void stop() {
         assert(started && "No iteration active?");
-        started =false;
+     
 
         //TODO: Throw away warmup
 
@@ -819,7 +805,7 @@ public:
         BENCH_CUDA_TRY(cudaEventRecord(stopCuda));
 #endif
 
-        auto durationWall = stopWall-startWall;
+        auto durationWall = stopWall  - startWall;
         auto durationUser = stopUser - startUser;
         auto durationKernel = stopKernel - startKernel;
 #if ROSETTA_PPM_CUDA
@@ -836,11 +822,33 @@ public:
         durationUser = std::max(0.0, durationUser);
         durationKernel = std::max(0.0, durationKernel);
 
+#if ROSETTA_PLATFORM_NVIDIA
+        CUPTI_CALL(cuptiActivityFlushAll(1));
+#endif 
+        started =false;
+
+#if ROSETTA_PLATFORM_NVIDIA
+        auto firstEvent  =  std::min({ cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther  }) ;
+        auto lastEvent  =  std::max({cuptiStopHtoD, cuptiStopDtoH, cuptiStopCompute, cuptiStopOther  }) ;
+        auto durationCupti =  firstEvent > lastEvent ? 0 : lastEvent -  firstEvent;
+        auto durationCuptiCompute =  cuptiStartCompute > cuptiStopCompute ? 0 : cuptiStopCompute - cuptiStartCompute  ;
+        auto durationCuptiToDev    = cuptiStartHtoD > cuptiStopHtoD? 0 : cuptiStopHtoD - cuptiStartHtoD  ;
+        auto durationCuptiFromDev  = cuptiStartDtoH > cuptiStopDtoH? 0 : cuptiStopDtoH - cuptiStartDtoH  ;
+#endif 
+
         IterationMeasurement m;
         m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
         m.values[UserTime] = durationUser;
         m.values[KernelTime] = durationKernel;
+#if ROSETTA_PPM_CUDA
         m.values[AccelTime] = durationCuda / 1000.0;
+#endif
+#if ROSETTA_PLATFORM_NVIDIA
+        m.values[Cupti] = durationCupti;
+        m.values[CuptiCompute] = durationCuptiCompute;
+        m.values[CuptiTransferToDevice] = durationCuptiToDev;
+        m.values[CuptiTransferToHost] = durationCuptiFromDev;
+#endif 
         measurements.push_back( std::move (m) );
     }
 
@@ -859,6 +867,65 @@ public:
 
         return howManyMoreIterations;
     }
+
+
+#ifdef ROSETTA_PLATFORM_NVIDIA
+     /// FIXME: Called from other threads. Require Mutex?
+     void handleCuptiActivity(CUpti_Activity* record) {
+         //assert(started);
+         // Ignore events outside iteration
+         if (!started) {
+             printActivity(record);
+             return;
+         }
+
+         switch (record->kind){
+         case CUPTI_ACTIVITY_KIND_KERNEL:
+         case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
+         {
+             CUpti_ActivityKernel5* kernel = (CUpti_ActivityKernel5*)record;
+             cuptiStartCompute = std::min(cuptiStartCompute, kernel->start);
+             cuptiStopCompute = std::max(cuptiStopCompute, kernel->end);
+             break;
+         }
+         case CUPTI_ACTIVITY_KIND_MEMCPY:
+         {
+             // TODO: record amount of data transferred
+             CUpti_ActivityMemcpy3* memcpy = (CUpti_ActivityMemcpy3*)record;
+             auto copyKind = (CUpti_ActivityMemcpyKind)memcpy->copyKind;
+
+             switch (copyKind) {
+             case CUPTI_ACTIVITY_MEMCPY_KIND_HTOD:
+                 cuptiStartHtoD = std::min(cuptiStartHtoD, memcpy->start);
+                 cuptiStopHtoD= std::max(cuptiStopHtoD, memcpy->end);
+                 break;
+             case CUPTI_ACTIVITY_MEMCPY_KIND_DTOH:
+                 cuptiStartDtoH = std::min(cuptiStartDtoH, memcpy->start);
+                 cuptiStopDtoH = std::max(cuptiStopDtoH, memcpy->end);
+                 break;
+             default:
+                 cuptiStartOther = std::min(cuptiStartOther, memcpy->start);
+                 cuptiStopOther = std::max(cuptiStopOther, memcpy->end);
+                 printActivity(record);
+                 break;
+             }
+             break;
+         }
+
+         case CUPTI_ACTIVITY_KIND_MEMSET:
+         {
+             CUpti_ActivityMemset2 *memset = (CUpti_ActivityMemset2 *) record;
+             cuptiStartOther = std::min(cuptiStartOther, memset->start);
+             cuptiStopOther = std::max(cuptiStopOther, memset->end);
+             break;
+         }
+
+         default:
+             printActivity(record);
+         }
+    }
+#endif 
+
 };
 
 
@@ -887,6 +954,7 @@ void Iteration::stop() {
   static RuntimeApiTrace_t trace[LAUNCH_LAST];
 #endif 
 
+// TODO: make singleton?
 struct Rosetta {
     static constexpr const char* measureDesc[MeasureCount] = {"Wall Clock", "User", "Kernel", "GPU"};
 
@@ -894,22 +962,95 @@ struct Rosetta {
         return s; // TODO
     }
 
-        static void run(const char *program, int n) {       
+   static  BenchmarkRun *currentRun ;
+  static void run(const char *program, int n) {       
             BenchmarkRun executor;
+            currentRun = &executor;
             executor.run(program, n);
+
+            int numMeasures = executor. measurements.size();
+            int startMeasures = 0;
+            if (numMeasures >=2) {
+                // Remove cold run if we can afford it.
+                startMeasures = 1;
+            }
+
 
                 std::cout << R"(<?xml version="1.0"?>)" <<std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
                 std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << R"(">)"<<std::endl;
-                for (auto &m :executor. measurements) {
+                for (int i = startMeasures; i < numMeasures; i+=1) {
+                    auto &m = executor. measurements[i];
+               // for (auto &m :executor. measurements) {
                     // TODO: custom times and units
-                    std::cout << R"(    <iteration walltime=")" << m.values[WallTime] << R"(" usertime=")" << m.values[UserTime] << R"(" kerneltime=")" << m.values[KernelTime] << R"(" acceltime=")" << m.values[AccelTime] << R"("/>)"<<std::endl;  
+                    std::cout << R"(    <iteration walltime=")" << m.values[WallTime] << R"(" usertime=")" << m.values[UserTime] << R"(" kerneltime=")" << m.values[KernelTime]  ;
+#if ROSETTA_PPM_CUDA
+                    std::cout << R"(" acceltime=")" << m.values[AccelTime];
+#endif 
+#if ROSETTA_PLATFORM_NVIDIA
+                    std::cout << R"(" cupti=")" << m.values[Cupti];
+                    std::cout << R"(" cupti_compute=")" << m.values[CuptiCompute];
+                    std::cout << R"(" cupti_todev=")" << m.values[CuptiTransferToDevice];
+                    std::cout << R"(" cupti_fromdev=")" << m.values[CuptiTransferToHost];
+#endif
+                    std::cout << R"("/>)"<<std::endl;  
                 }
                 // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
                 std::cout << R"(  </benchmark>)" <<std::endl;
                 std::cout << R"(</benchmarks>)" <<std::endl;
+
+                currentRun = nullptr;
         }
+
+#ifdef ROSETTA_PLATFORM_NVIDIA
+        static void handleCuptiActivity(CUpti_Activity *record) {
+            if (!currentRun) {
+                // Activity not asociated with a run
+                return ;
+            }
+
+
+            currentRun ->handleCuptiActivity(record);
+        }
+#endif 
 };
+
+
+BenchmarkRun *Rosetta::currentRun =nullptr;
+
+
+
+#ifdef ROSETTA_PLATFORM_NVIDIA
+static
+void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize)
+{
+    CUptiResult status;
+    CUpti_Activity *record = NULL;
+
+    if (validSize > 0) {
+        do {
+            status = cuptiActivityGetNextRecord(buffer, validSize, &record);
+            if (status == CUPTI_SUCCESS) {
+                Rosetta::handleCuptiActivity(record);
+            }
+            else if (status == CUPTI_ERROR_MAX_LIMIT_REACHED)
+                break;
+            else {
+                CUPTI_CALL(status);
+            }
+        } while (1);
+
+        // report any records dropped from the queue
+        size_t dropped;
+        CUPTI_CALL(cuptiActivityGetNumDroppedRecords(ctx, streamId, &dropped));
+        if (dropped != 0) {
+            printf("Dropped %u activity records\n", (unsigned int) dropped);
+        }
+    }
+
+    free(buffer);
+}
+#endif 
 
 
 
