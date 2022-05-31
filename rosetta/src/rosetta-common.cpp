@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cupti.h>
@@ -726,6 +729,7 @@ public:
         cuptiFinalize();
 #endif
 
+#if 0
         auto count = measurements.size();
         double sums[MeasureCount] ;
         for (int i = 0; i < MeasureCount;  i+=1 ) {
@@ -736,7 +740,7 @@ public:
             }
             sums[i]  = sum;
         }
-
+#endif 
      
     }
 
@@ -830,24 +834,24 @@ public:
 #if ROSETTA_PLATFORM_NVIDIA
         auto firstEvent  =  std::min({ cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther  }) ;
         auto lastEvent  =  std::max({cuptiStopHtoD, cuptiStopDtoH, cuptiStopCompute, cuptiStopOther  }) ;
-        auto durationCupti =  firstEvent > lastEvent ? 0 : lastEvent -  firstEvent;
-        auto durationCuptiCompute =  cuptiStartCompute > cuptiStopCompute ? 0 : cuptiStopCompute - cuptiStartCompute  ;
-        auto durationCuptiToDev    = cuptiStartHtoD > cuptiStopHtoD? 0 : cuptiStopHtoD - cuptiStartHtoD  ;
-        auto durationCuptiFromDev  = cuptiStartDtoH > cuptiStopDtoH? 0 : cuptiStopDtoH - cuptiStartDtoH  ;
 #endif 
 
         IterationMeasurement m;
-        m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
-        m.values[UserTime] = durationUser;
-        m.values[KernelTime] = durationKernel;
+        m.values[WallTime] = durationWall;
+        m.values[UserTime] =     std::chrono::duration<double,std::chrono::seconds::period>(durationUser);
+        m.values[KernelTime] =std::chrono::duration<double,std::chrono::seconds::period>( durationKernel);
 #if ROSETTA_PPM_CUDA
-        m.values[AccelTime] = durationCuda / 1000.0;
+        m.values[AccelTime] =  std::chrono::duration<double, std::chrono::milliseconds::period>( durationCuda );
 #endif
 #if ROSETTA_PLATFORM_NVIDIA
-        m.values[Cupti] = durationCupti;
-        m.values[CuptiCompute] = durationCuptiCompute;
-        m.values[CuptiTransferToDevice] = durationCuptiToDev;
-        m.values[CuptiTransferToHost] = durationCuptiFromDev;
+        if (firstEvent <= lastEvent )
+             m.values[Cupti] = std::chrono::duration<uint64_t,std::chrono::nanoseconds::period>( lastEvent -  firstEvent);
+        if (cuptiStartCompute <= cuptiStopCompute )
+            m.values[CuptiCompute] =std::chrono::duration<uint64_t,std::chrono::nanoseconds::period>(  cuptiStopCompute - cuptiStartCompute );
+        if ( cuptiStartHtoD <= cuptiStopHtoD)
+            m.values[CuptiTransferToDevice] = std::chrono::duration<uint64_t,std::chrono::nanoseconds::period>( cuptiStopHtoD - cuptiStartHtoD );
+        if (  cuptiStartDtoH <=  cuptiStopDtoH)
+            m.values[CuptiTransferToHost] =std::chrono::duration<uint64_t,std::chrono::nanoseconds::period>(  cuptiStopDtoH - cuptiStartDtoH);
 #endif 
         measurements.push_back( std::move (m) );
     }
@@ -954,9 +958,105 @@ void Iteration::stop() {
   static RuntimeApiTrace_t trace[LAUNCH_LAST];
 #endif 
 
+
+  static const  char *getUnit(Measure measure) {
+      switch (measure) {
+      case WallTime:
+      case UserTime:
+      case KernelTime:
+          return "s";
+      case OpenMPWTime:
+          return "s";
+      case AccelTime:
+          return "ms";
+      case Cupti:
+      case CuptiCompute:
+      case CuptiTransferToDevice:
+      case CuptiTransferToHost:
+          return "ns";
+      }
+      assert(!"What's the time unit?");
+      return nullptr;
+  }
+
+
+  template <typename... LAMBDAS> struct visitors : LAMBDAS... {
+      using LAMBDAS::operator()...;
+  };
+
+  template <typename... LAMBDAS> visitors(LAMBDAS... x) -> visitors<LAMBDAS...>;
+  template <class... T>
+  constexpr bool always_false = false;
+
+  struct duration_formatter {
+      std::ostringstream& buf;
+
+      template <typename T>
+      typename std::enable_if<std::is_floating_point <T>::value>::type  printNumber(T x) {
+          buf << std::setprecision(std::numeric_limits<double>::digits10 + 1) << x;
+      }
+
+      template <typename T>
+      typename std::enable_if<std::is_integral <T>::value>::type printNumber(T x) {
+          buf << x;
+      }
+
+      template<typename Ratio>
+      void printUnit() {
+      }
+
+      template <typename T,  typename Ratio>
+      void operator() (std::chrono::duration<T,Ratio> v) {
+          printNumber(v.count());
+
+          if   constexpr (std::is_same_v<Ratio, std::chrono::seconds::period >) {
+              buf << " s";
+          }
+          else               if   constexpr (std::is_same_v<Ratio, std::chrono::nanoseconds::period >) {
+              buf << " ns";
+          }          else               if   constexpr (std::is_same_v<Ratio, std::chrono::milliseconds::period >) {
+              buf << " ms";
+          }          else {
+              static_assert(always_false<T>, "Unhandled time unit");
+          }
+      }
+
+      void operator() (std::monostate) {  }
+  } ;
+
+  static std::string formatDuration(duration_t duration) {
+      std::ostringstream buf;
+      if (std::holds_alternative<std::monostate>(duration))
+          return "";       // Should not have been called
+
+      duration_formatter callme{buf};
+
+      std::visit( callme, duration);
+
+#if 0
+      std::visit( 
+          [&buf](auto&& arg) {
+              using T = std::decay_t<decltype(arg)>;
+              if   constexpr (std::is_same_v<T, uint64_t>) {
+                  buf << arg;
+              } else  if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
+                  buf << std::setprecision(std::numeric_limits<T>::digits10 + 1) << arg; 
+              } else  if constexpr (std::is_same_v<T, std::chrono::high_resolution_clock::duration> ) {
+                  buf << arg; 
+              } else if constexpr (std::is_same_v<T, std::monostate>) {
+                  // Should not have been called
+              }  else
+                  static_assert(always_false<T>, "non-exhaustive visitor!");
+          }, duration);
+#endif 
+
+      return buf.str();
+  }
+
 // TODO: make singleton?
 struct Rosetta {
     static constexpr const char* measureDesc[MeasureCount] = {"Wall Clock", "User", "Kernel", "GPU"};
+    static constexpr const char* measureName[MeasureCount] = {"walltime", "usertime", "kerneltime", "acceltime", "openmp","cupti", "cupti_compute", "cupti_todev", "cupti_fromdev" };
 
     static std::string  escape(std::string s) {
         return s; // TODO
@@ -983,17 +1083,31 @@ struct Rosetta {
                     auto &m = executor. measurements[i];
                // for (auto &m :executor. measurements) {
                     // TODO: custom times and units
-                    std::cout << R"(    <iteration walltime=")" << m.values[WallTime] << R"(" usertime=")" << m.values[UserTime] << R"(" kerneltime=")" << m.values[KernelTime]  ;
+                    std::cout << "    <iteration";
+
+                    for (int i = 0; i <= MeasureLast; i+=1) {
+                        auto measure = (Measure)i;
+                        auto &val = m.values[measure];
+                        if (std::holds_alternative<std::monostate>(val)) continue;
+                        std::cout <<' ' << measureName[measure] << "=\"" << formatDuration(m.values[measure]) << '\"';
+                    }
+
+#if 0
+                    std::cout << R"(    <iteration walltime=")" << formatDuration(m.values[WallTime],WallTime) 
+                                           << R"(" usertime=")" << formatDuration(m.values[UserTime] ,UserTime)
+                                         << R"(" kerneltime=")" << formatDuration(m.values[KernelTime], KernelTime)  ;
 #if ROSETTA_PPM_CUDA
-                    std::cout << R"(" acceltime=")" << m.values[AccelTime];
+                    std::cout << R"(" acceltime=")" <<  formatDuration( m.values[AccelTime], AccelTime);
 #endif 
 #if ROSETTA_PLATFORM_NVIDIA
-                    std::cout << R"(" cupti=")" << m.values[Cupti];
-                    std::cout << R"(" cupti_compute=")" << m.values[CuptiCompute];
-                    std::cout << R"(" cupti_todev=")" << m.values[CuptiTransferToDevice];
-                    std::cout << R"(" cupti_fromdev=")" << m.values[CuptiTransferToHost];
+                    std::cout << R"(" cupti=")" << formatDuration(  m.values[Cupti], Cupti);
+                    std::cout << R"(" cupti_compute=")" << formatDuration(m.values[CuptiCompute], Cupti);
+                    std::cout << R"(" cupti_todev=")" <<  formatDuration(m.values[CuptiTransferToDevice], CuptiTransferToDevice);
+                    std::cout << R"(" cupti_fromdev=")" << formatDuration( m.values[CuptiTransferToHost], CuptiTransferToHost) ;
 #endif
+#endif 
                     std::cout << R"("/>)"<<std::endl;  
+
                 }
                 // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
                 std::cout << R"(  </benchmark>)" <<std::endl;
