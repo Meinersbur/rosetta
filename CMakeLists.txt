@@ -243,7 +243,10 @@ elseif (CMAKE_DEFAULT_BUILD_TYPE) # Only Ninja Multi-Config Generator
 elseif ("Release" IN_LIST _build_types)
   set(_default_build_type "Release")
   # By default, Debug is first in CMAKE_CONFIGURATION_TYPES and becomes the implicit default. But we want Release to be the default by default.
-  set(CMAKE_DEFAULT_BUILD_TYPE "Release")
+  # CMake throws an error if setting CMAKE_DEFAULT_BUILD_TYPE and the generator does not support it
+  if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+    set(CMAKE_DEFAULT_BUILD_TYPE "Release")
+  endif ()
 elseif (CMAKE_CONFIGURATION_TYPES)
   list(GET CMAKE_CONFIGURATION_TYPES 0 _default_build_type)
 else ()

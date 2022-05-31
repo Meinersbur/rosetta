@@ -62,6 +62,7 @@ class IterationMeasurement {
     friend class State;
     friend class Rosetta;
     friend class Scope;
+    friend class BenchmarkRun;
 public:
 
 private:
@@ -88,16 +89,8 @@ void stop();
 protected:
   explicit Iteration(State &state) : state(state) {}
 
-// TODO: Get implementation detail out of header file
-  State &state;
-  std::chrono::high_resolution_clock::time_point startWall;
-  double startUser; // in seconds; TODO: use native type
-  double startKernel; // in seconds; TODO: use native type
 
-#if ROSETTA_PPM_CUDA
-cudaEvent_t startCuda;
-cudaEvent_t stopCuda;
-#endif
+  State &state;
 };
 
 
@@ -160,31 +153,29 @@ explicit Range(State &state) : state(state) {}
     State &state;
 };
 
+class BenchmarkRun;
 
 class State {
   template <typename I>
       friend class Iterator;
    friend class Iteration;
    friend class Rosetta;
+   friend class BenchmarkRun;
 public:
      Iterator<AutoIteration>  begin() ;
      Iterator<AutoIteration>  end()   ;
 
 Range manual() { return Range(*this) ; }
 
-
-
 private:
-  State (std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}
+    State (BenchmarkRun *impl) : impl(impl) {}
+ // State (std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}
 
   void start();
   void stop();
   int refresh();
 
-  std::vector<IterationMeasurement> measurements;
-  std::chrono::steady_clock::time_point startTime;
-
-  // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
+  BenchmarkRun *impl;
 };
 
 

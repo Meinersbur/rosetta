@@ -1,4 +1,5 @@
 #include "rosetta.h"
+
 #include <cassert>
 #include <algorithm>
 #include <numeric>
@@ -14,7 +15,9 @@
 
 #ifdef BENCHMARK_OS_WINDOWS
 #define NOMINMAX 1
+#ifndef WIN32_LEAN_AND_MEAN // Already set by cupti
 #define WIN32_LEAN_AND_MEAN 1
+#endif
 #include <shlwapi.h>
 #undef StrCat  // Don't let StrCat in string_util.h be renamed to lstrcatA
 #include <versionhelpers.h>
@@ -362,7 +365,7 @@ getMemcpyKindString(CUpti_ActivityMemcpyKind kind)
   return "<unknown>";
 }
 
-const char *
+static const char *
 getActivityOverheadKindString(CUpti_ActivityOverheadKind kind)
 {
   switch (kind) {
@@ -381,7 +384,7 @@ getActivityOverheadKindString(CUpti_ActivityOverheadKind kind)
   return "<unknown>";
 }
 
-const char *
+static const char *
 getActivityObjectKindString(CUpti_ActivityObjectKind kind)
 {
   switch (kind) {
@@ -402,7 +405,7 @@ getActivityObjectKindString(CUpti_ActivityObjectKind kind)
   return "<unknown>";
 }
 
-uint32_t
+static uint32_t
 getActivityObjectKindId(CUpti_ActivityObjectKind kind, CUpti_ActivityObjectKindId *id)
 {
   switch (kind) {
@@ -596,7 +599,7 @@ printActivity(CUpti_Activity *record)
   }
 }
 
-void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords)
+static void CUPTIAPI bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords)
 {
   uint8_t *bfr = (uint8_t *) malloc(BUF_SIZE + ALIGN_SIZE);
   if (bfr == NULL) {
@@ -690,83 +693,8 @@ using namespace std::chrono;
 
 
 
-void Iteration::start() {
-//printf("start\n");
-
-#if ROSETTA_PPM_CUDA
-// TODO: Don't every time
-    BENCH_CUDA_TRY(cudaEventCreate(&startCuda));
- BENCH_CUDA_TRY(cudaEventCreate(&stopCuda));
-   // TODO:  flush all of L2$ as NVIDIA suggestions in synchronization.h?
-#endif 
-
-    startWall = std::chrono::high_resolution_clock::now();
-   std::tie(startUser, startKernel) = ProcessCPUUsage();
- #if ROSETTA_PPM_CUDA
-  cudaEventRecord(startCuda);
-#endif
-}
 
 
-
-void Iteration::stop() {
-    //TODO: Throw away warmup
-
-#if ROSETTA_PPM_CUDA
-  cudaEventRecord(stopCuda);
-#endif
-
-   auto stopWall = std::chrono::high_resolution_clock::now();
-   auto [stopUser, stopKernel] = ProcessCPUUsage();
-
-#if ROSETTA_PPM_CUDA
-BENCH_CUDA_TRY(cudaEventRecord(stopCuda));
-#endif
-
-   auto durationWall = stopWall-startWall;
-   auto durationUser = stopUser - startUser;
-   auto durationKernel = stopKernel - startKernel;
-#if ROSETTA_PPM_CUDA
-  float durationCuda; // ms
-  BENCH_CUDA_TRY(cudaEventSynchronize(stopCuda));
-  BENCH_CUDA_TRY(cudaEventElapsedTime (&durationCuda, startCuda, stopCuda));
-    BENCH_CUDA_TRY(cudaEventDestroy(startCuda)); 
-    BENCH_CUDA_TRY(cudaEventDestroy(stopCuda));
-#else 
-float  durationCuda = 0;
-#endif
-
-   durationWall = std::max(decltype(durationWall)::zero(), durationWall);
-   durationUser = std::max(0.0, durationUser);
-   durationKernel = std::max(0.0, durationKernel);
-
-   IterationMeasurement m;
-   m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
-   m.values[UserTime] = durationUser;
-   m.values[KernelTime] = durationKernel;
-   m.values[AccelTime] = durationCuda / 1000.0;
-   state.measurements.push_back( std::move (m) );
-}
-
-
-
-
-
-int State::refresh() {
-    auto now = std::chrono::steady_clock::now();
-    auto duration =  now - startTime;
-
-    // TODO: configure, until stability, max/min number iterations, ...
-    if (duration >= 1s) 
-        return 0;
-    if (measurements.size() > 10)
-    return 0;
-
-    int howManyMoreIterations = 1;
-    measurements.reserve(measurements.size() + howManyMoreIterations);
-
-    return howManyMoreIterations;
-}
 
 
 
@@ -783,12 +711,183 @@ __attribute__((weak))
 void run(State& state, int n);
 
 
+
+class BenchmarkRun {
+    friend class Rosetta;
+private:
+    std::vector<IterationMeasurement> measurements;
+    std::chrono::steady_clock::time_point startTime;
+
+    // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
+
+public:
+    void run(const char *program, int n) {       
+        startTime = std::chrono::steady_clock::now();
+        State state{this};
+
+#if ROSETTA_PLATFORM_NVIDIA
+        // TODO: exclude cupti time from startTime
+
+        // subscribe to CUPTI callbacks
+        // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
+
+        //DRIVER_API_CALL(cuInit(0));
+        //CUcontext context = 0;
+        //  CUdevice device = 0;
+        // DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
+
+
+        //CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+        // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
+
+        initTrace();
+#endif 
+
+        // TODO: make flexible, this is just on way to find a run function
+        ::run(state, n);
+
+#if ROSETTA_PLATFORM_NVIDIA
+        // display timestamps collected in the callback
+        // displayTimestamps(trace);
+
+        finiTrace();
+
+        // CUPTI_CALL(cuptiUnsubscribe(subscriber));
+
+        cuptiFinalize();
+#endif
+
+        auto count = measurements.size();
+        double sums[MeasureCount] ;
+        for (int i = 0; i < MeasureCount;  i+=1 ) {
+            double sum = 0;
+            for (auto &m : measurements) {
+                auto val  = m.values[i];
+                sum += val;
+            }
+            sums[i]  = sum;
+        }
+
+     
+    }
+
+    bool started = false;
+    std::chrono::high_resolution_clock::time_point startWall;
+    double startUser; // in seconds; TODO: use native type
+    double startKernel; // in seconds; TODO: use native type
+
+#if ROSETTA_PPM_CUDA
+    cudaEvent_t startCuda;
+    cudaEvent_t stopCuda;
+#endif
+
+
+    void start() {
+        //printf("start\n");
+        assert(!started && "Must not interleave interation scope");
+        started = true;
+
+
+#if ROSETTA_PPM_CUDA
+        // TODO: Don't every time
+        BENCH_CUDA_TRY(cudaEventCreate(&startCuda));
+        BENCH_CUDA_TRY(cudaEventCreate(&stopCuda));
+        // TODO:  flush all of L2$ as NVIDIA suggestions in synchronization.h?
+#endif 
+
+        startWall = std::chrono::high_resolution_clock::now();
+        std::tie(startUser, startKernel) = ProcessCPUUsage();
+#if ROSETTA_PPM_CUDA
+        cudaEventRecord(startCuda);
+#endif
+    }
+
+    void stop() {
+        assert(started && "No iteration active?");
+        started =false;
+
+        //TODO: Throw away warmup
+
+#if ROSETTA_PPM_CUDA
+        cudaEventRecord(stopCuda);
+#endif
+
+        auto stopWall = std::chrono::high_resolution_clock::now();
+        auto [stopUser, stopKernel] = ProcessCPUUsage();
+
+#if ROSETTA_PPM_CUDA
+        BENCH_CUDA_TRY(cudaEventRecord(stopCuda));
+#endif
+
+        auto durationWall = stopWall-startWall;
+        auto durationUser = stopUser - startUser;
+        auto durationKernel = stopKernel - startKernel;
+#if ROSETTA_PPM_CUDA
+        float durationCuda; // ms
+        BENCH_CUDA_TRY(cudaEventSynchronize(stopCuda));
+        BENCH_CUDA_TRY(cudaEventElapsedTime (&durationCuda, startCuda, stopCuda));
+        BENCH_CUDA_TRY(cudaEventDestroy(startCuda)); 
+        BENCH_CUDA_TRY(cudaEventDestroy(stopCuda));
+#else 
+        float  durationCuda = 0;
+#endif
+
+        durationWall = std::max(decltype(durationWall)::zero(), durationWall);
+        durationUser = std::max(0.0, durationUser);
+        durationKernel = std::max(0.0, durationKernel);
+
+        IterationMeasurement m;
+        m.values[WallTime] = std::chrono::duration<double>(durationWall).count();
+        m.values[UserTime] = durationUser;
+        m.values[KernelTime] = durationKernel;
+        m.values[AccelTime] = durationCuda / 1000.0;
+        measurements.push_back( std::move (m) );
+    }
+
+    int refresh() {
+        auto now = std::chrono::steady_clock::now();
+        auto duration =  now - startTime;
+
+        // TODO: configure, until stability, max/min number iterations, ...
+        if (duration >= 1s) 
+            return 0;
+        if (measurements.size() > 10)
+            return 0;
+
+        int howManyMoreIterations = 1;
+        measurements.reserve(measurements.size() + howManyMoreIterations);
+
+        return howManyMoreIterations;
+    }
+};
+
+
+
+int State::refresh() {
+    return    impl->refresh();
+}
+
+
+void Iteration::start() {
+    state.impl->start();
+}
+
+void Iteration::stop() {
+    // TODO: save indirection
+    state.impl->stop();
+}
+
+
+
+
+
+
 #if ROSETTA_PLATFORM_NVIDIA
  static  CUpti_SubscriberHandle subscriber;
   static RuntimeApiTrace_t trace[LAUNCH_LAST];
 #endif 
 
-struct  Rosetta {
+struct Rosetta {
     static constexpr const char* measureDesc[MeasureCount] = {"Wall Clock", "User", "Kernel", "GPU"};
 
     static std::string  escape(std::string s) {
@@ -796,55 +895,13 @@ struct  Rosetta {
     }
 
         static void run(const char *program, int n) {       
-                std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock ::now();
-                State state{startTime};
-
-#if ROSETTA_PLATFORM_NVIDIA
-// TODO: exclude cupti time from startTime
-
-    // subscribe to CUPTI callbacks
-  // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
-
-  //DRIVER_API_CALL(cuInit(0));
- //CUcontext context = 0;
- //  CUdevice device = 0;
- // DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
-
-
-   //CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
-  // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
-
-  initTrace();
-#endif 
-
-::run(state, n);
-
-#if ROSETTA_PLATFORM_NVIDIA
-  // display timestamps collected in the callback
- // displayTimestamps(trace);
-
- finiTrace();
-
- // CUPTI_CALL(cuptiUnsubscribe(subscriber));
-
-cuptiFinalize();
-#endif
-            
-                auto count = state.measurements.size();
-                double sums[MeasureCount] ;
-                for (int i = 0; i < MeasureCount;  i+=1 ) {
-                    double sum = 0;
-                    for (auto &m : state.measurements) {
-                          auto val  = m.values[i];
-                          sum += val;
-                    }
-                    sums[i]  = sum;
-                }
+            BenchmarkRun executor;
+            executor.run(program, n);
 
                 std::cout << R"(<?xml version="1.0"?>)" <<std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
                 std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << R"(">)"<<std::endl;
-                for (auto &m : state.measurements) {
+                for (auto &m :executor. measurements) {
                     // TODO: custom times and units
                     std::cout << R"(    <iteration walltime=")" << m.values[WallTime] << R"(" usertime=")" << m.values[UserTime] << R"(" kerneltime=")" << m.values[KernelTime] << R"(" acceltime=")" << m.values[AccelTime] << R"("/>)"<<std::endl;  
                 }
