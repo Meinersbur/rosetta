@@ -55,30 +55,6 @@ enum Measure {
 constexpr int MeasureCount = MeasureLast+1;
 
 
-// TODO: filter out duplicates
-using duration_t = std::variant<std::monostate,
-    std::chrono::duration<double,std::chrono::seconds::period>,  // lowest common denominator
-    std::chrono::high_resolution_clock::duration, // for wall time
-    std::chrono::duration<double,std::chrono::milliseconds::period>, // Used by CUDA events
-    std::chrono::duration<uint64_t,std::chrono::nanoseconds::period> // Used by cupti
-   >;
-
-
-class IterationMeasurement {
-    friend class Iteration;
-    template <typename I>
-    friend class Iterator;
-    friend class State;
-    friend class Rosetta;
-    friend class Scope;
-    friend class BenchmarkRun;
-public:
-
-private:
-    // TODO: Make extendable (register user measures in addition to predefined ones)
-    duration_t values[MeasureCount] ;
-};
-
 
 
 class Iteration {
