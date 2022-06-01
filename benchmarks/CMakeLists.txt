@@ -1,9 +1,3 @@
-function (append_global_property propname)
-  get_property(propval GLOBAL PROPERTY ${propname})
-  list(APPEND propval ${ARGN})
-  set_property(GLOBAL PROPERTY ${propname} "${propval}")
-endfunction ()
-
 
 
 

@@ -239,6 +239,7 @@ class Table:
 
 
 # Summary statistics
+# Don't trust yet, have to check correctness
 class Statistic:
     studentt_density_95 = list( {
 1: 12.706, # 1
@@ -655,7 +656,17 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
 
+def runner_main():
+    pass
 
+def register_benchmark(path,config,ppm):
+    print("Registered:",path)
+
+def load_register_file(filename):
+    import importlib
+    spec = importlib.util.spec_from_file_location(filename, filename)
+    module =  importlib.util.module_from_spec( spec)
+    spec.loader.exec_module(module)
 
 if __name__ == '__main__':
     retcode = main(argv=sys.argv)
