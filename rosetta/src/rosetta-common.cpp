@@ -1137,7 +1137,7 @@ struct Rosetta {
 
                 std::cout << R"(<?xml version="1.0"?>)" <<std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
-                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << " cold_iterations=\"" << startMeasures <<  R"(">)"<<std::endl;
+                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<  R"(">)"<<std::endl;
                 for (int i = startMeasures; i < numMeasures; i+=1) {
                     auto &m = executor. measurements[i];
                // for (auto &m :executor. measurements) {
@@ -1165,7 +1165,7 @@ struct Rosetta {
                     std::cout << R"(" cupti_fromdev=")" << formatDuration( m.values[CuptiTransferToHost], CuptiTransferToHost) ;
 #endif
 #endif 
-                    std::cout << R"("/>)"<<std::endl;  
+                    std::cout << R"(/>)"<<std::endl;  
 
                 }
                 // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..

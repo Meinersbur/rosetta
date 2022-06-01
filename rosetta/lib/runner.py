@@ -18,6 +18,8 @@ import cwcwidth
 import math
 from collections import defaultdict
 
+from support import mkpath
+
 
 # FIXME: Hack
 colorama.Fore.BWHITE = colorama.ansi.code_to_chars(97)
@@ -516,18 +518,35 @@ class BenchVariants:
 
 
 class BenchResult:
-    def __init__(self,name:str, count:int, wtime , utime ,ktime , acceltime,maxrss):
+    def __init__(self,bench, name:str, count:int, durations, maxrss):
+        self.bench=bench
         self.name=name
         self.count=count
-        self.wtime=wtime
-        self.utime=utime
-        self.ktime=ktime
-        self.acceltime=acceltime
+        #self.wtime=wtime
+        #self.utime=utime
+        #self.ktime=ktime
+        #self.acceltime=acceltime
+        self.durations=durations
         self.maxrss=maxrss
 
 
 
-def run_gbench(exe):
+
+
+def parse_time(s):
+    if s.endswith("ns"):
+        return float(s[:-2]) / 1000000000
+    if s.endswith("us") or s.endswith("µs") :
+        return float(s[:-2]) / 1000000
+    if s.endswith("ms")  :
+        return float(s[:-2]) / 1000
+    if s.endswith("s")  :
+        return float(s[:-1]) 
+    raise Exception("Don't know the duration unit")
+
+def run_gbench(bench):
+    exe = bench.exepath 
+
     start = datetime.datetime.now()
     p = subprocess.Popen([exe],stdout=subprocess.PIPE,universal_newlines=True)
     #print([exe])
@@ -548,14 +567,25 @@ def run_gbench(exe):
     for benchmark in benchmarks:
         name = benchmark.attrib['name']
         n = benchmark.attrib['n']
+        cold_count = benchmark.attrib['cold_iterations']
         count = len( benchmark)
 
-        walltime = statistic( float(b.attrib['walltime']) for b in  benchmark)
-        usertime = statistic ( float(b.attrib['usertime']) for b in  benchmark)
-        kerneltime  = statistic ( float(b.attrib['kerneltime']) for b in  benchmark)
-        acceltime  = statistic ( float(b.attrib['acceltime']) for b in  benchmark)
+        time_per_key = defaultdict(lambda :  [])
+        for b in benchmark :
+            for k, v in b.attrib.items():
+                time_per_key[k] .append(parse_time(v))
 
-        yield BenchResult(name=name, count=count,wtime=walltime,utime=usertime,ktime=kerneltime,acceltime=acceltime, maxrss=maxrss) 
+        stat_per_key = {}
+        for k,data in time_per_key.items():
+            stat_per_key[k] = statistic(data)
+
+
+        #walltime = statistic(float(b.attrib['walltime']) for b in  benchmark)
+        #usertime = statistic (float(b.attrib['usertime']) for b in  benchmark)
+        #kerneltime  = statistic (float(b.attrib['kerneltime']) for b in  benchmark)
+        #acceltime  = statistic (float(b.attrib['acceltime']) for b in  benchmark)
+
+        yield BenchResult(bench=bench, name=name, count=count,durations=stat_per_key, maxrss=maxrss) 
         
 
 
@@ -568,27 +598,28 @@ def align_decimal(s):
 
 
 
-def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp_target=[]):
+def getMeasureDisplayStr(s:str):
+   return  {'walltime': "Wall", 'usertime': "User", 'kerneltime': "Kernel", 
+   'acceltime': "CUDA Event", 
+   'cupti': "nvprof", 'cupti_compute': "nvprof Kernel", 'cupti_todev': "nvprof H->D", 'cupti_fromdev': "nvprof D->H"}.get(s, s)
+
+
+def runner_main():
     results = []
-    for e in serial:
-        results += list(run_gbench(exe=e))
+    for e in benchmarks:
+        results += list(run_gbench(e))
 
-    for e in cuda:
-        results += list(run_gbench(exe=e))
+    stats_per_key = defaultdict(lambda :  [])
+    for r in results:
+        for k,stat in r.durations.items():
+            stats_per_key[k] .append(stat)
 
-    for e in omp_parallel:
-        results += list(run_gbench(exe=e))
+    summary_per_key = {} # mean of means
+    for k,data in stats_per_key.items():
+        summary_per_key[k] = statistic(  d.mean for d in data)
 
-    for e in omp_task:
-        results += list(run_gbench(exe=e))
 
-    for e in omp_target:
-        results += list(run_gbench(exe=e))
 
-    walltime_stat = statistic(r.wtime.mean for r in results)
-    usertime_stat = statistic(r.utime.mean for r in results)
-    kerneltime_stat = statistic(r.ktime.mean for r in results)
-    acceltime_stat = statistic(r.acceltime.mean for r in results)
 
     table = Table()
     def path_formatter(v:pathlib.Path):
@@ -630,18 +661,47 @@ def run_benchs(config:str=None,serial=[],cuda=[],omp_parallel=[],omp_task=[],omp
         return formatter
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
-    table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter) 
-    table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
-    table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(usertime_stat.minimum,usertime_stat.maximum))
-    table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
-    table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(acceltime_stat.minimum,acceltime_stat.maximum))
+    table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
+    for k,summary in summary_per_key.items():
+        table.add_column(k, title=StrColor( getMeasureDisplayStr(k), colorama.Style.BRIGHT),formatter=duration_formatter(summary.minimum,summary.maximum))
+    #table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
+    #table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(usertime_stat.minimum,usertime_stat.maximum))
+    #table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
+    #table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(acceltime_stat.minimum,acceltime_stat.maximum))
     
     for r in results:
         # TODO: acceltime doesn't always apply
-        table.add_row(program=r.name,n=r.count,wtime=r.wtime,utime=r.utime,ktime=r.ktime,acceltime=r.acceltime)
+        table.add_row(program=r.bench.target,n=r.count,**r.durations)
 
     
     table.print()
+
+
+class Benchmark:
+    def __init__(self,target,exepath,config,ppm):
+        self.target=target
+        self.exepath =exepath 
+        self.config=config
+        self.ppm = ppm
+
+
+benchmarks =[]
+def register_benchmark(target,exepath,config,ppm):
+    bench = Benchmark(target,exepath=mkpath( exepath), config=config,ppm=ppm)
+    benchmarks.append(bench)
+
+
+
+
+
+def load_register_file(filename):
+    import importlib
+    spec = importlib.util.spec_from_file_location(filename, filename)
+    module =  importlib.util.module_from_spec( spec)
+    spec.loader.exec_module(module)
+
+
+
 
 
 
@@ -656,19 +716,16 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
 
-def runner_main():
-    pass
 
-def register_benchmark(path,config,ppm):
-    print("Registered:",path)
 
-def load_register_file(filename):
-    import importlib
-    spec = importlib.util.spec_from_file_location(filename, filename)
-    module =  importlib.util.module_from_spec( spec)
-    spec.loader.exec_module(module)
+
+
+
 
 if __name__ == '__main__':
     retcode = main(argv=sys.argv)
     if retcode:
         exit(retcode)
+
+
+
