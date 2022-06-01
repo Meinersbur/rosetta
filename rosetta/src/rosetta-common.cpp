@@ -76,25 +76,64 @@ int InitializeStreams() {
 }
 }
 
-namespace {
 #if defined(BENCHMARK_OS_WINDOWS)
-   std::pair<  double,double> MakeTime(FILETIME const& kernel_time, FILETIME const& user_time) {
+using usage_duration_t =  std::chrono::duration<ULONGLONG, std::ratio_multiply<std::chrono::nanoseconds::period,  std::ratio <100,1 >>> ;
+#else 
+using usage_duration_t =  std::chrono::microseconds;
+#endif 
+
+
+
+// TODO: filter out duplicates
+// TODO: make extendable
+using duration_t = std::variant<std::monostate,
+    std::chrono::duration<double,std::chrono::seconds::period>,  // lowest common denominator
+    std::chrono::high_resolution_clock::duration, // for wall time
+    usage_duration_t , // for user/kernel time
+    std::chrono::duration<double,std::chrono::milliseconds::period>, // Used by CUDA events
+    std::chrono::duration<uint64_t,std::chrono::nanoseconds::period> // Used by cupti
+>;
+
+
+
+
+
+namespace {
+#if defined(CLOCK_PROCESS_CPUTIME_ID) || defined(CLOCK_THREAD_CPUTIME_ID)
+    static
+        std::chrono::nanoseconds MakeTime(struct timespec const& ts) {
+        return   std::chrono::seconds(ts.tv_sec)  + std::chrono::nanoseconds( ts.tv_nsec );
+        //   return ts.tv_sec + (static_cast<double>(ts.tv_nsec) * 1e-9);
+    }
+#endif
+
+#if defined(BENCHMARK_OS_WINDOWS)
+    static
+   std::pair<usage_duration_t, usage_duration_t > MakeTime(FILETIME const& kernel_time, FILETIME const& user_time) {
         ULARGE_INTEGER kernel;
         ULARGE_INTEGER user;
         kernel.HighPart = kernel_time.dwHighDateTime;
         kernel.LowPart = kernel_time.dwLowDateTime;
         user.HighPart = user_time.dwHighDateTime;
         user.LowPart = user_time.dwLowDateTime;
-        return {user.QuadPart* 1e-7, kernel.QuadPart* 1e-7};
-          //  (static_cast<double>(kernel.QuadPart) +  static_cast<double>(user.QuadPart)) * 1e-7;
+        return {  usage_duration_t (user.QuadPart), usage_duration_t(kernel.QuadPart )};
     }
 #elif !defined(BENCHMARK_OS_FUCHSIA)
-    std::pair<  double,double>  MakeTime(struct rusage const& ru) {
-        return { static_cast<double>(ru.ru_utime.tv_sec) + static_cast<double>(ru.ru_utime.tv_usec) * 1e-6, static_cast<double>(ru.ru_stime.tv_sec) + static_cast<double>(ru.ru_stime.tv_usec) * 1e-6 };
+    static
+        std::chrono::microseconds  MakeTime(struct timeval const& tv) {
+        return std::chrono::seconds (tv.tv_sec)  +  std::chrono::microseconds (tv.tv_usec );
+        //   return ts.tv_sec + (static_cast<double>(ts.tv_nsec) * 1e-9);
+    }
+
+    static
+    std::pair<  usage_duration_t,usage_duration_t>  MakeTime(struct rusage const& ru) {
+        return  { MakeTime(ru.ru_utime),MakeTime(ru.ru_stime) };
+  //      return { static_cast<double>(ru.ru_utime.tv_sec) + static_cast<double>(ru.ru_utime.tv_usec) * 1e-6, static_cast<double>(ru.ru_stime.tv_sec) + static_cast<double>(ru.ru_stime.tv_usec) * 1e-6 };
       //  return (static_cast<double>(ru.ru_utime.tv_sec) +  static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 + static_cast<double>(ru.ru_stime.tv_sec) + static_cast<double>(ru.ru_stime.tv_usec) * 1e-6);
     }
 #endif
 #if defined(BENCHMARK_OS_MACOSX)
+    static
     double MakeTime(thread_basic_info_data_t const& info) {
         return (static_cast<double>(info.user_time.seconds) +
             static_cast<double>(info.user_time.microseconds) * 1e-6 +
@@ -102,11 +141,7 @@ namespace {
             static_cast<double>(info.system_time.microseconds) * 1e-6);
     }
 #endif
-#if defined(CLOCK_PROCESS_CPUTIME_ID) || defined(CLOCK_THREAD_CPUTIME_ID)
-    double MakeTime(struct timespec const& ts) {
-        return ts.tv_sec + (static_cast<double>(ts.tv_nsec) * 1e-9);
-    }
-#endif
+
 
     BENCHMARK_NORETURN static void DiagnoseAndExit(const char* msg) {
         std::cerr << "ERROR: " << msg << std::endl;
@@ -115,15 +150,14 @@ namespace {
 
 }  // end namespace
 
-std::pair<double,double> ProcessCPUUsage() {
+std::pair<usage_duration_t,usage_duration_t> ProcessCPUUsage() {
 #if defined(BENCHMARK_OS_WINDOWS)
     HANDLE proc = GetCurrentProcess();
     FILETIME creation_time;
     FILETIME exit_time;
     FILETIME kernel_time;
     FILETIME user_time;
-    if (GetProcessTimes(proc, &creation_time, &exit_time, &kernel_time,
-        &user_time))
+    if (GetProcessTimes(proc, &creation_time, &exit_time, &kernel_time, &user_time))
         return MakeTime(kernel_time, user_time);
     DiagnoseAndExit("GetProccessTimes() failed");
 #elif defined(BENCHMARK_OS_EMSCRIPTEN)
@@ -646,6 +680,22 @@ void run(State& state, int n);
 
 
 
+class IterationMeasurement {
+    friend class Iteration;
+    template <typename I>
+    friend class Iterator;
+    friend class State;
+    friend class Rosetta;
+    friend class Scope;
+    friend class BenchmarkRun;
+public:
+
+private:
+    // TODO: Make extendable (register user measures in addition to predefined ones)
+    duration_t values[MeasureCount] ;
+};
+
+
 class BenchmarkRun {
     friend class Rosetta;
 private:
@@ -747,8 +797,8 @@ public:
     // TODO: Per-iteration data in separate object?
     bool started = false;
     std::chrono::high_resolution_clock::time_point startWall;
-    double startUser; // in seconds; TODO: use native type
-    double startKernel; // in seconds; TODO: use native type
+    usage_duration_t startUser; // in seconds; TODO: use native type
+    usage_duration_t startKernel; // in seconds; TODO: use native type
 
 #if ROSETTA_PPM_CUDA
     cudaEvent_t startCuda;
@@ -823,8 +873,8 @@ public:
 #endif
 
         durationWall = std::max(decltype(durationWall)::zero(), durationWall);
-        durationUser = std::max(0.0, durationUser);
-        durationKernel = std::max(0.0, durationKernel);
+        //durationUser = std::max(0.0, durationUser);
+        //durationKernel = std::max(0.0, durationKernel);
 
 #if ROSETTA_PLATFORM_NVIDIA
         CUPTI_CALL(cuptiActivityFlushAll(1));
@@ -1009,20 +1059,29 @@ void Iteration::stop() {
       void operator() (std::chrono::duration<T,Ratio> v) {
           printNumber(v.count());
 
-          if   constexpr (std::is_same_v<Ratio, std::chrono::seconds::period >) {
+          if constexpr (std::is_same_v<Ratio, std::chrono::seconds::period >) {
               buf << " s";
           }
-          else               if   constexpr (std::is_same_v<Ratio, std::chrono::nanoseconds::period >) {
+          else if   constexpr (std::is_same_v<Ratio, std::chrono::nanoseconds::period >) {
               buf << " ns";
-          }          else               if   constexpr (std::is_same_v<Ratio, std::chrono::milliseconds::period >) {
+          } else if   constexpr (std::is_same_v<Ratio, std::chrono::milliseconds::period >) {
               buf << " ms";
-          }          else {
+          } else {
               static_assert(always_false<T>, "Unhandled time unit");
           }
       }
 
+      template <typename T>
+      void operator() (std::chrono::duration<T, usage_duration_t::period> v) {
+          // fallback to nanoseconds
+          return this->operator()( std::chrono::duration_cast<std::chrono::nanoseconds>(v)   );
+      }
+
+
       void operator() (std::monostate) {  }
   } ;
+
+
 
   static std::string formatDuration(duration_t duration) {
       std::ostringstream buf;
@@ -1056,7 +1115,7 @@ void Iteration::stop() {
 // TODO: make singleton?
 struct Rosetta {
     static constexpr const char* measureDesc[MeasureCount] = {"Wall Clock", "User", "Kernel", "GPU"};
-    static constexpr const char* measureName[MeasureCount] = {"walltime", "usertime", "kerneltime", "acceltime", "openmp","cupti", "cupti_compute", "cupti_todev", "cupti_fromdev" };
+    static constexpr const char* measureName[MeasureCount] = {"walltime", "usertime", "kerneltime", "openmp","acceltime", "cupti", "cupti_compute", "cupti_todev", "cupti_fromdev" };
 
     static std::string  escape(std::string s) {
         return s; // TODO
@@ -1078,7 +1137,7 @@ struct Rosetta {
 
                 std::cout << R"(<?xml version="1.0"?>)" <<std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
-                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << R"(">)"<<std::endl;
+                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << " cold_iterations=\"" << startMeasures <<  R"(">)"<<std::endl;
                 for (int i = startMeasures; i < numMeasures; i+=1) {
                     auto &m = executor. measurements[i];
                // for (auto &m :executor. measurements) {
