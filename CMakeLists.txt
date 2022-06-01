@@ -290,7 +290,7 @@ function (enable_ppm name shortname displayname)
 
   set(_benchmarks_run)
   foreach (_target IN LISTS _arg_TARGETS)
-    list(APPEND _benchmarks_run "register_benchmark('${target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}')")
+    list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}')")
   endforeach ()
   list(JOIN _benchmarks_run "\n" _benchmarks_pylist)
 
