@@ -2,9 +2,9 @@
 
 
 
-static void kernel(int n, double *B, double *A) {
+static void kernel(int n, double *A) {
     for (int i = 0; i < n; i += 1)
-        B[i] = 42 + A[i];
+        A[i] += 42;
 }
 
 void run(State& state, int n) {
@@ -12,23 +12,14 @@ void run(State& state, int n) {
     if (n < 0)
         n = (DEFAULT_N);
 
-    double *A = new double[n];
-    double *B = new double[n];
+    double *A = state.malloc<double>(n);
 
-    for (auto &&_ : state.manual()) {
 
-        {
-            auto &&Scope = _.scope();
-            kernel(n, B, A);
-        }
-
-        
-
-        benchmark::ClobberMemory();
+    for (auto &&_ : state) {
+            kernel(n, A);
     }
 
-    delete[] A;
-    delete[] B;
+    state.free(A);
 }
 
 

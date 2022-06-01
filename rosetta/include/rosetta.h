@@ -152,6 +152,14 @@ public:
 
 Range manual() { return Range(*this) ; }
 
+template<typename T>
+T* malloc (size_t count) {
+  return new T[count];
+}
+
+template<typename T>
+void free (T *ptr) { delete [] ptr; }
+
 private:
     State (BenchmarkRun *impl) : impl(impl) {}
  // State (std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}

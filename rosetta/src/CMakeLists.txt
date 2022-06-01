@@ -1,8 +1,8 @@
 
 function(enable_platform_nvidia target)
-if (NOT ROSETTA_PLATFORM_NVIDIA)
-  return ()
-endif ()
+  if (NOT ROSETTA_PLATFORM_NVIDIA)
+    return ()
+  endif ()
 
   target_sources("${target}" PRIVATE rosetta-nvidia.cpp)
   target_compile_definitions("${target}" PUBLIC ROSETTA_PLATFORM_NVIDIA=1)
@@ -15,18 +15,29 @@ endfunction()
 
 
 if (ROSETTA_PPM_SERIAL)
-  add_library(rosetta-serial
+  add_library(rosetta-serial-bench
     rosetta-serial.cpp
     rosetta-common.cpp
     )
-  target_compile_definitions(rosetta-serial PUBLIC ROSETTA_SERIAL=1)
-  target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  #target_link_libraries(rosetta-serial PUBLIC benchmark::benchmark)
-
+  target_compile_definitions(rosetta-serial-bench PUBLIC ROSETTA_SERIAL=1 ROSETTA_BENCH=1)
+  target_include_directories(rosetta-serial-bench PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
 
   if (ROSETTA_NO_EXCEPTIONS)
     # TODO: Introspection
-    target_compile_options(rosetta-serial PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
+    target_compile_options(rosetta-serial-bench PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
+  endif ()
+
+  # TODO: un-duplicate
+  add_library(rosetta-serial-verify
+    rosetta-serial.cpp
+    rosetta-common.cpp
+    )
+  target_compile_definitions(rosetta-serial-verify PUBLIC ROSETTA_SERIAL=1 ROSETTA_VERIFY=1)
+  target_include_directories(rosetta-serial-verify PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
+
+  if (ROSETTA_NO_EXCEPTIONS)
+    # TODO: Introspection
+    target_compile_options(rosetta-serial-verify PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
   endif ()
 endif ()
 

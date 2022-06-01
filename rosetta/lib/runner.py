@@ -604,6 +604,10 @@ def getMeasureDisplayStr(s:str):
    'cupti': "nvprof", 'cupti_compute': "nvprof Kernel", 'cupti_todev': "nvprof H->D", 'cupti_fromdev': "nvprof D->H"}.get(s, s)
 
 
+def getPPMDisplayStr(s:str):
+    return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel", 'omp_task' : "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s,s)
+
+
 def runner_main():
     results = []
     for e in benchmarks:
@@ -629,6 +633,8 @@ def runner_main():
     def count_formatter(v:int):
         s = str(v)
         return StrAlign( StrColor(str(v),colorama.Fore.BLUE), printlength(s))
+    def ppm_formatter(s:str):
+        return getPPMDisplayStr(s)
     def duration_formatter(best,worst):
         def formatter(s: Statistic):
             if s is None:
@@ -661,6 +667,8 @@ def runner_main():
         return formatter
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
+    table.add_column('ppm', title="PPM",formatter=ppm_formatter)
+    table.add_column('config', title="Config")
     table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
     for k,summary in summary_per_key.items():
         table.add_column(k, title=StrColor( getMeasureDisplayStr(k), colorama.Style.BRIGHT),formatter=duration_formatter(summary.minimum,summary.maximum))
@@ -671,7 +679,7 @@ def runner_main():
     
     for r in results:
         # TODO: acceltime doesn't always apply
-        table.add_row(program=r.bench.target,n=r.count,**r.durations)
+        table.add_row(program=r.bench.target , ppm=r.bench.ppm, config=r.bench.config, n=r.count,**r.durations)
 
     
     table.print()
@@ -683,6 +691,7 @@ class Benchmark:
         self.exepath =exepath 
         self.config=config
         self.ppm = ppm
+
 
 
 benchmarks =[]
