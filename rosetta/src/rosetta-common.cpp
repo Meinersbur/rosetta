@@ -843,14 +843,19 @@ public:
     }
 
     void stop() {
+        benchmark::ClobberMemory(); // even necessary?
         assert(started && "No iteration active?");
      
 
-        //TODO: Throw away warmup
+#if ROSETTA_PPM_CUDA || ROSETTA_PLATFORM_NVIDIA
+        BENCH_CUDA_TRY(cudaDeviceSynchronize());
+#endif 
 
 #if ROSETTA_PPM_CUDA
-        cudaEventRecord(stopCuda);
+            BENCH_CUDA_TRY( cudaEventRecord(stopCuda));
 #endif
+
+
 
         auto stopWall = std::chrono::high_resolution_clock::now();
         auto [stopUser, stopKernel] = ProcessCPUUsage();
@@ -879,6 +884,7 @@ public:
 #if ROSETTA_PLATFORM_NVIDIA
         CUPTI_CALL(cuptiActivityFlushAll(1));
 #endif 
+
         started =false;
 
 #if ROSETTA_PLATFORM_NVIDIA

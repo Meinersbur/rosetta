@@ -1,22 +1,36 @@
 
 
 
+
 function (add_benchmark_serial basename)
   if (NOT ROSETTA_PPM_SERIAL)
     return ()
   endif ()
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
 
-  set(_target "${basename}.serial")
+  set(_target "${basename}.serial.bench")
   set(_sources "${basename}.cpp")
   add_executable("${_target}" ${_sources} ${_arg_SOURCES})
   if (_arg_DEFAULT_N)
     target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
   endif ()
-  target_link_libraries("${_target}" PRIVATE rosetta-serial)
+  target_link_libraries("${_target}" PRIVATE rosetta-serial-bench)
   add_dependencies(build-serial "${_target}")
 
   append_global_property(benchmarks_serial "${_target}")
+
+
+  # TODO: unduplicate
+  set(_target "${basename}.serial.verify")
+  set(_sources "${basename}.cpp")
+  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
+  if (_arg_DEFAULT_N)
+    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+  endif ()
+  target_link_libraries("${_target}" PRIVATE rosetta-serial-verify)
+  add_dependencies(build-serial "${_target}")  # TODO: separate target for verifications
+
+  append_global_property(verifications_serial "${_target}")
 endfunction ()
 
 
