@@ -12,6 +12,13 @@ include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 
 
+function (append_global_property propname)
+  get_property(propval GLOBAL PROPERTY ${propname})
+  list(APPEND propval ${ARGN})
+  set_property(GLOBAL PROPERTY ${propname} "${propval}")
+endfunction ()
+
+
 
 ## Dependencies ################################################################
 
@@ -259,16 +266,7 @@ message("__default_build_type: ${_default_build_type}")
 
 
 
-# TODO: allow use as config file; run only with __name__ = '__main__'
-set(_benchmarks)
-set(_benchmarks_run "#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
 
-import sys
-sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-from rosetta import run_benchs
-
-")
 
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
@@ -286,24 +284,32 @@ set(_benchmarks_run_arglist)
 
 
 function (enable_ppm name shortname displayname)
-  cmake_parse_arguments(_arg "" "" "TARGETS"  ${ARGN} )
+  cmake_parse_arguments(_arg "" "" "TARGETS"  ${ARGN})
 
-  #string(REPLACE "-" "_" pythonized_name "${name}")
+  append_global_property(enabled_ppms "${name}")
 
   set(_benchmarks_run)
   foreach (_target IN LISTS _arg_TARGETS)
-    list(APPEND _benchmarks_run "\"$<TARGET_FILE:${_target}>\"")
+    list(APPEND _benchmarks_run "register_benchmark(path='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}')")
   endforeach ()
-  list(JOIN _benchmarks_run ",\n  " _benchmarks_pylist)
-  set(_benchmarks_pylist "${shortname}=[\n  ${_benchmarks_pylist}]")
-
-  # Add to list that runs all benchmarks
-  list(APPEND _benchmarks_run_arglist "${_benchmarks_pylist}")
-  set(_benchmarks_run_arglist "${_benchmarks_run_arglist}" PARENT_SCOPE)
+  list(JOIN _benchmarks_run "\n" _benchmarks_pylist)
 
   file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-${name}-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}\nrun_benchs(config='$<CONFIG>',${_benchmarks_pylist})"
+    CONTENT "#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+if __name__ == '__main__':
+  import sys
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+from rosetta import register_benchmark, runner_main
+
+${_benchmarks_pylist}
+s = 'Hello world!'
+
+if __name__ == '__main__':
+  runner_main()
+"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 
@@ -345,11 +351,30 @@ endif ()
 
 
 
+get_property(enabled_ppms GLOBAL PROPERTY enabled_ppms)
+
+set(_ppms_pylist)
+foreach (_name IN LISTS enabled_ppms)
+  list(APPEND _ppms_pylist "load_register_file('run-${_name}-$<CONFIG>.py')")
+endforeach ()
+list(JOIN _ppms_pylist "\n" _ppms_pylist)
 
 list(JOIN _benchmarks_run_arglist ",\n  " _benchmarks_run_pyarglist)
 file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
-    CONTENT "${_benchmarks_run}\nrun_benchs(config='$<CONFIG>',${_benchmarks_run_pyarglist})"
+    CONTENT "#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+    
+if __name__ == '__main__':
+  import sys
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+
+from rosetta import runner_main,load_register_file
+${_ppms_pylist}
+
+if __name__ == '__main__':
+  runner_main()
+"
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 
@@ -357,7 +382,7 @@ file(GENERATE
 
 foreach (_conftype IN LISTS _build_types)
   add_custom_target(run-${_conftype}
-    DEPENDS gbench
+    DEPENDS ${_benchmarks}
     COMMAND  Python::Interpreter "run-${_conftype}.py"
     COMMENT "Run benchmarks for ${_conftype} ..."
     USES_TERMINAL VERBATIM
