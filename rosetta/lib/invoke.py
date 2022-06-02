@@ -31,6 +31,8 @@ class Invoke:
             return []
         if isinstance(arg, str):  # A filename
             return [arg]
+        if isinstance(arg,pathlib.PurePath):
+            return[str(arg)]
         return list(arg)
 
 

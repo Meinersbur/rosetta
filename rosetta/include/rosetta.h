@@ -156,6 +156,8 @@ protected:
     BenchmarkRun *impl;
 };
 
+
+
 template <>
 class DataHandler<double> :  public DataHandlerBase {
     friend class State;
@@ -179,6 +181,7 @@ public:
 
 Range manual() { return Range(*this) ; }
 
+
 // TODO: return some smart ptr, we are C++ after all
 template<typename T>
 T* malloc(size_t count) {
@@ -187,15 +190,21 @@ T* malloc(size_t count) {
   return result;
 }
 
+
+
 template<typename T>
 void fakedata(T *data, size_t count) {
     DataHandler<T>(impl).fake(data,count);
-
 }
+
 
 template<typename T>
 void verifydata(T* data, size_t count) {
+#if ROSETTA_VERIFY
     DataHandler<T>(impl).verify(data,count);
+#else
+    // Don't do anything in benchmark mode
+#endif 
 }
 
 template<typename T>

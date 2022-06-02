@@ -16,9 +16,13 @@ import xml.etree.ElementTree as et
 import colorama  
 import cwcwidth
 import math
+import tqdm # progress meter
+import argparse
 from collections import defaultdict
-
 from support import mkpath
+import invoke
+import io
+
 
 
 # FIXME: Hack
@@ -53,6 +57,7 @@ class StrConcat: # Rename: Twine
 
     def consolestr(self):
         return ''.join(consolestr(a ) for a in self.args)
+
 
 
 class StrColor:
@@ -531,8 +536,6 @@ class BenchResult:
 
 
 
-
-
 def parse_time(s):
     if s.endswith("ns"):
         return float(s[:-2]) / 1000000000
@@ -543,6 +546,7 @@ def parse_time(s):
     if s.endswith("s")  :
         return float(s[:-1]) 
     raise Exception("Don't know the duration unit")
+
 
 def run_gbench(bench):
     exe = bench.exepath 
@@ -609,6 +613,30 @@ def getPPMDisplayStr(s:str):
 
 
 def runner_main():
+    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
+    parser.add_argument('--verify',  action='store_true',  help="Write reference output file")
+    parser.add_argument('--bench',  action='store_true',  help="Run benchmark")
+    args = parser.parse_args(sys.argv[1:])
+
+    if args.verify:
+        for e in verifications:
+            exepath = e.exepath
+            refpath = e.refpath
+            #print(f"{exepath=}")
+
+            p = invoke.call(exepath, return_stdout=True)
+            data = p.stdout 
+            #print(f"{data=}")
+
+            with refpath.open() as f:
+                refdata = f.read()
+                if refdata != data:
+                    print(f"Output different from reference for {e.target}")
+                    exit (1)
+        return 
+
+
+
     results = []
     for e in benchmarks:
         results += list(run_gbench(e))
@@ -692,13 +720,27 @@ class Benchmark:
         self.config=config
         self.ppm = ppm
 
+class Verification:
+    def __init__(self,target,exepath,refpath,config,ppm):
+        self.target=target
+        self.exepath =exepath 
+        self.refpath=refpath 
+        self.config=config
+        self.ppm = ppm
+
+
 
 
 benchmarks =[]
 def register_benchmark(target,exepath,config,ppm):
-    bench = Benchmark(target,exepath=mkpath( exepath), config=config,ppm=ppm)
+    bench = Benchmark(target,exepath=mkpath(exepath), config=config,ppm=ppm)
     benchmarks.append(bench)
 
+
+verifications=[]
+def register_verification(target,exepath,refpath,config,ppm):
+    verifier = Verification(target,exepath=mkpath(exepath), refpath=mkpath(refpath), config=config,ppm=ppm)
+    verifications.append(verifier)
 
 
 
@@ -712,17 +754,20 @@ def load_register_file(filename):
 
 
 
+def gen_reference(exepath,refpath):
+    #print(f"{exepath=} {refpath=}")
+    invoke.call(exepath, stdout=refpath,print_stderr=True)
+
 
 
 def main(argv):
     colorama.init()
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    #parser.add_argument('--exe',    action='append', default=[], type=pathlib.Path,  help="Google Benchmark Executable")
-    #parser.add_argument('--exedir', action='append', default=[], type=pathlib.Path, help="Google Benchmark Executable")
-    #parser.add_argument('gbenchexe',nargs='+', help="Google Benchmark Executables")
-    parser.add_argument('--serial', action='append', default=[], help="Google Benchmark Executables")
-    parser.add_argument('--cuda', action='append', default=[], help="Google Benchmark Executables")
+    parser.add_argument('--gen-reference', nargs=2, type=pathlib.Path,  help="Write reference output file")
     args = parser.parse_args(argv[1:])
+
+    if args.gen_reference:
+        gen_reference(*args.gen_reference)
 
 
 

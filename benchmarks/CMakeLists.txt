@@ -1,7 +1,6 @@
 
 
 
-
 function (add_benchmark_serial basename)
   if (NOT ROSETTA_PPM_SERIAL)
     return ()
@@ -10,28 +9,71 @@ function (add_benchmark_serial basename)
 
   set(_target "${basename}.serial.bench")
   set(_sources "${basename}.cpp")
-  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
+  add_executable(${_target} ${_sources} ${_arg_SOURCES})
   if (_arg_DEFAULT_N)
     target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
   endif ()
-  target_link_libraries("${_target}" PRIVATE rosetta-serial-bench)
+  target_link_libraries(${_target} PRIVATE rosetta-serial-bench)
   add_dependencies(build-serial "${_target}")
 
+   # TODO: set_property(GLOBAL APPEND benchmarks_serial "${_target}")
   append_global_property(benchmarks_serial "${_target}")
 
 
   # TODO: unduplicate
-  set(_target "${basename}.serial.verify")
-  set(_sources "${basename}.cpp")
-  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
+  set(_verify_target "${basename}.serial.verify")
+  add_executable("${_verify_target}" ${_sources} ${_arg_SOURCES})
   if (_arg_DEFAULT_N)
-    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+    target_compile_definitions(${_verify_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
   endif ()
-  target_link_libraries("${_target}" PRIVATE rosetta-serial-verify)
-  add_dependencies(build-serial "${_target}")  # TODO: separate target for verifications
+  target_link_libraries(${_verify_target} PRIVATE rosetta-serial-verify)
+  add_dependencies(build-serial-verify "${_verify_target}")  # TODO: separate target for verifications
 
-  append_global_property(verifications_serial "${_target}")
+  append_global_property(verifications_serial "${_verify_target}")
+
+  if (CMAKE_BUILD_TYPE)
+    set(_reference "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.reference")
+  else ()
+    set(_reference "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.$<CONFIG>.reference")
+  endif ()
+ #message("_reference ${_reference}")
+
+  add_custom_command(
+    OUTPUT "${_reference}"
+    DEPENDS ${_verify_target}
+    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--gen-reference" "$<TARGET_FILE:${_verify_target}>" "${_reference}"
+    COMMENT "Generate ${basename} reference output ..."
+  )
+  add_custom_target("reference-${basename}"
+    DEPENDS "${_reference}"
+  )
+  set_property(TARGET ${_verify_target}    
+    PROPERTY REFERENCE_FILE "${_reference}"
+  )
+ 
+  append_global_property(references_serial "${_reference}")
+
+  set_property(TARGET ${_target}    
+    PROPERTY VERIFY_TARGET "${_verify_target}"
+  )
+  set_property(TARGET ${_target}    
+    PROPERTY VERIFY_FILE "$<TARGET_FILE:${_verify_target}>"
+  )
+  set_property(TARGET ${_target}    
+    PROPERTY REFERENCE_FILE "${_reference}"
+  )
 endfunction ()
+
+
+
+
+
+
+
+
+
+
+
 
 
 
