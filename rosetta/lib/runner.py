@@ -631,6 +631,7 @@ def runner_main():
             with refpath.open() as f:
                 refdata = f.read()
                 if refdata != data:
+                    # TODO: allow floating-point differences
                     print(f"Output different from reference for {e.target}")
                     exit (1)
         return 
