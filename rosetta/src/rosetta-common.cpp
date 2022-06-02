@@ -1188,7 +1188,7 @@ struct Rosetta {
             }
 
 
-            currentRun ->handleCuptiActivity(record);
+            currentRun->handleCuptiActivity(record);
         }
 #endif 
 };

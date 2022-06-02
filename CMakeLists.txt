@@ -12,11 +12,44 @@ include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 
 
+# TODO: use set_property(GLOBAL APPEND benchmarks_serial "${_target}")
 function (append_global_property propname)
   get_property(propval GLOBAL PROPERTY ${propname})
   list(APPEND propval ${ARGN})
   set_property(GLOBAL PROPERTY ${propname} "${propval}")
 endfunction ()
+
+
+if (CMAKE_CONFIGURATION_TYPES)
+  set(_build_types ${CMAKE_CONFIGURATION_TYPES})
+elseif (CMAKE_BUILD_TYPE)
+  set(_build_types "${CMAKE_BUILD_TYPE}")
+else ()
+  message(FATAL_ERROR "Cannot determine the build types")
+endif ()
+
+
+if (CMAKE_BUILD_TYPE)
+  set(_default_build_type "${CMAKE_BUILD_TYPE}")
+elseif (CMAKE_DEFAULT_BUILD_TYPE) # Only Ninja Multi-Config Generator
+  set(_default_build_type "${CMAKE_DEFAULT_BUILD_TYPE}")
+elseif ("Release" IN_LIST _build_types)
+  set(_default_build_type "Release")
+  # By default, Debug is first in CMAKE_CONFIGURATION_TYPES and becomes the implicit default. But we want Release to be the default by default.
+  # CMake throws an error if setting CMAKE_DEFAULT_BUILD_TYPE and the generator does not support it
+  if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
+    set(CMAKE_DEFAULT_BUILD_TYPE "Release")
+  endif ()
+elseif (CMAKE_CONFIGURATION_TYPES)
+  list(GET CMAKE_CONFIGURATION_TYPES 0 _default_build_type)
+else ()
+  set(_default_build_type)
+endif ()
+
+
+
+# TODO: should call something in bin/
+set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
 
 
 
@@ -196,10 +229,13 @@ set_property(GLOBAL PROPERTY benchmarks_openmp_task)
 set_property(GLOBAL PROPERTY benchmarks_openmp_target)
 
 add_custom_target(build)
+add_custom_target(build-verify)
 
 if (ROSETTA_PPM_SERIAL)
   add_custom_target(build-serial)
-  add_dependencies(build build-serial)
+  add_custom_target(build-serial-verify)
+  add_dependencies(build build-serial build-serial-verify)
+  add_dependencies(build-verify build-serial-verify)
 endif ()
 if (ROSETTA_PPM_CUDA)
   add_custom_target(build-cuda)
@@ -229,47 +265,12 @@ endif ()
 add_subdirectory(benchmarks)
 
 
+
 ## Run #########################################################################
 
-
-set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/runner.py")
-
-if (CMAKE_CONFIGURATION_TYPES)
-  set(_build_types ${CMAKE_CONFIGURATION_TYPES})
-elseif (CMAKE_BUILD_TYPE)
-  set(_build_types "${CMAKE_BUILD_TYPE}")
-else ()
-  message(FATAL_ERROR "Cannot determine the build types")
-endif ()
-
-message("_build_types : ${_build_types}")
-if (CMAKE_BUILD_TYPE)
-  set(_default_build_type "${CMAKE_BUILD_TYPE}")
-elseif (CMAKE_DEFAULT_BUILD_TYPE) # Only Ninja Multi-Config Generator
-  set(_default_build_type "${CMAKE_DEFAULT_BUILD_TYPE}")
-elseif ("Release" IN_LIST _build_types)
-  set(_default_build_type "Release")
-  # By default, Debug is first in CMAKE_CONFIGURATION_TYPES and becomes the implicit default. But we want Release to be the default by default.
-  # CMake throws an error if setting CMAKE_DEFAULT_BUILD_TYPE and the generator does not support it
-  if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
-    set(CMAKE_DEFAULT_BUILD_TYPE "Release")
-  endif ()
-elseif (CMAKE_CONFIGURATION_TYPES)
-  list(GET CMAKE_CONFIGURATION_TYPES 0 _default_build_type)
-else ()
-  set(_default_build_type)
-endif ()
-message("CMAKE_DEFAULT_BUILD_TYPE: ${CMAKE_DEFAULT_BUILD_TYPE}")
-message("__default_build_type: ${_default_build_type}")
-
-
-
-
-
-
-
-
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
+get_property(_verifications_serial GLOBAL PROPERTY verifications_serial)
+
 list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
 list(APPEND _benchmarks ${_benchmarks_cuda})
@@ -284,13 +285,18 @@ set(_benchmarks_run_arglist)
 
 
 function (enable_ppm name shortname displayname)
-  cmake_parse_arguments(_arg "" "" "TARGETS"  ${ARGN})
+  cmake_parse_arguments(_arg "" "" "BENCHMARKS;VERIFICATIONS"  ${ARGN})
 
   append_global_property(enabled_ppms "${name}")
 
   set(_benchmarks_run)
-  foreach (_target IN LISTS _arg_TARGETS)
+  foreach (_target IN LISTS _arg_BENCHMARKS)
     list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}')")
+  endforeach ()
+  foreach (_target IN LISTS _arg_VERIFICATIONS)
+    get_property(_reffile TARGET ${_target} PROPERTY REFERENCE_FILE)
+    message("_reffile ${_reffile}")
+    list(APPEND _benchmarks_run "register_verification('${_target}', exepath='$<TARGET_FILE:${_target}>', refpath='${_reffile}', config='$<CONFIG>', ppm='${shortname}')")
   endforeach ()
   list(JOIN _benchmarks_run "\n" _benchmarks_pylist)
 
@@ -302,7 +308,7 @@ function (enable_ppm name shortname displayname)
 if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-from rosetta import register_benchmark, runner_main
+from rosetta import runner_main, register_benchmark, register_verification
 
 ${_benchmarks_pylist}
 
@@ -322,30 +328,35 @@ if __name__ == '__main__':
       COMMENT "Run ${displayname} benchmarks ..."
       USES_TERMINAL VERBATIM
     )
-    add_dependencies("run-${name}" "build-${name}")
+    add_custom_target("verify-${name}"
+      COMMAND Python::Interpreter "run-${name}.py" "--verify"
+      COMMENT "Run ${displayname} correctness checks ..."
+      USES_TERMINAL VERBATIM
+    )
+    add_dependencies("verify-${name}" "build-${name}")
   endif ()
 endfunction()
 
 
 
 if (ROSETTA_PPM_SERIAL)
-  enable_ppm(serial serial Serial TARGETS ${_benchmarks_serial})
+  enable_ppm(serial serial Serial BENCHMARKS ${_benchmarks_serial} VERIFICATIONS ${_verifications_serial})
 endif ()
 
 if (ROSETTA_PPM_CUDA)
-  enable_ppm(cuda cuda CUDA TARGETS ${_benchmarks_cuda})
+  enable_ppm(cuda cuda CUDA BENCHMARKS ${_benchmarks_cuda})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL)
-  enable_ppm(openmp-parallel omp_parallel "OpenMP parallel" TARGETS ${_benchmarks_openmp_parallel})
+  enable_ppm(openmp-parallel omp_parallel "OpenMP parallel" BENCHMARKS ${_benchmarks_openmp_parallel})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TASK)
-  enable_ppm(openmp-task omp_task "OpenMP Tasks" TARGETS ${_benchmarks_openmp_task})
+  enable_ppm(openmp-task omp_task "OpenMP Tasks" BENCHMARKS ${_benchmarks_openmp_task})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TARGET)
-  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" TARGETS ${_benchmarks_openmp_target})
+  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" BENCHMARKS ${_benchmarks_openmp_target})
 endif ()
 
 
@@ -368,7 +379,7 @@ if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
 
-from rosetta import runner_main,load_register_file
+from rosetta import runner_main, load_register_file
 ${_ppms_pylist}
 
 if __name__ == '__main__':
@@ -396,13 +407,18 @@ if (_default_build_type)
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
   add_custom_target(run
-    COMMAND Python::Interpreter "run.py"
+    COMMAND Python::Interpreter "run.py" "--bench"
     COMMENT "Run all benchmarks ..."
     USES_TERMINAL VERBATIM
   )
   add_dependencies(run build)
 
-
+  add_custom_target(verify
+    COMMAND Python::Interpreter "run.py" "--verify"
+    COMMENT "Verify all benchmarks ..."
+    USES_TERMINAL VERBATIM
+  )
+  add_dependencies(verify build-verify)
 endif ()
 
 
