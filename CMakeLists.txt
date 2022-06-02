@@ -415,6 +415,7 @@ if (_default_build_type)
   )
   add_dependencies(run build)
 
+  # TODO: Individial verify targets
   add_custom_target(verify
     COMMAND Python::Interpreter "run.py" "--verify"
     COMMENT "Verify all benchmarks ..."
