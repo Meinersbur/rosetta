@@ -32,21 +32,23 @@ function (add_benchmark_serial basename)
   append_global_property(verifications_serial "${_verify_target}")
 
   if (CMAKE_BUILD_TYPE)
-    set(_reference "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.reference")
+    set(_reference_filename "${basename}.reference")
   else ()
-    set(_reference "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.$<CONFIG>.reference")
+  set(_reference_filename "${basename}.$<CONFIG>.reference")
   endif ()
+  set(_reference "${CMAKE_CURRENT_BINARY_DIR}/${_reference_filename}")
  #message("_reference ${_reference}")
 
   add_custom_command(
-    OUTPUT "${_reference}"
-    DEPENDS ${_verify_target}
+    OUTPUT "${_reference_filename}"
+    DEPENDS "${_verify_target}"
     COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--gen-reference" "$<TARGET_FILE:${_verify_target}>" "${_reference}"
-    COMMENT "Generate ${basename} reference output ..."
+    COMMENT "Generate ${basename} reference output (using serial output) ..."
   )
   add_custom_target("reference-${basename}"
-    DEPENDS "${_reference}"
+    DEPENDS "${_reference_filename}"
   )
+  append_global_property(references "reference-${basename}")
   set_property(TARGET ${_verify_target}    
     PROPERTY REFERENCE_FILE "${_reference}"
   )

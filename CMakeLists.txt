@@ -270,6 +270,8 @@ add_subdirectory(benchmarks)
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
 get_property(_verifications_serial GLOBAL PROPERTY verifications_serial)
+get_property(_references GLOBAL PROPERTY references)
+
 
 list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
@@ -418,7 +420,7 @@ if (_default_build_type)
     COMMENT "Verify all benchmarks ..."
     USES_TERMINAL VERBATIM
   )
-  add_dependencies(verify build-verify)
+  add_dependencies(verify build-verify ${_references})
 endif ()
 
 
@@ -472,12 +474,12 @@ else ()
 list(APPEND _disabled_ppm "OpenMP-Task")
 endif ()
 if (ROSETTA_PPM_OPENMP_TARGET)
-  message("  OpenMP-Target:   ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  OpenMP-Target:   ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_CFLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
 else ()
 list(APPEND _disabled_ppm "OpenMP-Target")
 endif ()
 if (ROSETTA_PPM_OPENACC)
-  message("  OpenACC:         ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${OPENMP_OFFLOADING_CFLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION} ${OpenACC_CXX_SPEC_DATE})")
+  message("  OpenACC:         ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${OpenACC_CXX_VERSION} ${OpenACC_CXX_SPEC_DATE})")
 else ()
 list(APPEND _disabled_ppm "OpenACC")
 endif ()
