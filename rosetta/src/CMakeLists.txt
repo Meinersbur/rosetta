@@ -48,7 +48,7 @@ if (ROSETTA_PPM_CUDA)
     rosetta-common.cpp
     rosetta-nvidia.cpp
     )
-    target_compile_definitions(rosetta-cuda PUBLIC ROSETTA_PPM_CUDA=1)
+    target_compile_definitions(rosetta-cuda PUBLIC ROSETTA_PPM_CUDA=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-cuda PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   #target_link_libraries(rosetta-cuda PUBLIC benchmark::benchmark)
   target_link_libraries(rosetta-cuda PUBLIC CUDA::cudart)
@@ -67,7 +67,7 @@ if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK)
     rosetta-openmp.cpp
     rosetta-common.cpp
     )
-  target_compile_definitions(rosetta-openmp PUBLIC ROSETTA_PPM_OPENMP=1)
+  target_compile_definitions(rosetta-openmp PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-openmp PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries( rosetta-openmp PUBLIC OpenMP::OpenMP_CXX)
 endif ()
@@ -78,7 +78,7 @@ if (ROSETTA_PPM_OPENMP_TARGET)
     rosetta-openmp.cpp
     rosetta-common.cpp
   )
-  target_compile_definitions(rosetta-openmp-target PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1)
+  target_compile_definitions(rosetta-openmp-target PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-openmp-target PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-target PUBLIC OpenMP::OpenMP_Offload_CXX)
   enable_platform_nvidia(rosetta-openmp-target)
