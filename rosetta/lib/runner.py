@@ -633,6 +633,8 @@ def runner_main():
                 if refdata != data:
                     # TODO: allow floating-point differences
                     print(f"Output different from reference for {e.target}")
+                    print("Output   ", data)
+                    print("Reference", refdata)
                     exit (1)
         return 
 
