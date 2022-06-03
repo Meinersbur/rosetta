@@ -924,8 +924,8 @@ public:
         #endif 
     }
 
-
-#ifdef ROSETTA_PLATFORM_NVIDIA
+#if ROSETTA_BENCH
+#if ROSETTA_PLATFORM_NVIDIA
      /// FIXME: Called from other threads. Require Mutex?
      void handleCuptiActivity(CUpti_Activity* record) {
          //assert(started);
@@ -981,7 +981,7 @@ public:
          }
     }
 #endif 
-
+#endif 
 };
 
 
@@ -1180,7 +1180,8 @@ struct Rosetta {
                 currentRun = nullptr;
         }
 
-#ifdef ROSETTA_PLATFORM_NVIDIA
+#if ROSETTA_BENCH
+#if ROSETTA_PLATFORM_NVIDIA
         static void handleCuptiActivity(CUpti_Activity *record) {
             if (!currentRun) {
                 // Activity not asociated with a run
@@ -1191,6 +1192,7 @@ struct Rosetta {
             currentRun->handleCuptiActivity(record);
         }
 #endif 
+#endif 
 };
 
 
@@ -1198,7 +1200,8 @@ BenchmarkRun *Rosetta::currentRun =nullptr;
 
 
 
-#ifdef ROSETTA_PLATFORM_NVIDIA
+#if ROSETTA_BENCH
+#if ROSETTA_PLATFORM_NVIDIA
 static
 void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize)
 {
@@ -1228,6 +1231,7 @@ void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer,
 
     free(buffer);
 }
+#endif 
 #endif 
 
 
