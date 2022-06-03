@@ -221,16 +221,8 @@ add_subdirectory(rosetta)
 
 # Benchmarks -------------------------------------------------------------------
 
-set_property(GLOBAL PROPERTY benchmarks)
-set_property(GLOBAL PROPERTY benchmarks_serial)
-set_property(GLOBAL PROPERTY benchmarks_cuda)
-set_property(GLOBAL PROPERTY benchmarks_openmp_parallel)
-set_property(GLOBAL PROPERTY verifications_openmp_parallel)
-set_property(GLOBAL PROPERTY benchmarks_openmp_task)
-set_property(GLOBAL PROPERTY verifications_openmp_parallel)
-set_property(GLOBAL PROPERTY benchmarks_openmp_target)
-
 add_custom_target(build)
+# TODO: build-bench
 add_custom_target(build-verify)
 
 if (ROSETTA_PPM_SERIAL)
@@ -241,7 +233,9 @@ if (ROSETTA_PPM_SERIAL)
 endif ()
 if (ROSETTA_PPM_CUDA)
   add_custom_target(build-cuda)
+  add_custom_target(build-cuda-verify)
   add_dependencies(build build-cuda)
+  add_dependencies(build-verify build-cuda-verify)
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP_TARGET)
@@ -263,7 +257,9 @@ if (ROSETTA_PPM_OPENMP_TASK)
 endif ()
 if (ROSETTA_PPM_OPENMP_TARGET)
   add_custom_target(build-openmp-target)
+  add_custom_target(build-openmp-target-verify)
   add_dependencies(build build-openmp-target)
+  add_dependencies(build-verify build-openmp-target-verify)
   add_dependencies(build-openmp build-openmp-target)
 endif ()
 
@@ -279,8 +275,10 @@ get_property(_verifications_serial GLOBAL PROPERTY verifications_serial)
 get_property(_references GLOBAL PROPERTY references)
 
 
+# TODO: separate verifications lists should not be necessary
 list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
+get_property(_verifications_cuda GLOBAL PROPERTY verifications_cuda)
 list(APPEND _benchmarks ${_benchmarks_cuda})
 get_property(_benchmarks_openmp_parallel GLOBAL PROPERTY benchmarks_openmp_parallel)
 get_property(_verifications_openmp_parallel GLOBAL PROPERTY verifications_openmp_parallel)
@@ -289,6 +287,7 @@ get_property(_benchmarks_openmp_task GLOBAL PROPERTY benchmarks_openmp_task)
 get_property(_verifications_openmp_task GLOBAL PROPERTY verifications_openmp_task)
 list(APPEND _benchmarks ${_benchmarks_openmp_task})
 get_property(_benchmarks_openmp_target GLOBAL PROPERTY benchmarks_openmp_target)
+get_property(_verifications_openmp_target GLOBAL PROPERTY verifications_openmp_target)
 list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
 set(_benchmarks_run_arglist)
@@ -353,7 +352,7 @@ if (ROSETTA_PPM_SERIAL)
 endif ()
 
 if (ROSETTA_PPM_CUDA)
-  enable_ppm(cuda cuda CUDA BENCHMARKS ${_benchmarks_cuda})
+  enable_ppm(cuda cuda CUDA BENCHMARKS ${_benchmarks_cuda} VERIFICATIONS ${_verifications_cuda})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL)
@@ -365,7 +364,7 @@ if (ROSETTA_PPM_OPENMP_TASK)
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TARGET)
-  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" BENCHMARKS ${_benchmarks_openmp_target})
+  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" BENCHMARKS ${_benchmarks_openmp_target} VERIFICATIONS ${_verifications_openmp_target})
 endif ()
 
 
@@ -446,6 +445,13 @@ if (ROSETTA_NO_EXCEPTIONS)
   set(_extra_flags "-fno-exceptions")
 endif ()
 
+set(_cxx_version)
+if (CMAKE_CXX_STANDARD)
+ set(_cxx_version ${CMAKE_CXX_STANDARD})
+elseif (CMAKE_CXX_STANDARD_DEFAULT)
+set(_cxx_version ${CMAKE_CXX_STANDARD_DEFAULT})
+endif ()
+
 message("")
 message("Configuration Summary")
 message("---------------------")
@@ -457,7 +463,7 @@ else ()
 endif ()
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
-  message("  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+  message("  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, C++${_cxx_version})")
 else ()
   list(APPEND _disabled_ppm "Serial")
 endif ()
