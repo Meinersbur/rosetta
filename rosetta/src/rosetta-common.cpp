@@ -15,7 +15,6 @@
 #include <cupti.h>
 #endif
 
-
 #ifdef BENCHMARK_OS_WINDOWS
 #define NOMINMAX 1
 #ifndef WIN32_LEAN_AND_MEAN // Already set by cupti
@@ -1152,7 +1151,7 @@ struct Rosetta {
             }
 
 
-                std::cout << R"(<?xml version="1.0"?>)" <<std::endl;
+                std::cout << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
                 std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<  R"(">)"<<std::endl;
                 for (int i = startMeasures; i < numMeasures; i+=1) {
