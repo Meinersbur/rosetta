@@ -55,7 +55,7 @@ set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
 
 ## Dependencies ################################################################
 
-set(CMAKE_CXX_STANDARD 17)
+#set(CMAKE_CXX_STANDARD 17)
 
 # Python
 find_package(Python 3.6.13 REQUIRED)
@@ -445,12 +445,10 @@ if (ROSETTA_NO_EXCEPTIONS)
   set(_extra_flags "-fno-exceptions")
 endif ()
 
-set(_cxx_version)
-if (CMAKE_CXX_STANDARD)
- set(_cxx_version ${CMAKE_CXX_STANDARD})
-elseif (CMAKE_CXX_STANDARD_DEFAULT)
-set(_cxx_version ${CMAKE_CXX_STANDARD_DEFAULT})
-endif ()
+
+
+
+
 
 message("")
 message("Configuration Summary")
@@ -463,7 +461,11 @@ else ()
 endif ()
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
-  message("  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, C++${_cxx_version})")
+  get_property(_cxx_standard TARGET rosetta-serial-bench PROPERTY "CXX_STANDARD")
+  if (NOT _cxx_standard STREQUAL "")
+    set (_cxx_standard "${CMAKE_CXX_STANDARD_DEFAULT}")
+  endif ()
+  message("  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, C++${_cxx_standard})")
 else ()
   list(APPEND _disabled_ppm "Serial")
 endif ()

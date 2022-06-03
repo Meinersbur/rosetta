@@ -19,6 +19,7 @@ if (ROSETTA_PPM_SERIAL)
     rosetta-serial.cpp
     rosetta-common.cpp
     )
+  target_compile_features(rosetta-serial-bench PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-serial-bench PUBLIC ROSETTA_SERIAL=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-serial-bench PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
 
@@ -32,6 +33,7 @@ if (ROSETTA_PPM_SERIAL)
     rosetta-serial.cpp
     rosetta-common.cpp
     )
+  target_compile_features(rosetta-serial-verify PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-serial-verify PUBLIC ROSETTA_SERIAL=1 ROSETTA_VERIFY=1)
   target_include_directories(rosetta-serial-verify PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
 
@@ -48,6 +50,7 @@ if (ROSETTA_PPM_CUDA)
     rosetta-common.cpp
     rosetta-nvidia.cpp
     )
+    target_compile_features(rosetta-cuda-bench PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-cuda-bench PUBLIC ROSETTA_PPM_CUDA=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-cuda-bench PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-cuda-bench PUBLIC CUDA::cudart)
@@ -64,6 +67,7 @@ if (ROSETTA_PPM_CUDA)
     rosetta-common.cpp
     rosetta-nvidia.cpp
     )
+    target_compile_features(rosetta-cuda-verify PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-cuda-verify PUBLIC ROSETTA_PPM_CUDA=1 ROSETTA_VERIFY=1)
   target_include_directories(rosetta-cuda-verify PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-cuda-verify PUBLIC CUDA::cudart)
@@ -81,6 +85,7 @@ if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK)
     rosetta-openmp.cpp
     rosetta-common.cpp
     )
+    target_compile_features(rosetta-openmp-bench PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-bench PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-openmp-bench PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-bench PUBLIC OpenMP::OpenMP_CXX)
@@ -91,6 +96,7 @@ if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK)
     rosetta-openmp.cpp
     rosetta-common.cpp
     )
+  target_compile_features(rosetta-openmp-verify PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-verify PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_VERIFY=1)
   target_include_directories(rosetta-openmp-verify PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-verify PUBLIC OpenMP::OpenMP_CXX)
@@ -102,6 +108,7 @@ if (ROSETTA_PPM_OPENMP_TARGET)
     rosetta-openmp.cpp
     rosetta-common.cpp
   )
+  target_compile_features(rosetta-openmp-target-bench PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-target-bench PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1 ROSETTA_BENCH=1)
   target_include_directories(rosetta-openmp-target-bench PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-target-bench PUBLIC OpenMP::OpenMP_Offload_CXX)
@@ -113,6 +120,7 @@ if (ROSETTA_PPM_OPENMP_TARGET)
     rosetta-openmp.cpp
     rosetta-common.cpp
   )
+  target_compile_features(rosetta-openmp-target-verify PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-target-verify PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1 ROSETTA_VERIFY=1)
   target_include_directories(rosetta-openmp-target-verify PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-target-verify PUBLIC OpenMP::OpenMP_Offload_CXX)
