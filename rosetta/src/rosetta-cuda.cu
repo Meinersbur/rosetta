@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
        argv += 1;
     }
 
-fprintf(stderr,"main()\n");
+
 
     auto wrapper = [](benchmark::State& state, int n) {
         CudaState mystate{state};

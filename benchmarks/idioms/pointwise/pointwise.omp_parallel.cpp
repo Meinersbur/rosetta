@@ -18,9 +18,10 @@ void run(State& state, int n) {
 
     for (auto &&_ : state) {
         kernel(n, A);
-        state.verifydata(A, n);
+      
     }
 
+    state.verifydata(A, n);
     state.free(A);
 }
 

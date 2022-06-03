@@ -12,16 +12,13 @@ void run(State& state, int n) {
     if (n < 0)
         n = (DEFAULT_N);
 
-    double *A = state.malloc<double>(n);
-    state.fakedata(A, n);
+    double *A = state.malloc<double>(n);   
+    state.fakedata(A, n); 
 
-    for (auto &&_ : state) {
+    for (auto &&_ : state) 
         kernel(n, A);
-        state.verifydata(A, n);
-    }
+    
 
+ state.verifydata(A, n);
     state.free(A);
 }
-
-
-
