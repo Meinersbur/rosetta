@@ -55,7 +55,6 @@ if (ROSETTA_PPM_CUDA)
     # TODO: Introspection
     target_compile_options(rosetta-cuda-bench PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
   endif ()
-
   enable_platform_nvidia(rosetta-cuda-bench)
 
 
@@ -72,7 +71,6 @@ if (ROSETTA_PPM_CUDA)
     # TODO: Introspection
     target_compile_options(rosetta-cuda-verify PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> $<$<COMPILE_LANGUAGE:CUDA>:--no-exceptions>)
   endif ()
-
   enable_platform_nvidia(rosetta-cuda-verify)
 endif ()
 

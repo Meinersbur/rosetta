@@ -5,7 +5,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
 
   set(_bench_target "${basename}.${ppm_shortname}.bench")
   set(_verify_target "${basename}.${ppm_shortname}.verify")
-  set(_sources "${basename}.${ppm_shortname}.cpp" ${_arg_SOURCES})
+  set(_sources ${_arg_SOURCES})
   get_property(_reffile TARGET "${basename}.serial.verify" PROPERTY REFERENCE_FILE)
 
   string(REPLACE "-" "_" ppm_mixed "${ppm}")
@@ -39,10 +39,10 @@ function (add_benchmark_serial basename)
     return ()
   endif ()
   # TODO: Use add_benchmark_ppm
-  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
+  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
 
   set(_target "${basename}.serial.bench")
-  set(_sources "${basename}.cpp")
+  set(_sources "${basename}.cxx")
   add_executable(${_target} ${_sources} ${_arg_SOURCES})
   if (_arg_DEFAULT_N)
     target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
@@ -113,7 +113,7 @@ function (add_benchmark_cuda basename)
   if (NOT ROSETTA_PPM_CUDA)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "cuda" "cuda" "rosetta-cuda" ${ARGN})
+  add_benchmark_ppm("${basename}" "cuda" "cuda" "rosetta-cuda" ${ARGN} SOURCES "${basename}.cu")
 endfunction ()
 
 
@@ -121,7 +121,7 @@ function (add_benchmark_openmp_parallel basename)
   if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp" ${ARGN})
+  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp" ${ARGN} SOURCES "${basename}.omp_parallel.cxx")
 endfunction ()
 
 
@@ -129,7 +129,7 @@ function (add_benchmark_openmp_task basename)
   if (NOT ROSETTA_PPM_OPENMP_TASK)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp" ${ARGN})
+  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp" ${ARGN} SOURCES "${basename}.omp_task.cxx")
 endfunction ()
 
 
@@ -137,7 +137,7 @@ function (add_benchmark_openmp_target basename)
   if (NOT ROSETTA_PPM_OPENMP_TARGET)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-target" "omp_target" "rosetta-openmp-target" ${ARGN})
+  add_benchmark_ppm("${basename}" "openmp-target" "omp_target" "rosetta-openmp-target" ${ARGN} SOURCES "${basename}.omp_target.cxx")
 endfunction ()
 
 

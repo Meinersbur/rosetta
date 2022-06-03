@@ -7,10 +7,10 @@
 
 // Loosely based on CUDA Toolkit sample: vectorAdd
 
-__global__ void kernel(int n, double *B, double *A) {
+__global__ void kernel(int n, double *A) {
     int i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < n)
-        B[i] = 42 + A[i];
+        A[i] += 42;
 }
 
 
@@ -19,8 +19,8 @@ __global__ void kernel(int n, double *B, double *A) {
     if (n < 0)
         n = (DEFAULT_N);
 
-    double *A = new double[n];
-    double *B = new double[n];
+    double *A = state.malloc<double>(n);   
+
 
    // cuptiSubscribe() ;
 
@@ -28,9 +28,9 @@ __global__ void kernel(int n, double *B, double *A) {
 //cudaEventCreate(&start);
 //cudaEventCreate(&stop);
 
-    double *dev_A, *dev_B;
+    double *dev_A;
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_B, n * sizeof(double)));
+
 
     cudaMemcpy(dev_A, A, n * sizeof(double), cudaMemcpyHostToDevice);
 
@@ -49,19 +49,19 @@ __global__ void kernel(int n, double *B, double *A) {
 
 {
         auto &&scope = _.scope();
-        kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_B, dev_A);
+        kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_A);
         }
 
         // TODO: Is the invocation already blocking?
-        // cudaMemcpy( B, dev_B, n * sizeof(double), cudaMemcpyDeviceToHost ); cudaDeviceSynchronize();
+        cudaMemcpy( A, dev_A, n * sizeof(double), cudaMemcpyDeviceToHost ); cudaDeviceSynchronize();
 
     }
 
     cudaFree(dev_A);
-    cudaFree(dev_B);
 
-    delete[] A;
-    delete[] B;
+
+    state.verifydata(A, n);
+    state.free(A);
 }
 
 
