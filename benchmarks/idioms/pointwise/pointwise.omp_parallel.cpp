@@ -16,11 +16,10 @@ void run(State& state, int n) {
     double *A = state.malloc<double>(n);
     state.fakedata(A, n);
 
-    for (auto &&_ : state) {
+// TODO: #pragma omp parallel outside of loop
+    for (auto &&_ : state) 
         kernel(n, A);
       
-    }
-
     state.verifydata(A, n);
     state.free(A);
 }

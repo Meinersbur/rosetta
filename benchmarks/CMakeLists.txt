@@ -1,10 +1,44 @@
 
 
+function (add_benchmark_ppm basename ppm ppm_shortname _library)
+  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
+
+  set(_bench_target "${basename}.${ppm_shortname}.bench")
+  set(_verify_target "${basename}.${ppm_shortname}.verify")
+  set(_sources "${basename}.${ppm_shortname}.cpp" ${_arg_SOURCES})
+  get_property(_reffile TARGET "${basename}.serial.verify" PROPERTY REFERENCE_FILE)
+
+  string(REPLACE "-" "_" ppm_mixed "${ppm}")
+
+  add_executable("${_bench_target}" ${_sources})
+  add_executable("${_verify_target}" ${_sources})
+  target_link_libraries("${_bench_target}" PRIVATE "${_library}-bench")
+  target_link_libraries("${_verify_target}" PRIVATE "${_library}-verify")
+  if (_arg_DEFAULT_N)
+    target_compile_definitions(${_bench_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+    target_compile_definitions(${_verify_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+  endif ()
+
+  set_property(TARGET ${_bench_target} PROPERTY REFERENCE_FILE "${_reffile}")
+  set_property(TARGET ${_verify_target} PROPERTY REFERENCE_FILE "${_reffile}")
+  set_property(TARGET ${_bench_target} PROPERTY VERIFY_TARGET "${_verify_target}")
+
+  append_global_property("benchmarks_${ppm_mixed}" "${_bench_target}")
+  append_global_property("verifications_${ppm_mixed}" "${_verify_target}")
+
+  add_dependencies("build-${ppm}" "${_bench_target}")
+  add_dependencies("build-${ppm}-verify" "${_verify_target}")
+endfunction ()
+
+
+
+
 
 function (add_benchmark_serial basename)
   if (NOT ROSETTA_PPM_SERIAL)
     return ()
   endif ()
+  # TODO: Use add_benchmark_ppm
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
 
   set(_target "${basename}.serial.bench")
@@ -72,131 +106,43 @@ endfunction ()
 
 
 
+
+
+
 function (add_benchmark_cuda basename)
   if (NOT ROSETTA_PPM_CUDA)
       return ()
   endif ()
-  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
-  set(_sources "${basename}.cu")
-
-  set(_target "${basename}.cuda.bench")
-  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  if (_arg_DEFAULT_N)
-    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  endif ()
-  target_link_libraries("${_target}" PRIVATE rosetta-cuda)
-  add_dependencies(build-cuda "${_target}")
-
-  append_global_property(benchmarks_cuda "${_target}")
-
-
-  set(_verify_target "${basename}.cuda.verify")
-  add_executable("${_verify_target}" ${_sources} ${_arg_SOURCES})
-  if (_arg_DEFAULT_N)
-    target_compile_definitions(${_verify_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  endif ()
-  target_link_libraries("${_verify_target}" PRIVATE rosetta-cuda-verify)
-  add_dependencies(build-cuda-verify "${_verify_target}")
+  add_benchmark_ppm("${basename}" "cuda" "cuda" "rosetta-cuda" ${ARGN})
 endfunction ()
 
-
-
-
-
-function (add_benchmark_openmp_parallel_target basename _target _library)
-  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
-
-  set(_sources "${basename}.omp_parallel.cpp")
-  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE ${_library})
-  if (_arg_DEFAULT_N)
-    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  endif ()
-
-  get_property(_reffile TARGET "${basename}.serial.verify" PROPERTY REFERENCE_FILE)
-  set_property(TARGET ${_target}    
-    PROPERTY REFERENCE_FILE "${_reffile}"
-  )
-endfunction ()
 
 function (add_benchmark_openmp_parallel basename)
   if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
   endif ()
-
-  set(_bench_target "${basename}.openmp_parallel.bench")
-  set(_verify_target "${basename}.openmp_parallel.verify")
-  add_benchmark_openmp_parallel_target(${basename} ${_bench_target} rosetta-openmp-bench ${ARGN})
-  add_dependencies(build-openmp-parallel "${_bench_target}")
-  append_global_property(benchmarks_openmp_parallel "${_bench_target}")
-  set_property(TARGET ${_bench_target}    
-    PROPERTY VERIFY_TARGET "${_verify_target}"
-  )
-
-  add_benchmark_openmp_parallel_target(${basename} ${_verify_target} rosetta-openmp-verify ${ARGN})
-  add_dependencies(build-openmp-parallel-verify "${_verify_target}")
-  append_global_property(verifications_openmp_parallel "${_verify_target}")
+  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp" ${ARGN})
 endfunction ()
 
-
-
-
-
-
-function (add_benchmark_openmp_task_target basename _target _library)
-  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
-
-  set(_sources "${basename}.omp_task.cpp")
-  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE ${_library})
-  if (_arg_DEFAULT_N)
-    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  endif ()
-
-  get_property(_reffile TARGET "${basename}.serial.verify" PROPERTY REFERENCE_FILE)
-  set_property(TARGET ${_target}    
-    PROPERTY REFERENCE_FILE "${_reffile}"
-  )
-endfunction ()
 
 function (add_benchmark_openmp_task basename)
   if (NOT ROSETTA_PPM_OPENMP_TASK)
       return ()
   endif ()
-  
-  set(_bench_target "${basename}.openmp_task.bench")
-  set(_verify_target "${basename}.openmp_task.verify")
-  add_benchmark_openmp_task_target(${basename} ${_bench_target} rosetta-openmp-bench ${ARGN})
-  add_dependencies(build-openmp-task "${_bench_target}")
-  append_global_property(benchmarks_openmp_task "${_bench_target}")
-  set_property(TARGET ${_bench_target}    
-    PROPERTY VERIFY_TARGET "${_verify_target}"
-  )
-
-  add_benchmark_openmp_task_target(${basename} ${_verify_target} rosetta-openmp-verify ${ARGN})
-  add_dependencies(build-openmp-task-verify "${_verify_target}")
-  append_global_property(verifications_openmp_task "${_verify_target}")
+  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp" ${ARGN})
 endfunction ()
-
 
 
 function (add_benchmark_openmp_target basename)
   if (NOT ROSETTA_PPM_OPENMP_TARGET)
       return ()
   endif ()
-  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES"  ${ARGN} )
-
-  set(_target "${basename}.openmp_target")
-  set(_sources "${basename}.omp_target.cpp")
-  add_executable("${_target}" ${_sources} ${_arg_SOURCES})
-  target_link_libraries("${_target}" PRIVATE rosetta-openmp-target)
-  if (_arg_DEFAULT_N)
-    target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  endif ()
-  add_dependencies(build-openmp-target "${_target}")
-
-  append_global_property(benchmarks_openmp_target "${_target}")
+  add_benchmark_ppm("${basename}" "openmp-target" "omp_target" "rosetta-openmp-target" ${ARGN})
 endfunction ()
+
+
+
+
 
 
 
@@ -228,6 +174,9 @@ function (add_benchmark basename)
     add_benchmark_openmp_target("${basename}" SOURCES ${_source_openmp_target})
   endif ()
 endfunction ()
+
+
+
 
 
 add_subdirectory(idioms)
