@@ -7,6 +7,11 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <optional>
+#include <string>
+#include <iostream>
+#include <string>
+#include <charconv>
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cupti.h>
@@ -1234,10 +1239,83 @@ void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer,
 #endif 
 
 
+std::tuple <std::string_view, std::optional<  std::string_view>> nextArg(int argc, char* argv[], int &i) {
+    std::string_view arg{argv[i]};
+    i +=1 ;
+    if ( arg.length() > 3 && arg.substr(0, 2) == "--" && isalpha( arg[2])) {
+        std::string_view sw = arg.substr(2);
+        auto eqpos = sw.find('=');
+        if (eqpos != std::string_view::npos) {
+            auto swname = sw.substr(0, eqpos);
+            auto swarg = sw.substr(eqpos + 1);
+            return {swname, swarg };
+        }
+        return { sw, {} };
+    }
+    if ( arg.length() > 2 && arg[0] == '-' && isalpha( arg[1]) ) {    
+        auto swname =    arg.substr(1,1);
+        if (arg.length() > 2) {      
+            auto swarg =arg.substr(2);
+            return {swname, swarg };
+        }
+        return { swname, {} };
+    }
 
+    // Not recognized as a switch. Assume positional argument.
+    return { std::string_view(), arg };
+}
+
+
+static 
+int parseInt(std::string_view s) {
+    int result;
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.length(), result );
+    // TODO: check for error
+    return result;
+}
 
 int main(int argc, char* argv[]) {
-    auto program = argv[0];
+    assert(argc >= 1);
+    const char * program = argv[0];
+
+    std::string_view problemsizefile ;
+    int problemsize = -1;
+    int i =1;
+    while (i < argc) {
+        auto [name,val] = nextArg(argc, argv, i);
+
+        if (name == "n") {
+            if (!val.has_value() && i < argc) {
+                val = argv[i]; i+= 1;
+            }
+            problemsize = parseInt(val.value());
+        }
+        else if (name == "sizefile") {
+            if (!val.has_value() && i < argc) {
+                val = argv[i]; i+= 1;
+            }
+            problemsizefile = problemsizefile;
+        }
+    }
+
+   
+    // TODO: default problem size
+    if (problemsize >= 0) {
+        // Explicit problemsize has priority
+    } else if (!problemsizefile.empty()) {
+        std::ifstream psfile{ problemsizefile };
+        std::string myline;
+        std::getline (psfile, myline);
+    }
+
+#if 0
+    for (int i = 1; i < argc; ++i) {
+        std::string_view a{argv[i]};
+        if (a == "-n") {
+        }else if (a.st)
+    }
+
+
    // std::cerr <<program << "\n";
     argc-=1;
     argv += 1;
@@ -1250,7 +1328,7 @@ int main(int argc, char* argv[]) {
        argc -= 1;
        argv += 1;
     }
-
+#endif 
 
 
 
