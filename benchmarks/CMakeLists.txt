@@ -1,5 +1,6 @@
 
 
+# internal
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
 
