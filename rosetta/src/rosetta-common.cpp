@@ -704,6 +704,7 @@ private:
 
 class BenchmarkRun {
     friend class Rosetta;
+    friend class dyn_array_base;
 private:
 #if ROSETTA_BENCH
     std::vector<IterationMeasurement> measurements;
@@ -920,7 +921,7 @@ public:
         auto now = std::chrono::steady_clock::now();
         auto duration =  now - startTime;
 
-        if (exactRepeats) {
+        if (exactRepeats >= 1) {
             measurements.reserve(exactRepeats);
             return exactRepeats - measurements.size() ;
         }
@@ -1305,6 +1306,22 @@ int parseInt(std::string_view s) {
 }
 
 
+dyn_array_base::
+dyn_array_base(BenchmarkRun* impl, int size, bool verify ) : impl(impl), size(size) , verify (verify ) {
+    if (!impl) return ;
+    impl->curAllocatedBytes += size;
+    impl->peakAllocatedBytes = std::max( impl->peakAllocatedBytes ,  impl->curAllocatedBytes  );
+}
+
+
+dyn_array_base::
+~dyn_array_base() {
+    if (!impl) return ;
+assert (size <= impl->curAllocatedBytes );
+impl->curAllocatedBytes -= size;
+}
+
+
 
 int main(int argc, char* argv[]) {
     assert(argc >= 1);
@@ -1392,28 +1409,6 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-
-#if 0
-    for (int i = 1; i < argc; ++i) {
-        std::string_view a{argv[i]};
-        if (a == "-n") {
-        }else if (a.st)
-    }
-
-
-   // std::cerr <<program << "\n";
-    argc-=1;
-    argv += 1;
-
-    // TODO: benchmark-specific default size
-    int n = 100;
-    if (argc > 0) {
-       // std::cerr <<argv[0] << "\n";
-       n = std::atoi(argv[0]);
-       argc -= 1;
-       argv += 1;
-    }
-#endif 
 
 
     assert(problemsize >= 1);

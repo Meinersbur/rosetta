@@ -569,6 +569,7 @@ def do_run(bench,args) :
     exe = bench.exepath 
 
     start = datetime.datetime.now()
+    print ("Executing", shjoin( [exe] + args))
     p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     stdout = p.stdout.read()
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
@@ -603,7 +604,7 @@ def do_run(bench,args) :
 
 
 def run_gbench(bench,problemsizefile):
-    yield do_run(bench=bench, args=[f'--problemsizefile={problemsizefile}'])
+    yield from do_run(bench=bench, args=[f'--problemsizefile={problemsizefile}'])
         
 
 
@@ -632,7 +633,8 @@ def run_verify(problemsizefile):
             refpath = e.refpath
             #print(f"{exepath=}")
 
-            p = invoke.call(exepath, f'--problemsizefile={problemsizefile}', return_stdout=True)
+            args = [exepath, f'--problemsizefile={problemsizefile}']
+            p = invoke.call(*args, return_stdout=True, print_command=True)
             data = p.stdout 
             #print(f"{data=}")
 
@@ -882,9 +884,10 @@ def load_register_file(filename):
 
 
 
-def gen_reference(exepath,refpath):
+def gen_reference(exepath,refpath,problemsizefile):
     #print(f"{exepath=} {refpath=}")
-    invoke.call(exepath, stdout=refpath,print_stderr=True)
+    args = [exepath, f'--problemsizefile={problemsizefile}']
+    invoke.call(*args, stdout=refpath,print_stderr=True,print_command=True)
 
 
 
@@ -892,11 +895,11 @@ def main(argv):
     colorama.init()
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
     parser.add_argument('--gen-reference', nargs=2, type=pathlib.Path,  help="Write reference output file")
+    parser.add_argument('--problemsizefile',  type=pathlib.Path)
     args = parser.parse_args(argv[1:])
 
     if args.gen_reference:
-        gen_reference(*args.gen_reference)
-
+        gen_reference(*args.gen_reference,problemsizefile=args.problemsizefile)
 
 
 

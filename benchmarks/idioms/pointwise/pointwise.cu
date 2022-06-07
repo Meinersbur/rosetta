@@ -15,14 +15,14 @@ __global__ void kernel(int n, double *A) {
 
 
  void run(State& state, int n) {
-    double *A = state.malloc<double>(n);   
+     auto A  = state.fakedata_array<double>(n,/*verify*/true);   
 
 
     double *dev_A;
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
 
 
-    cudaMemcpy(dev_A, A, n * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_A, A.data(), n * sizeof(double), cudaMemcpyHostToDevice);
 
 
 
@@ -43,14 +43,13 @@ __global__ void kernel(int n, double *A) {
         }
 
         // TODO: Is the invocation already blocking?
-        cudaMemcpy( A, dev_A, n * sizeof(double), cudaMemcpyDeviceToHost ); cudaDeviceSynchronize();
+        cudaMemcpy( A.data(), dev_A, n * sizeof(double), cudaMemcpyDeviceToHost ); cudaDeviceSynchronize();
 
     }
 
     cudaFree(dev_A);
 
 
-    state.verifydata(A, n);
-    state.free(A);
+
 }
 

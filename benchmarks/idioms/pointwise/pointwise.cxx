@@ -8,13 +8,8 @@ static void kernel(int n, double *A) {
 }
 
 void run(State& state, int n) {
-    double *A = state.malloc<double>(n);   
-    state.fakedata(A, n); 
+    auto A  = state.fakedata_array<double>(n,/*verify*/true);   
 
     for (auto &&_ : state) 
-        kernel(n, A);
-    
-
-    state.verifydata(A, n);
-    state.free(A);
+        kernel(n, A.data());    
 }
