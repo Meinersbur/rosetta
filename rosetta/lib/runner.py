@@ -19,10 +19,9 @@ import math
 import tqdm # progress meter
 import argparse
 from collections import defaultdict
-from support import mkpath
 import invoke
 import io
-
+from support import *
 
 
 # FIXME: Hack
@@ -249,55 +248,55 @@ class Table:
 # Don't trust yet, have to check correctness
 class Statistic:
     studentt_density_95 = list( {
-1: 12.706, # 1
-2: 4.303, # 2
-3: 3.182, # 3
-4: 2.776, # 4
-5: 2.571, # 5
-6: 2.447, # 6
-7: 2.365, # 7
-8: 2.306, # 8
-9: 2.262, # 9
-10: 2.228, # 10
-11: 2.201, # 11
-12: 2.179, # 12
-13: 2.160, # 13
-14: 2.145, # 14
-15: 2.131, # 15
-16: 2.120, # 16
-17: 2.110, # 17
-18: 2.101, # 18
-19: 2.093, # 19
-20: 2.086, # 20
-21: 2.080, # 21
-22: 2.074, # 22
-23: 2.069, # 23
-24: 2.064, # 24
-25: 2.060, # 25
-26: 2.056, # 26
-27: 2.052, # 27
-28: 2.048, # 28
-29: 2.045, # 29
-30: 2.042, # 30
-35: 2.030, # 35
-40: 2.021, # 40
-45: 2.014, # 45
-50: 2.009, # 50
-60: 2.000, # 
-70: 1.994, # 
-80: 1.990, # 
-90: 1.987, # 
-100: 1.984, # 
-150: 1.976, # 
-200: 1.972, # 
-250: 1.969, # 
-300: 1.968, # 
-400: 1.966, # 
-500: 1.965, # 
-600: 1.964, # 
-800: 1.963, # 
-1000: 1.962, # 
-100000: 1.960, # 
+1: 12.706, 
+2: 4.303, 
+3: 3.182, 
+4: 2.776, 
+5: 2.571, 
+6: 2.447, 
+7: 2.365, 
+8: 2.306, 
+9: 2.262, 
+10: 2.228, 
+11: 2.201, 
+12: 2.179, 
+13: 2.160, 
+14: 2.145, 
+15: 2.131, 
+16: 2.120, 
+17: 2.110, 
+18: 2.101, 
+19: 2.093, 
+20: 2.086, 
+21: 2.080, 
+22: 2.074, 
+23: 2.069,
+24: 2.064, 
+25: 2.060, 
+26: 2.056, 
+27: 2.052, 
+28: 2.048, 
+29: 2.045, 
+30: 2.042, 
+35: 2.030, 
+40: 2.021,
+45: 2.014, 
+50: 2.009, 
+60: 2.000, 
+70: 1.994, 
+80: 1.990, 
+90: 1.987, 
+100: 1.984, 
+150: 1.976, 
+200: 1.972, 
+250: 1.969, 
+300: 1.968, 
+400: 1.966, 
+500: 1.965, 
+600: 1.964, 
+800: 1.963, 
+1000: 1.962, 
+100000: 1.960, 
     }.items())
 
     def __init__(self,samples,sum,sumabs,sumsqr,sumreciproc,geomean):
@@ -523,7 +522,7 @@ class BenchVariants:
 
 
 class BenchResult:
-    def __init__(self,bench, name:str, count:int, durations, maxrss):
+    def __init__(self,bench, name:str, count:int, durations, maxrss, cold_count, peak_alloc):
         self.bench=bench
         self.name=name
         self.count=count
@@ -533,10 +532,13 @@ class BenchResult:
         #self.acceltime=acceltime
         self.durations=durations
         self.maxrss=maxrss
+        self.cold_count = cold_count
+        self.peak_alloc = peak_alloc
 
 
-
-def parse_time(s):
+# TODO: enough prevision for nanoseconds?
+# TODO: Use alternative duration class
+def parse_time(s:str):
     if s.endswith("ns"):
         return float(s[:-2]) / 1000000000
     if s.endswith("us") or s.endswith("µs") :
@@ -545,26 +547,37 @@ def parse_time(s):
         return float(s[:-2]) / 1000
     if s.endswith("s")  :
         return float(s[:-1]) 
+    if s.endswith("m")  :
+        return float(s[:-1])   * 60  
+    if s.endswith("h")  :
+        return float(s[:-1])   * 60 * 60 
     raise Exception("Don't know the duration unit")
 
 
-def run_gbench(bench,problemsizefile):
+# TODO: Recognize Kibibytes
+def parse_memsize(s:str):
+    if s.endswith("K") :
+            return  math.ceil( float(s[:-1]) * 1024)
+    if s.endswith("M") :
+            return  math.ceil(float(s[:-1]) * 1024* 1024)
+    if s.endswith("G") :
+            return  math.ceil( float(s[:-1]) * 1024* 1024* 1024)
+    return int(s)
+
+
+def do_run(bench,args) :
     exe = bench.exepath 
 
-
     start = datetime.datetime.now()
-    p = subprocess.Popen([exe, f'--problemsizefile={problemsizefile}'],stdout=subprocess.PIPE,universal_newlines=True)
-    
-
-    
-
+    p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     stdout = p.stdout.read()
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
     stop = datetime.datetime.now()
+
     wtime = max(stop - start,datetime.timedelta(0))
     utime = ru.ru_utime
     stime = ru.ru_stime
-    maxrss = ru.ru_maxrss
+    maxrss = ru.ru_maxrss * 1024
 
     benchmarks = et.fromstring(stdout)
 
@@ -573,6 +586,7 @@ def run_gbench(bench,problemsizefile):
         name = benchmark.attrib['name']
         n = benchmark.attrib['n']
         cold_count = benchmark.attrib['cold_iterations']
+        peak_alloc = benchmark.attrib['peak_alloc']
         count = len( benchmark)
 
         time_per_key = defaultdict(lambda :  [])
@@ -584,13 +598,12 @@ def run_gbench(bench,problemsizefile):
         for k,data in time_per_key.items():
             stat_per_key[k] = statistic(data)
 
+        yield BenchResult(bench=bench, name=name, count=count,durations=stat_per_key, maxrss=maxrss,cold_count=cold_count,peak_alloc=peak_alloc) 
 
-        #walltime = statistic(float(b.attrib['walltime']) for b in  benchmark)
-        #usertime = statistic (float(b.attrib['usertime']) for b in  benchmark)
-        #kerneltime  = statistic (float(b.attrib['kerneltime']) for b in  benchmark)
-        #acceltime  = statistic (float(b.attrib['acceltime']) for b in  benchmark)
 
-        yield BenchResult(bench=bench, name=name, count=count,durations=stat_per_key, maxrss=maxrss) 
+
+def run_gbench(bench,problemsizefile):
+    yield do_run(bench=bench, args=[f'--problemsizefile={problemsizefile}'])
         
 
 
@@ -613,23 +626,8 @@ def getPPMDisplayStr(s:str):
     return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel", 'omp_task' : "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s,s)
 
 
-def runner_main():
-    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    parser.add_argument('--verify', action='store_true',  help="Write reference output file")
-    parser.add_argument('--bench',  action='store_true',  help="Run benchmark")
-    parser.add_argument('--problemsizefile', type=pathlib.Path, required=True, help="Problem sizes to use (.ini file)")
-    args = parser.parse_args(sys.argv[1:])
-
-
-
-    problemsizefile = args.problemsizefile
-    if not problemsizefile.is_file():
-        # TODO: Embed default sizes
-        print(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
-        exit(1)
-
-    if args.verify:
-        for e in verifications:
+def run_verify(problemsizefile):
+     for e in verifications:
             exepath = e.exepath
             refpath = e.refpath
             #print(f"{exepath=}")
@@ -646,10 +644,9 @@ def runner_main():
                     print("Output   ", data)
                     print("Reference", refdata)
                     exit (1)
-        return 
 
 
-
+def run_bench(problemsizefile):
     results = []
     for e in benchmarks:
         results += list(run_gbench(e,problemsizefile=problemsizefile))
@@ -662,8 +659,6 @@ def runner_main():
     summary_per_key = {} # mean of means
     for k,data in stats_per_key.items():
         summary_per_key[k] = statistic(  d.mean for d in data)
-
-
 
 
     table = Table()
@@ -713,11 +708,8 @@ def runner_main():
     table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
     for k,summary in summary_per_key.items():
         table.add_column(k, title=StrColor( getMeasureDisplayStr(k), colorama.Style.BRIGHT),formatter=duration_formatter(summary.minimum,summary.maximum))
-    #table.add_column('wtime', title=StrColor( "Wall" , colorama.Style.BRIGHT),formatter=duration_formatter(walltime_stat.minimum,walltime_stat.maximum))
-    #table.add_column('utime', title=StrColor( "User" , colorama.Style.BRIGHT),formatter=duration_formatter(usertime_stat.minimum,usertime_stat.maximum))
-    #table.add_column('ktime', title=StrColor("Kernel" , colorama.Style.BRIGHT),formatter=duration_formatter(kerneltime_stat.minimum,kerneltime_stat.maximum))
-    #table.add_column('acceltime', title=StrColor("GPU" , colorama.Style.BRIGHT),formatter=duration_formatter(acceltime_stat.minimum,acceltime_stat.maximum))
-    
+
+
     for r in results:
         # TODO: acceltime doesn't always apply
         table.add_row(program=r.bench.target , ppm=r.bench.ppm, config=r.bench.config, n=r.count,**r.durations)
@@ -733,6 +725,11 @@ class Benchmark:
         self.config=config
         self.ppm = ppm
 
+
+    @property 
+    def name (self):
+        return self.target.split(sep='.', maxsplit=1)[0]
+
 class Verification:
     def __init__(self,target,exepath,refpath,config,ppm):
         self.target=target
@@ -740,6 +737,124 @@ class Verification:
         self.refpath=refpath 
         self.config=config
         self.ppm = ppm
+
+
+
+
+def custom_bisect_left(lb, ub, func):
+    assert ub >= lb
+    while True:
+        if lb == ub:
+            return lb
+        mid = (lb + ub + 1 ) // 2
+        result = func(mid)
+        if result < 0:
+            # Go smaller
+            ub = mid - 1
+            continue 
+        if result > 0:
+            # Go larger, keep candidate as possible result
+            lb = mid
+            continue
+        # exact match?
+        return mid
+
+
+# TODO: merge with run_gbench
+# TODO: repeats for stability
+def probe_bench(bench:Benchmark, limit_walltime, limit_rss, limit_alloc):
+    assert limit_walltime or limit_rss or limit_alloc, "at least one limit required"
+
+    def is_too_large(result):
+        if limit_walltime is not None and result.durations['walltime'].mean >= limit_walltime:
+            return True
+        if limit_rss is not None and  result.maxrss >= limit_rss:
+             return True
+        if limit_alloc is not None and result.peakalloc >= limit_alloc:
+            return True
+        return False
+
+    # Find a rough ballpark
+    lower_n = 1
+    n = 1
+    while True:
+        [result] = do_run(bench,args=[f'-n{n}', '--repeats=1'] )
+        if is_too_large(result):
+            break
+
+        lower_n = n
+        n *= 2
+
+    # Bisect between lower_n and n
+    def func(n):
+        [result] = do_run(bench,args=[f'-n{n}', '--repeats=1'] )
+        if is_too_large(result):
+            return -1
+        return 1
+    return custom_bisect_left(lower_n, n-1, func)
+        
+  
+
+
+def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
+    problemsizecontent = []
+    for bench in benchmarks:
+        n = probe_bench(bench=bench, limit_walltime=limit_walltime,limit_rss=limit_rss,limit_alloc=limit_alloc)
+
+        problemsizecontent.extend(
+                [f"[{bench.name}]",
+                f"n={n}",
+                ""
+                ]
+        )
+
+    with problemsizefile.open('w+') as f:
+        for line in problemsizecontent:
+            print(line,file=f)
+
+
+
+
+def runner_main():
+    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
+    parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
+
+    # Command
+    parser.add_argument('--verify', action='store_true',  help="Write reference output file")
+
+    # Command 
+    parser.add_argument('--bench',  action='store_true',  help="Run benchmark")
+
+    # Command
+    parser.add_argument('--probe', action='store_true')
+    parser.add_argument('--write-problemsizefile', type=pathlib.Path)
+    parser.add_argument('--limit-walltime', type=parse_time)
+    parser.add_argument('--limit-rss', type=parse_memsize)
+    parser.add_argument('--limit-alloc', type=parse_memsize)
+ 
+
+    args = parser.parse_args(sys.argv[1:])
+
+
+    if args.probe:
+        return     run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+
+
+    problemsizefile = args.problemsizefile
+    if not problemsizefile:
+        die("Problemsizes required")  
+    if not problemsizefile.is_file():
+        # TODO: Embed default sizes
+        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
+
+
+    if args.verify:
+     return run_verify(problemsizefile=problemsizefile)
+
+
+    return run_bench(problemsizefile=problemsizefile)
+
+
 
 
 

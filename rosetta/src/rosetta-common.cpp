@@ -715,8 +715,10 @@ private:
 
     // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
 
-public:
+    int exactRepeats  = -1;
 
+public:
+  explicit   BenchmarkRun(int exactRepeats) : exactRepeats(exactRepeats) {}
 
     void run(std::string program, int n) {     
 #if ROSETTA_BENCH
@@ -774,6 +776,8 @@ public:
 #endif
 #endif 
 
+        assert(!curAllocatedBytes && "Should not leak memory");
+
         // TODO: print basic timing info so user knows something happened 
     }
 
@@ -797,6 +801,9 @@ public:
     uint64_t cuptiStartOther, cuptiStopOther;
 #endif 
 #endif 
+
+    size_t curAllocatedBytes = 0;
+    size_t peakAllocatedBytes = 0;
 
     void start() {
         //printf("start\n");
@@ -913,6 +920,11 @@ public:
         auto now = std::chrono::steady_clock::now();
         auto duration =  now - startTime;
 
+        if (exactRepeats) {
+            measurements.reserve(exactRepeats);
+            return exactRepeats - measurements.size() ;
+        }
+
         // TODO: configure, until stability, max/min number iterations, ...
         if (duration >= 1s) 
             return 0;
@@ -996,7 +1008,13 @@ int State::refresh() {
     return    impl->refresh();
 }
 
-void State:: addAllocatedBytes(size_t allocatedSize) {
+void State:: addAllocatedBytes(size_t size) {
+    impl->curAllocatedBytes += size;
+    impl->peakAllocatedBytes = std::max( impl->peakAllocatedBytes ,  impl->curAllocatedBytes  );
+}
+void State::subAllocatedBytes(size_t size) {
+    assert (size <= impl->curAllocatedBytes );
+    impl->curAllocatedBytes -= size;
 }
 
 
@@ -1144,23 +1162,23 @@ struct Rosetta {
     }
 
    static  BenchmarkRun *currentRun ;
-  static void run(std::string program, int n) {       
-            BenchmarkRun executor;
+  static void run(std::string program, int n, int repeats) {       
+            BenchmarkRun executor(repeats);
             currentRun = &executor;
             executor.run(program, n);
 
 #if ROSETTA_BENCH
             int numMeasures = executor.measurements.size();
             int startMeasures = 0;
-            if (numMeasures >=2) {
-                // Remove cold run if we can afford it.
+            if (numMeasures >=2 && repeats==-1) {
+                // Remove cold run if we can afford it and no option to omit was given.
                 startMeasures = 1;
             }
 
 
                 std::cout << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
-                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<  R"(">)"<<std::endl;
+                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<   "\" peak_alloc=\"" << executor.peakAllocatedBytes << R"(">)"<<std::endl;
                 for (int i = startMeasures; i < numMeasures; i+=1) {
                     auto &m = executor. measurements[i];
                // for (auto &m :executor. measurements) {
@@ -1286,6 +1304,8 @@ int parseInt(std::string_view s) {
     return result;
 }
 
+
+
 int main(int argc, char* argv[]) {
     assert(argc >= 1);
 
@@ -1301,6 +1321,8 @@ int main(int argc, char* argv[]) {
 
     std::string_view problemsizefile ;
     int problemsize = -1;
+    int repeats = -1;
+    int cold = -1;
     int i =1;
     while (i < argc) {
         auto [name,val] = nextArg(argc, argv, i);
@@ -1316,7 +1338,12 @@ int main(int argc, char* argv[]) {
                 val = argv[i]; i+= 1;
             }
             problemsizefile = *val;
-        }
+        } else if (name == "repeats") {
+            if (!val.has_value() && i < argc) {
+                val = argv[i]; i+= 1;
+            }
+            repeats = parseInt(*val);
+        } 
     }
 
    
@@ -1390,7 +1417,7 @@ int main(int argc, char* argv[]) {
 
 
     assert(problemsize >= 1);
-    Rosetta::run( program.filename().string(), problemsize );
+    Rosetta::run( program.filename().string(), problemsize , repeats);
 
     return EXIT_SUCCESS;
 }
