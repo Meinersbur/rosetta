@@ -12,6 +12,8 @@
 #include <iostream>
 #include <string>
 #include <charconv>
+#include <fstream>
+#include <filesystem>
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cupti.h>
@@ -716,7 +718,7 @@ private:
 public:
 
 
-    void run(const char *program, int n) {     
+    void run(std::string program, int n) {     
 #if ROSETTA_BENCH
         startTime = std::chrono::steady_clock::now();
 #endif 
@@ -1142,7 +1144,7 @@ struct Rosetta {
     }
 
    static  BenchmarkRun *currentRun ;
-  static void run(const char *program, int n) {       
+  static void run(std::string program, int n) {       
             BenchmarkRun executor;
             currentRun = &executor;
             executor.run(program, n);
@@ -1266,6 +1268,16 @@ std::tuple <std::string_view, std::optional<  std::string_view>> nextArg(int arg
 }
 
 
+static  std::string_view trim(std::string_view str){ constexpr char const* whitespace { " \t\r\n" };
+    auto start =  str.find_first_not_of(whitespace);
+    if (start == std::string::npos) return ""; // contains only whitespace chars
+    auto stop = str.find_last_not_of(whitespace,   str.length());
+    if (stop == std::string::npos) return ""; // contains only whitespace chars
+    if (stop < start ) return "";
+    return  str.substr(start, stop - start + 1); 
+}
+
+
 static 
 int parseInt(std::string_view s) {
     int result;
@@ -1276,7 +1288,16 @@ int parseInt(std::string_view s) {
 
 int main(int argc, char* argv[]) {
     assert(argc >= 1);
-    const char * program = argv[0];
+
+    // TODO: Get benchname from program itself.
+    std::filesystem ::path program ( argv[0]);
+    auto progname = program.filename().string();
+
+   auto dotpos = progname.find_first_of('.');
+   auto benchname = progname;
+   if (dotpos != std::string::npos) {
+    benchname = progname.substr(0, dotpos);
+   }
 
     std::string_view problemsizefile ;
     int problemsize = -1;
@@ -1288,13 +1309,13 @@ int main(int argc, char* argv[]) {
             if (!val.has_value() && i < argc) {
                 val = argv[i]; i+= 1;
             }
-            problemsize = parseInt(val.value());
+            problemsize = parseInt(*val);
         }
-        else if (name == "sizefile") {
+        else if (name == "problemsizefile") {
             if (!val.has_value() && i < argc) {
                 val = argv[i]; i+= 1;
             }
-            problemsizefile = problemsizefile;
+            problemsizefile = *val;
         }
     }
 
@@ -1303,9 +1324,46 @@ int main(int argc, char* argv[]) {
     if (problemsize >= 0) {
         // Explicit problemsize has priority
     } else if (!problemsizefile.empty()) {
-        std::ifstream psfile{ problemsizefile };
-        std::string myline;
-        std::getline (psfile, myline);
+        std::vector<std::string> lines;
+        {
+            std::ifstream psfile(std::string(problemsizefile).c_str(), std::ios::in);
+            std::string myline;
+            for (std::string myline; std::getline(psfile, myline); )
+                lines.push_back(myline);
+        }
+
+        std::vector<std::string> seclines;
+        int i =0 ;
+        auto secheader  = "[" + benchname + "]";
+        while (i < lines.size()) {
+            if (trim(lines[i]) == secheader) {
+                i += 1;
+                while (i < lines.size()) {
+                    auto trimmed = trim(lines[i]);
+                    if (trimmed.substr(0, 1) == "[") break;
+                    if (!trimmed.empty())
+                        seclines.push_back( std::string (trimmed)); 
+                    i+=1;
+                }
+                break;
+             }
+            i+=1;
+        }
+
+
+        for (auto &&line : seclines) {
+            auto lineview = std::string_view(line);
+            auto eqpos = line.find_first_of('=');
+            if (eqpos == std::string::npos) continue;
+            auto key = trim(  lineview.substr(0, eqpos) );
+            auto val = trim( lineview.substr(eqpos + 1) );
+
+            if (key == "n") {
+                auto nval = parseInt(val);
+                problemsize = nval;
+                continue;
+            }
+        }
     }
 
 #if 0
@@ -1331,11 +1389,8 @@ int main(int argc, char* argv[]) {
 #endif 
 
 
-
-    Rosetta::run( program, n );
-
-
-
+    assert(problemsize >= 1);
+    Rosetta::run( program.filename().string(), problemsize );
 
     return EXIT_SUCCESS;
 }

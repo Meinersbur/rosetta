@@ -548,12 +548,13 @@ def parse_time(s):
     raise Exception("Don't know the duration unit")
 
 
-def run_gbench(bench):
+def run_gbench(bench,problemsizefile):
     exe = bench.exepath 
 
+
     start = datetime.datetime.now()
-    p = subprocess.Popen([exe],stdout=subprocess.PIPE,universal_newlines=True)
-    #print([exe])
+    p = subprocess.Popen([exe, f'--problemsizefile={problemsizefile}'],stdout=subprocess.PIPE,universal_newlines=True)
+    
 
     
 
@@ -614,9 +615,18 @@ def getPPMDisplayStr(s:str):
 
 def runner_main():
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    parser.add_argument('--verify',  action='store_true',  help="Write reference output file")
+    parser.add_argument('--verify', action='store_true',  help="Write reference output file")
     parser.add_argument('--bench',  action='store_true',  help="Run benchmark")
+    parser.add_argument('--problemsizefile', type=pathlib.Path, required=True, help="Problem sizes to use (.ini file)")
     args = parser.parse_args(sys.argv[1:])
+
+
+
+    problemsizefile = args.problemsizefile
+    if not problemsizefile.is_file():
+        # TODO: Embed default sizes
+        print(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
+        exit(1)
 
     if args.verify:
         for e in verifications:
@@ -624,7 +634,7 @@ def runner_main():
             refpath = e.refpath
             #print(f"{exepath=}")
 
-            p = invoke.call(exepath, return_stdout=True)
+            p = invoke.call(exepath, f'--problemsizefile={problemsizefile}', return_stdout=True)
             data = p.stdout 
             #print(f"{data=}")
 
@@ -642,7 +652,7 @@ def runner_main():
 
     results = []
     for e in benchmarks:
-        results += list(run_gbench(e))
+        results += list(run_gbench(e,problemsizefile=problemsizefile))
 
     stats_per_key = defaultdict(lambda :  [])
     for r in results:

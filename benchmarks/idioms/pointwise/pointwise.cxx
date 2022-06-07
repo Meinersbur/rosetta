@@ -9,8 +9,8 @@ static void kernel(int n, double *A) {
 
 void run(State& state, int n) {
     // default size
-    if (n < 0)
-        n = (DEFAULT_N);
+   // if (n < 0)
+   //     n = (DEFAULT_N);
 
     double *A = state.malloc<double>(n);   
     state.fakedata(A, n); 

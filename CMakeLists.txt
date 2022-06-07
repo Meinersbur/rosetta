@@ -165,7 +165,9 @@ endif ()
 
 ## Configuration ###############################################################
 
-option(ROSETTA_PPM_SERIAL "Enable serial reference" ON)
+option(ROSETTA_PPM_REFERENCE "Enable reference code" ON)
+
+option(ROSETTA_PPM_SERIAL "Enable serial" ON)
 
 set(_cuda_enabled_default OFF)
 if (CMAKE_CUDA_COMPILER)
@@ -205,11 +207,26 @@ endif ()
 option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
 
+set(ROSETTA_PROBLEMSIZE "medium" CACHE STRING "Problemsize to use (predefined or path to ini-file)")
+message("ROSETTA_PROBLEMSIZE ${ROSETTA_PROBLEMSIZE}")
 
-
-## Compiler-preconfigurations ##################################################
-
-
+set(_problemsizefile)
+get_filename_component(_rosetta_predefined "${ROSETTA_PROBLEMSIZE}.problemsize.ini" ABSOLUTE  BASE_DIR "${CMAKE_SOURCE_DIR}/benchmarks"   )
+get_filename_component(_rosetta_filename "${ROSETTA_PROBLEMSIZE}" ABSOLUTE  BASE_DIR "${CMAKE_SOURCE_DIR}/benchmarks"   )
+get_filename_component(_rosetta_fullpath "${ROSETTA_PROBLEMSIZE}" ABSOLUTE   )
+message("_rosetta_predefined ${_rosetta_predefined}")
+if (NOT _problemsizefile  AND EXISTS "${_rosetta_predefined}")
+  set(_problemsizefile "${_rosetta_predefined}")
+endif ()
+if (NOT _problemsizefile AND EXISTS "${_rosetta_filename}")
+  set(_problemsizefile "${_rosetta_filename}")
+endif ()
+if (NOT _problemsizefile AND EXISTS "${_rosetta_fullpath}")
+  set(_problemsizefile "${_rosetta_fullpath}")
+endif ()
+if (NOT _problemsizefile)
+  message(SEND_ERROR "Problem sizes required")
+endif ()
 
 
 ## Build #######################################################################
@@ -415,7 +432,7 @@ if (_default_build_type)
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
   add_custom_target(run
-    COMMAND Python::Interpreter "run.py" "--bench"
+    COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--bench"
     COMMENT "Run all benchmarks ..."
     USES_TERMINAL VERBATIM
   )
@@ -423,7 +440,7 @@ if (_default_build_type)
 
   # TODO: Individial verify targets
   add_custom_target(verify
-    COMMAND Python::Interpreter "run.py" "--verify"
+    COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
     COMMENT "Verify all benchmarks ..."
     USES_TERMINAL VERBATIM
   )
@@ -449,6 +466,7 @@ endif ()
 
 
 
+get_filename_component(_problemsizefilename "${_problemsizefile}" NAME      )
 
 message("")
 message("Configuration Summary")
@@ -459,6 +477,7 @@ else ()
   message("Build Configurations: ${CMAKE_CONFIGURATION_TYPES}")
   message("Default Build Configuration: ${_default_build_type}")
 endif ()
+message("Problem sizes: ${_problemsizefilename}")
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
   get_property(_cxx_standard TARGET rosetta-serial-bench PROPERTY "CXX_STANDARD")
