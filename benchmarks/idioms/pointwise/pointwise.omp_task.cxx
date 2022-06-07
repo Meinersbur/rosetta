@@ -9,16 +9,12 @@ static void kernel(int n, double *A) {
 }
 
 void run(State& state, int n) {
-    double *A = state.malloc<double>(n);
-    state.fakedata(A, n);
+    auto A  = state.fakedata_array<double>(n,/*verify*/true);   
 
     for (auto &&_ : state) {
-        kernel(n, A);
-         #pragma omp taskwait
+        kernel(n, A.data());
+         #pragma omp taskwait // TODO: do in rosetta-omp_task
     }
-
-    state.verifydata(A, n);
-    state.free(A);
 }
 
 

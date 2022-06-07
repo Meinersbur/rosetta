@@ -28,10 +28,11 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
     endif ()
     set(_reffile "${CMAKE_CURRENT_BINARY_DIR}/${_reference_filename}")
 
+    # TODO: different reference file for reach problemsize? Hardcode problemsize for verification?
     add_custom_command(
       OUTPUT "${_reference_filename}"
       DEPENDS "${_verify_target}"
-      COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--gen-reference" "$<TARGET_FILE:${_verify_target}>" "${_reffile}"
+      COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--problemsizefile=${_problemsizefile}" "--gen-reference" "$<TARGET_FILE:${_verify_target}>" "${_reffile}"
       COMMENT "Generate ${basename} reference output (using serial output) ..."
     )
     add_custom_target("reference-${basename}"

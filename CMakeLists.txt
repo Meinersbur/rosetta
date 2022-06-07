@@ -418,7 +418,7 @@ if __name__ == '__main__':
 foreach (_conftype IN LISTS _build_types)
   add_custom_target(run-${_conftype}
     DEPENDS ${_benchmarks}
-    COMMAND  Python::Interpreter "run-${_conftype}.py"
+    COMMAND  Python::Interpreter "run-${_conftype}.py" "--problemsizefile=${_problemsizefile}" "--bench"
     COMMENT "Run benchmarks for ${_conftype} ..."
     USES_TERMINAL VERBATIM
   )
@@ -477,7 +477,7 @@ else ()
   message("Build Configurations: ${CMAKE_CONFIGURATION_TYPES}")
   message("Default Build Configuration: ${_default_build_type}")
 endif ()
-message("Problem sizes: ${_problemsizefilename}")
+message("Problem size: ${_problemsizefilename}")
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
   get_property(_cxx_standard TARGET rosetta-serial-bench PROPERTY "CXX_STANDARD")

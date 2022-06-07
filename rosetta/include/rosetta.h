@@ -62,6 +62,7 @@ constexpr int MeasureCount = MeasureLast+1;
 
 
 
+
 class Iteration {
   template <typename I>
   friend class Iterator;
@@ -156,8 +157,6 @@ protected:
     BenchmarkRun *impl;
 };
 
-
-
 template <>
 class DataHandler<double> :  public DataHandlerBase {
     friend class State;
@@ -169,12 +168,82 @@ public:
 };
 
 
+
+
+class dyn_array_base{
+protected:
+    dyn_array_base(BenchmarkRun* impl, int size, bool verify) ;
+    dyn_array_base(dyn_array_base&& that)  : impl(that.impl), size(that.size), verify(that.verify)   { that.impl=nullptr; that.verify= false;  that.size=0; }
+    ~dyn_array_base() ;
+
+    BenchmarkRun *impl;
+    size_t size;
+    bool verify ;
+};
+
+template<typename T> 
+class dyn_array : dyn_array_base {
+    friend class State;
+public:
+    ~dyn_array() { 
+        if (verify) verifydata();
+        verify=false;
+        delete[] mydata;  
+        mydata = nullptr;
+    }
+
+    dyn_array(const dyn_array &that) = delete;
+    dyn_array & operator=(const dyn_array &that) =delete;
+
+
+    dyn_array(dyn_array&& that) : dyn_array_base(std::move(that)), mydata(that.mydata) {
+        that.mydata=nullptr;
+    }
+
+
+    T* data() { return mydata ;};
+    const    T* data()const  { return mydata ;};
+
+    void zerodata() {
+        memset(data, '\0', size);
+    }
+
+    void fakedata() {  DataHandler<T>(impl).fake(mydata,size/sizeof(T)); }
+    void verifydata() {
+#if ROSETTA_VERIFY
+        DataHandler<T>(impl).verify(mydata,size/sizeof(T));
+#else
+        // Don't do anything in benchmark mode
+#endif 
+    }
+
+
+
+
+    // TODO: realloc
+private:
+    dyn_array(BenchmarkRun* impl, int count, bool verify  ) : dyn_array_base(impl, count * sizeof(T), verify ), mydata(new T[count]) {      }
+
+    // typed, to ensure TBAA can be effective
+        T* mydata;
+};
+
+
+
+
+ 
+
+
+
 class State {
   template <typename I>
       friend class Iterator;
    friend class Iteration;
    friend class Rosetta;
    friend class BenchmarkRun;
+   friend class dyn_array_base;
+   template <typename T>
+   friend class dyn_array;
 public:
      Iterator<AutoIteration>  begin();
      Iterator<AutoIteration>  end();
@@ -190,14 +259,31 @@ struct InternalData {
 // TODO: return some smart ptr, we are C++ after all
 // TODO: ensure alignment
 template<typename T>
-    T* malloc(size_t count) {
-   
+    T* malloc(size_t count) {   
   auto result = (InternalData<T>*) ::malloc(sizeof(InternalData<T>) + sizeof( T) * count );
   result->size = count * sizeof(T);
   addAllocatedBytes(count * sizeof(T));
   return &result->Data[0];
 }
 
+    template<typename T>
+    dyn_array<T> alloc_array(size_t count, bool verify= false) {   
+        return  dyn_array<T>( impl, count ,verify );
+    }
+
+    template<typename T>
+    dyn_array<T> calloc_array(size_t count , bool verify=false) {   
+        auto  result =  dyn_array<T>( impl, count, verify  );
+        result.zerodata();
+        return result;
+    }
+
+    template<typename T>
+    dyn_array<T> fakedata_array(size_t count, bool verify=false) {   
+        auto  result =  dyn_array<T>( impl, count ,verify );
+        result.fakedata();
+        return result;
+    }
 
 
 template<typename T>
@@ -284,12 +370,16 @@ private:
 };
 
 
+
+
 inline Iterator<Iteration> Range::begin() { return Iterator<Iteration>(state, false); }
 inline Iterator<Iteration> Range::end()   { return Iterator<Iteration>(state, true);  }
 
 
 inline Iterator<AutoIteration>  State::begin() { return Iterator<AutoIteration>(*this, false); }
 inline Iterator<AutoIteration>State::end()     { return Iterator<AutoIteration>(*this, true);}
+
+
 
 
 
