@@ -181,13 +181,21 @@ public:
 
 Range manual() { return Range(*this) ; }
 
+template<typename T>
+struct InternalData {
+    size_t size;
+    T Data[];
+};
 
 // TODO: return some smart ptr, we are C++ after all
+// TODO: ensure alignment
 template<typename T>
-T* malloc(size_t count) {
-  auto result = new T[count]; // TODO: alignment
+    T* malloc(size_t count) {
+   
+  auto result = (InternalData<T>*) ::malloc(sizeof(InternalData<T>) + sizeof( T) * count );
+  result->size = count * sizeof(T);
   addAllocatedBytes(count * sizeof(T));
-  return result;
+  return &result->Data[0];
 }
 
 
@@ -208,9 +216,11 @@ void verifydata(T* data, size_t count) {
 }
 
 template<typename T>
-void free (T *ptr) {
-    // TODO: subtract allocated bytes 
-    delete [] ptr;
+void free (T *ptr) { 
+    auto internaldata =(InternalData<T>*)  (((char*)ptr) -offsetof(InternalData<T>, Data)); 
+
+   subAllocatedBytes(internaldata->size);
+   ::free(internaldata);
 }
 
 private:
@@ -221,7 +231,8 @@ private:
   void stop();
   int refresh();
 
-  void addAllocatedBytes(size_t allocatedSize);
+  void addAllocatedBytes(size_t size);
+  void subAllocatedBytes(size_t size);
 
   BenchmarkRun *impl;
 };

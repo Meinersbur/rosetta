@@ -15,18 +15,8 @@ __global__ void kernel(int n, double *A) {
 
 
  void run(State& state, int n) {
-    // default size
-    if (n < 0)
-        n = (DEFAULT_N);
-
     double *A = state.malloc<double>(n);   
 
-
-   // cuptiSubscribe() ;
-
-//cudaEvent_t start, stop;
-//cudaEventCreate(&start);
-//cudaEventCreate(&stop);
 
     double *dev_A;
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
@@ -63,26 +53,4 @@ __global__ void kernel(int n, double *A) {
     state.verifydata(A, n);
     state.free(A);
 }
-
-
-#if 0
-int main(int argc, char* argv[]) {
-    ::benchmark::Initialize(&argc, argv);
-
-    int n = N;
-    if (argc > 1) {
-       n = std::atoi(argv[1]);
-       argc -= 1;
-       argv += 1;
-    }
-
-    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n) + "/gpu").c_str(), &pointwise_cuda, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond)->UseManualTime();
-    benchmark::RegisterBenchmark(("pointwise.cuda" + std::string("/") +std:: to_string(n) + "/cpu").c_str() , &pointwise_cuda, n)->MeasureProcessCPUTime()->UseRealTime()->Unit(benchmark::kMillisecond);
-
-    if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
-    ::benchmark::RunSpecifiedBenchmarks();
-    ::benchmark::Shutdown();
-    return EXIT_SUCCESS;
-}
-#endif
 
