@@ -8,16 +8,22 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
   set(_verify_target "${basename}.${ppm_shortname}.verify")
   set(_sources ${_arg_SOURCES})
 
-
   string(REPLACE "-" "_" ppm_mixed "${ppm}")
 
   add_executable("${_bench_target}" ${_sources})
   add_executable("${_verify_target}" ${_sources})
+  set_target_properties("${_bench_target}" PROPERTIES FOLDER "Benchmarks")
+  set_target_properties("${_verify_target}" PROPERTIES FOLDER "Verifications")
   target_link_libraries("${_bench_target}" PRIVATE "${_library}-bench")
   target_link_libraries("${_verify_target}" PRIVATE "${_library}-verify")
   if (_arg_DEFAULT_N)
     target_compile_definitions(${_bench_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
     target_compile_definitions(${_verify_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
+  endif ()
+  if (ROSETTA_REALTYPE)
+    # TODO: Support compiling mutiple real types at the same time?
+    target_compile_definitions(${_bench_target} PRIVATE "ROSETTA_REALTYPE=${ROSETTA_REALTYPE}")
+    target_compile_definitions(${_verify_target} PRIVATE "ROSETTA_REALTYPE=${ROSETTA_REALTYPE}")
   endif ()
 
   if (ppm STREQUAL "serial")
@@ -69,60 +75,8 @@ function (add_benchmark_serial basename)
   if (NOT ROSETTA_PPM_SERIAL)
     return ()
   endif ()
-  #cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
-
   add_benchmark_ppm("${basename}" "serial" "serial" "rosetta-serial" ${ARGN} SOURCES "${basename}.cxx")
-
-  #set(_target "${basename}.serial.bench")
-  #set(_sources "${basename}.cxx")
-  #add_executable(${_target} ${_sources} ${_arg_SOURCES})
-  #if (_arg_DEFAULT_N)
-  #  target_compile_definitions(${_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  #endif ()
-  #target_link_libraries(${_target} PRIVATE rosetta-serial-bench)
-  #add_dependencies(build-serial "${_target}")
-
-   # TODO: set_property(GLOBAL APPEND benchmarks_serial "${_target}")
-  #append_global_property(benchmarks_serial "${_target}")
-
-
-  # TODO: unduplicate
-  #set(_verify_target "${basename}.serial.verify")
-  #add_executable("${_verify_target}" ${_sources} ${_arg_SOURCES})
-  #if (_arg_DEFAULT_N)
-  #  target_compile_definitions(${_verify_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  #endif ()
-  #target_link_libraries(${_verify_target} PRIVATE rosetta-serial-verify)
-  #add_dependencies(build-serial-verify "${_verify_target}")  # TODO: separate target for verifications
-
-  #append_global_property(verifications_serial "${_verify_target}")
-
-
- 
- 
-
-  #set_property(TARGET ${_target}    
-  #  PROPERTY VERIFY_TARGET "${_verify_target}"
-  #)
-  #set_property(TARGET ${_target}    
-  #  PROPERTY VERIFY_FILE "$<TARGET_FILE:${_verify_target}>"
-  #)
-  #set_property(TARGET ${_target}    
-  #  PROPERTY REFERENCE_FILE "${_reference}"
-  #)
-
-  #add_custom_target("${basename}.serial")
-  #add_dependencies("${basename}.serial" "${_target}" "${_verify_target}")
 endfunction ()
-
-
-
-
-
-
-
-
-
 
 
 function (add_benchmark_cuda basename)
@@ -196,6 +150,7 @@ endfunction ()
 
 
 add_subdirectory(idioms)
+#add_subdirectory(features)
 #add_subdirectory(synth)
-#add_subdirectory(suites)
+add_subdirectory(suites)
 #add_subdirectory(apps)

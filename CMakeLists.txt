@@ -165,6 +165,7 @@ endif ()
 
 ## Configuration ###############################################################
 
+# TODO: Make possible to a reference that is not serial (serial may include optimizations)
 option(ROSETTA_PPM_REFERENCE "Enable reference code" ON)
 
 option(ROSETTA_PPM_SERIAL "Enable serial" ON)
@@ -206,6 +207,8 @@ if (OpenACC_CXX_FOUND)
 endif ()
 option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
+
+set(ROSETTA_REALTYPE "double" CACHE STRING "Which type to prefer for floating-point values ('float' or 'double')")
 
 set(ROSETTA_PROBLEMSIZE "medium" CACHE STRING "Problemsize to use (predefined or path to ini-file)")
 message("ROSETTA_PROBLEMSIZE ${ROSETTA_PROBLEMSIZE}")
