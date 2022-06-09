@@ -11,7 +11,7 @@
 # internal
 # TODO: basename is not required
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
-  cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
+  cmake_parse_arguments(_arg "" "" "SOURCES" ${ARGN})
 
   file(RELATIVE_PATH _relpath  "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
@@ -27,32 +27,22 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
       COMMAND Python::Interpreter "${GENCONFIG_EXECUTABLE}" "--benchname=${benchname}" "--problemsizefile=${_problemsizefile}" "--output=${_benchprop_filename}" 
       COMMENT "Generate ${benchname} properties file ..."
     )
-    add_custom_target("genconfig-${benchname}"
+    add_custom_target("${_genconfig_target}"
       DEPENDS "${_benchprop_filename}"
     )
   endif ()
 
-  set(_bench_target "${basename}.${ppm_shortname}.bench")
-  set(_verify_target "${basename}.${ppm_shortname}.verify")
+  set(_bench_target "${basename}.${ppm_shortname}")
   set(_sources ${_arg_SOURCES} "${_benchprop_filename}")
 
   string(REPLACE "-" "_" ppm_mixed "${ppm}")
 
   add_executable("${_bench_target}" ${_sources})
-  add_executable("${_verify_target}" ${_sources})
-  #add_dependencies("${_bench_target}" "${genconfig}-${benchname}")
   set_target_properties("${_bench_target}" PROPERTIES FOLDER "Benchmarks")
-  set_target_properties("${_verify_target}" PROPERTIES FOLDER "Verifications")
-  target_link_libraries("${_bench_target}" PRIVATE "${_library}-bench")
-  target_link_libraries("${_verify_target}" PRIVATE "${_library}-verify")
-  if (_arg_DEFAULT_N)
-    target_compile_definitions(${_bench_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-    target_compile_definitions(${_verify_target} PRIVATE "DEFAULT_N=${_arg_DEFAULT_N}")
-  endif ()
+  target_link_libraries("${_bench_target}" PRIVATE "${_library}")
   if (ROSETTA_REALTYPE)
     # TODO: Support compiling mutiple real types at the same time?
     target_compile_definitions(${_bench_target} PRIVATE "ROSETTA_REALTYPE=${ROSETTA_REALTYPE}")
-    target_compile_definitions(${_verify_target} PRIVATE "ROSETTA_REALTYPE=${ROSETTA_REALTYPE}")
   endif ()
 
   if (ppm STREQUAL "serial")
@@ -63,11 +53,11 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
     endif ()
     set(_reffile "${CMAKE_CURRENT_BINARY_DIR}/${_reference_filename}")
 
-    # TODO: different reference file for reach problemsize? Hardcode problemsize for verification?
+    # TODO: different reference file for each problemsize? Hardcode problemsize for verification?
     add_custom_command(
       OUTPUT "${_reference_filename}"
-      DEPENDS "${_verify_target}"
-      COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--problemsizefile=${_problemsizefile}" "--gen-reference" "$<TARGET_FILE:${_verify_target}>" "${_reffile}"
+      DEPENDS "${_bench_target}" "${RUNNER_EXECUTABLE}"
+      COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--problemsizefile=${_problemsizefile}" "--gen-reference" "$<TARGET_FILE:${_bench_target}>" "${_reffile}"
       COMMENT "Generate ${basename} reference output (using serial output) ..."
     )
     add_custom_target("reference-${basename}"
@@ -79,21 +69,22 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
     )
     append_global_property(references_serial "${_reference}")
   else ()
-    get_property(_reffile TARGET "${basename}.serial.verify" PROPERTY REFERENCE_FILE)
+    get_property(_reffile TARGET "${basename}.serial" PROPERTY REFERENCE_FILE)
+    #message("_reffile ${_reffile}")
   endif ()
   set_property(TARGET ${_bench_target} PROPERTY REFERENCE_FILE "${_reffile}")
-  set_property(TARGET ${_verify_target} PROPERTY REFERENCE_FILE "${_reffile}")
+  #set_property(TARGET ${_verify_target} PROPERTY REFERENCE_FILE "${_reffile}")
   set_property(TARGET ${_bench_target} PROPERTY VERIFY_TARGET "${_verify_target}")
 
   append_global_property("benchmarks_${ppm_mixed}" "${_bench_target}")
-  append_global_property("verifications_${ppm_mixed}" "${_verify_target}")
+  #append_global_property("verifications_${ppm_mixed}" "${_verify_target}")
 
 
-  add_custom_target("${basename}.${ppm}")
-  add_dependencies("${basename}.${ppm}" "${_bench_target}" "${_verify_target}")
+  #add_custom_target("${basename}.${ppm}")
+  #add_dependencies("${basename}.${ppm}" "${_bench_target}" "${_verify_target}")
 
   add_dependencies("build-${ppm}" "${_bench_target}")
-  add_dependencies("build-${ppm}-verify" "${_verify_target}")
+  #add_dependencies("build-${ppm}-verify" "${_verify_target}")
 endfunction ()
 
 
@@ -120,7 +111,7 @@ function (add_benchmark_openmp_parallel basename)
   if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp" ${ARGN} SOURCES "${basename}.omp_parallel.cxx")
+  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp-parallel" ${ARGN} SOURCES "${basename}.omp_parallel.cxx")
 endfunction ()
 
 
@@ -128,7 +119,7 @@ function (add_benchmark_openmp_task basename)
   if (NOT ROSETTA_PPM_OPENMP_TASK)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp" ${ARGN} SOURCES "${basename}.omp_task.cxx")
+  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp-task" ${ARGN} SOURCES "${basename}.omp_task.cxx")
 endfunction ()
 
 
