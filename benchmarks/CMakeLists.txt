@@ -18,7 +18,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
   set(benchname "${_relpath_dots}")
   set(basename "${_relpath_dots}")
 
-  set(_genconfig_target "${genconfig}-${benchname}")
+  set(_genconfig_target "genconfig-${benchname}")
   set(_benchprop_filename "${benchname}.benchprop.cxx")
   if (NOT TARGET "${_genconfig_target}")
     add_custom_command(

@@ -18,9 +18,9 @@ void kernel(int m, int n, multarray<real,2> A,    real* x,    real* y,    real* 
 
 
 void run(State& state, int pbsize) {
-    // n 5%-20% larger than n
-    size_t n = pbsize + pbsize/10;
-    size_t m = pbsize;
+    // n is 5%-20% larger than m
+    size_t n = pbsize ;
+    size_t m = pbsize - pbsize/10;
 
 
     auto A = state.allocate_array<double>({n,m}, /*fakedata*/true, /*verify*/false); 
