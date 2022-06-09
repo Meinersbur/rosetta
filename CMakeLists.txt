@@ -50,7 +50,7 @@ endif ()
 
 # TODO: should call something in bin/
 set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
-
+set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
 
 
 ## Dependencies ################################################################
@@ -480,7 +480,7 @@ else ()
   message("Build Configurations: ${CMAKE_CONFIGURATION_TYPES}")
   message("Default Build Configuration: ${_default_build_type}")
 endif ()
-message("Problem size: ${_problemsizefilename}")
+message("Default problem size: ${_problemsizefilename}")
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
   get_property(_cxx_standard TARGET rosetta-serial-bench PROPERTY "CXX_STANDARD")

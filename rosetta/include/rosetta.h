@@ -658,7 +658,12 @@ public:
 
     operator multarray<T, DIMS>() {  return get(); }
 
+ //  template<  typename  std::enable_if<DIMS==1,bool> ::type =  true >
+ //  operator T*() {  return  mydata.data(); }
 
+    // Implicit conversion to pointer only for flat arrays
+   template<typename U =T, typename = typename std::enable_if<std::is_same<U,T>::value && DIMS==1,T>::type   >
+   operator T*() {  return  mydata.data(); }
 
 private:
     dyn_array<T> mydata;

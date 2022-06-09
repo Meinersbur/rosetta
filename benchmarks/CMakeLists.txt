@@ -1,17 +1,46 @@
 
 
+
+
+
+
+
+
+
+
 # internal
+# TODO: basename is not required
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
   cmake_parse_arguments(_arg "" "DEFAULT_N" "SOURCES" ${ARGN})
 
+  file(RELATIVE_PATH _relpath  "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
+  string(REPLACE "/" "." _relpath_dots "${_relpath}")
+  set(benchname "${_relpath_dots}")
+  set(basename "${_relpath_dots}")
+
+  set(_genconfig_target "${genconfig}-${benchname}")
+  set(_benchprop_filename "${benchname}.benchprop.cxx")
+  if (NOT TARGET "${_genconfig_target}")
+    add_custom_command(
+      OUTPUT "${_benchprop_filename}"
+      DEPENDS "${_problemsizefile}" "${GENCONFIG_EXECUTABLE}"
+      COMMAND Python::Interpreter "${GENCONFIG_EXECUTABLE}" "--benchname=${benchname}" "--problemsizefile=${_problemsizefile}" "--output=${_benchprop_filename}" 
+      COMMENT "Generate ${benchname} properties file ..."
+    )
+    add_custom_target("genconfig-${benchname}"
+      DEPENDS "${_benchprop_filename}"
+    )
+  endif ()
+
   set(_bench_target "${basename}.${ppm_shortname}.bench")
   set(_verify_target "${basename}.${ppm_shortname}.verify")
-  set(_sources ${_arg_SOURCES})
+  set(_sources ${_arg_SOURCES} "${_benchprop_filename}")
 
   string(REPLACE "-" "_" ppm_mixed "${ppm}")
 
   add_executable("${_bench_target}" ${_sources})
   add_executable("${_verify_target}" ${_sources})
+  #add_dependencies("${_bench_target}" "${genconfig}-${benchname}")
   set_target_properties("${_bench_target}" PROPERTIES FOLDER "Benchmarks")
   set_target_properties("${_verify_target}" PROPERTIES FOLDER "Verifications")
   target_link_libraries("${_bench_target}" PRIVATE "${_library}-bench")

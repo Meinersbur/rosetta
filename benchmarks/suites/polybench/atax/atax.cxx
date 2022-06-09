@@ -2,12 +2,7 @@
 
 
 static
-void kernel(int m, int n, 
-    multarray<real,2> A,
-    multarray<real,1> x,
-    multarray<real,1> y,
-    multarray<real,1> tmp){
-
+void kernel(int m, int n, multarray<real,2> A,    real* x,    real* y,    real* tmp){
 #pragma scop
     for (int i = 0; i < n; i++)
         y[i] = 0;
@@ -33,9 +28,6 @@ void run(State& state, int pbsize) {
     auto y = state.allocate_array<double>({ n },/*fakedata*/false,/*verify*/true);
     auto tmp = state.allocate_array<double>({ n },/*fakedata*/false,/*verify*/false);
 
-
-
     for (auto &&_ : state) 
         kernel(n, m, A, x, y, tmp);
 }
-

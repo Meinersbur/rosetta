@@ -1163,7 +1163,7 @@ struct Rosetta {
     }
 
    static  BenchmarkRun *currentRun ;
-  static void run(std::string program, int n, int repeats) {       
+  static void run(std::filesystem ::path executable, std::string program, int n, int repeats) {       
             BenchmarkRun executor(repeats);
             currentRun = &executor;
             executor.run(program, n);
@@ -1177,9 +1177,25 @@ struct Rosetta {
             }
 
 
+#if ROSETTA_SERIAL
+            const char *ppm_variant = "serial";
+#endif 
+#if ROSETTA_OPENMP_CUDA
+            const char *ppm_variant = "openmp_cuda";
+#endif 
+#if ROSETTA_OPENMP_PARALLEL
+            const char *ppm_variant = "openmp_parallel";
+#endif 
+#if ROSETTA_OPENMP_TASK
+            const char *ppm_variant = "openmp_task";
+#endif 
+#if ROSETTA_OPENMP_TARGET
+            const char *ppm_variant = "openmp_target";
+#endif 
+
                 std::cout << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
                 std::cout << R"(<benchmarks>)" <<std::endl;
-                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<   "\" peak_alloc=\"" << executor.peakAllocatedBytes << R"(">)"<<std::endl;
+                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<   "\" peak_alloc=\"" << executor.peakAllocatedBytes <<  "\" ppm=\"" << ppm_variant << R"(">)"<<std::endl;
                 for (int i = startMeasures; i < numMeasures; i+=1) {
                     auto &m = executor. measurements[i];
                // for (auto &m :executor. measurements) {
@@ -1323,18 +1339,28 @@ impl->curAllocatedBytes -= size;
 
 
 
+extern const char *bench_name;
+extern int64_t bench_default_problemsize;
+
 int main(int argc, char* argv[]) {
     assert(argc >= 1);
 
-    // TODO: Get benchname from program itself.
     std::filesystem ::path program ( argv[0]);
-    auto progname = program.filename().string();
+    std::string benchname;
+    if (bench_name) {
+        // preferably use program name linked into the program
+        benchname = bench_name;
+       // printf("bench_name %s\n", bench_name);
+    }    else {
+        // fallback to executable name
+        auto progname = program.filename().string();
 
-   auto dotpos = progname.find_first_of('.');
-   auto benchname = progname;
-   if (dotpos != std::string::npos) {
-    benchname = progname.substr(0, dotpos);
-   }
+        auto dotpos = progname.find_first_of('.');
+         benchname = progname;
+        if (dotpos != std::string::npos) {
+            benchname = progname.substr(0, dotpos);
+        }
+    }
 
     std::string_view problemsizefile ;
     int problemsize = -1;
@@ -1365,8 +1391,10 @@ int main(int argc, char* argv[]) {
 
    
     // TODO: default problem size
+    int64_t n;
     if (problemsize >= 0) {
         // Explicit problemsize has priority
+        n = problemsize;
     } else if (!problemsizefile.empty()) {
         std::vector<std::string> lines;
         {
@@ -1408,11 +1436,13 @@ int main(int argc, char* argv[]) {
                 continue;
             }
         }
+    }    else {
+    n = bench_default_problemsize;
     }
 
 
     assert(problemsize >= 1);
-    Rosetta::run( program.filename().string(), problemsize , repeats);
+    Rosetta::run( program, benchname, problemsize , repeats);
 
     return EXIT_SUCCESS;
 }
