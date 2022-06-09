@@ -682,7 +682,7 @@ using namespace std::chrono;
 #else
 __attribute__((weak))
 #endif
-void run(State& state, int n);
+void run(State& state, int pbsize);
 
 
 
