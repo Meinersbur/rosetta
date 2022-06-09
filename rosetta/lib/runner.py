@@ -628,12 +628,12 @@ def getPPMDisplayStr(s:str):
 
 
 def run_verify(problemsizefile):
-     for e in verifications:
+     for e in benchmarks:
             exepath = e.exepath
             refpath = e.refpath
             #print(f"{exepath=}")
 
-            args = [exepath, f'--problemsizefile={problemsizefile}']
+            args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
             p = invoke.call(*args, return_stdout=True, print_command=True)
             data = p.stdout 
             #print(f"{data=}")
@@ -721,24 +721,18 @@ def run_bench(problemsizefile):
 
 
 class Benchmark:
-    def __init__(self,target,exepath,config,ppm):
+    def __init__(self,target,exepath,config,ppm,refpath):
         self.target=target
         self.exepath =exepath 
         self.config=config
         self.ppm = ppm
-
+        self.refpath = refpath
 
     @property 
-    def name (self):
-        return self.target.split(sep='.', maxsplit=1)[0]
+    def name(self):
+        return self.target
+        #return self.target.split(sep='.', maxsplit=1)[0]
 
-class Verification:
-    def __init__(self,target,exepath,refpath,config,ppm):
-        self.target=target
-        self.exepath =exepath 
-        self.refpath=refpath 
-        self.config=config
-        self.ppm = ppm
 
 
 
@@ -851,7 +845,7 @@ def runner_main():
 
 
     if args.verify:
-     return run_verify(problemsizefile=problemsizefile)
+       return run_verify(problemsizefile=problemsizefile)
 
 
     return run_bench(problemsizefile=problemsizefile)
@@ -862,15 +856,9 @@ def runner_main():
 
 
 benchmarks =[]
-def register_benchmark(target,exepath,config,ppm):
-    bench = Benchmark(target,exepath=mkpath(exepath), config=config,ppm=ppm)
+def register_benchmark(target,exepath,config,ppm,refpath):
+    bench = Benchmark(target,exepath=mkpath(exepath), config=config,ppm=ppm,refpath=mkpath(refpath))
     benchmarks.append(bench)
-
-
-verifications=[]
-def register_verification(target,exepath,refpath,config,ppm):
-    verifier = Verification(target,exepath=mkpath(exepath), refpath=mkpath(refpath), config=config,ppm=ppm)
-    verifications.append(verifier)
 
 
 
@@ -886,7 +874,7 @@ def load_register_file(filename):
 
 def gen_reference(exepath,refpath,problemsizefile):
     #print(f"{exepath=} {refpath=}")
-    args = [exepath, f'--problemsizefile={problemsizefile}']
+    args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
     invoke.call(*args, stdout=refpath,print_stderr=True,print_command=True)
 
 

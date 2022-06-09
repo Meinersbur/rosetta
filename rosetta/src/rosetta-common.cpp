@@ -706,28 +706,27 @@ class BenchmarkRun {
     friend class Rosetta;
     friend class dyn_array_base;
 private:
-#if ROSETTA_BENCH
     std::vector<IterationMeasurement> measurements;
     std::chrono::steady_clock::time_point startTime;
-#endif 
-#if ROSETTA_VERIFY
-    int iterationsSoFar=0;
-#endif 
+
 
     // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
 
+    bool verify ;
     int exactRepeats  = -1;
 
-public:
-  explicit   BenchmarkRun(int exactRepeats) : exactRepeats(exactRepeats) {}
+public :
+        bool isVerifyRun() const { return verify ;}
+    bool isBenchRun() const { return !verify ;}
 
-    void run(std::string program, int n) {     
-#if ROSETTA_BENCH
+public:
+  explicit   BenchmarkRun(bool verify, int exactRepeats) : verify(verify), exactRepeats(exactRepeats) {}
+
+    void run(std::string program, int n ) {     
         startTime = std::chrono::steady_clock::now();
-#endif 
+
         State state{this};
 
-#if ROSETTA_BENCH
 #if ROSETTA_PLATFORM_NVIDIA
         // TODO: exclude cupti time from startTime
 
@@ -766,16 +765,16 @@ public:
         CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
         startTimestamp = cuptiStart;
 #endif 
-#endif 
+ 
 
         // TODO: make flexible, this is just on way to find a run function
         ::run(state, n);
 
-#if ROSETTA_BENCH
+
 #if ROSETTA_PLATFORM_NVIDIA
         cuptiFinalize();
 #endif
-#endif 
+
 
         assert(!curAllocatedBytes && "Should not leak memory");
 
@@ -784,7 +783,7 @@ public:
 
     bool started = false;
 
-#if ROSETTA_BENCH
+
     // TODO: Per-iteration data in separate object?
     std::chrono::high_resolution_clock::time_point startWall;
     usage_duration_t startUser; // in seconds; TODO: use native type
@@ -801,7 +800,7 @@ public:
     uint64_t cuptiStartCompute, cuptiStopCompute;
     uint64_t cuptiStartOther, cuptiStopOther;
 #endif 
-#endif 
+
 
     size_t curAllocatedBytes = 0;
     size_t peakAllocatedBytes = 0;
@@ -811,7 +810,7 @@ public:
         assert(!started && "Must not interleave interation scope");
         started = true;
 
-#if ROSETTA_BENCH
+
 #ifdef ROSETTA_PLATFORM_NVIDIA
         cuptiStartHtoD = std::numeric_limits<uint64_t>::max();
         cuptiStopHtoD = std::numeric_limits<uint64_t>::min();
@@ -835,13 +834,12 @@ public:
 #if ROSETTA_PPM_CUDA
         cudaEventRecord(startCuda);
 #endif
-#endif 
     }
 
     void stop() {
         assert(started && "No iteration active?");
 
-#if ROSETTA_BENCH
+
         benchmark::ClobberMemory(); // even necessary?
        
 
@@ -852,7 +850,6 @@ public:
 #if ROSETTA_PPM_CUDA
             BENCH_CUDA_TRY( cudaEventRecord(stopCuda));
 #endif
-
 
 
         auto stopWall = std::chrono::high_resolution_clock::now();
@@ -882,11 +879,11 @@ public:
 #if ROSETTA_PLATFORM_NVIDIA
         CUPTI_CALL(cuptiActivityFlushAll(1));
 #endif 
-#endif 
+
 
         started =false;
 
-#if ROSETTA_BENCH
+
 #if ROSETTA_PLATFORM_NVIDIA
         auto firstEvent  =  std::min({ cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther  }) ;
         auto lastEvent  =  std::max({cuptiStopHtoD, cuptiStopDtoH, cuptiStopCompute, cuptiStopOther  }) ;
@@ -910,40 +907,35 @@ public:
             m.values[CuptiTransferToHost] =std::chrono::duration<uint64_t,std::chrono::nanoseconds::period>(  cuptiStopDtoH - cuptiStartDtoH);
 #endif 
         measurements.push_back( std::move (m) );
-#endif 
-#if ROSETTA_VERIFY
-        iterationsSoFar += 1;
-#endif 
     }
 
     int refresh() {
-#if ROSETTA_BENCH
-        auto now = std::chrono::steady_clock::now();
-        auto duration =  now - startTime;
+        if (verify) {
+            // When verifying, always do exectly one iteration
+            return 1 - measurements.size();
+        }  else {
+            auto now = std::chrono::steady_clock::now();
+            auto duration = now - startTime;
 
-        if (exactRepeats >= 1) {
-            measurements.reserve(exactRepeats);
-            return exactRepeats - measurements.size() ;
+            if (exactRepeats >= 1) {
+                measurements.reserve(exactRepeats);
+                return exactRepeats - measurements.size();
+            }
+
+            // TODO: configure, until stability, max/min number iterations, ...
+            if (duration >= 1s)
+                return 0;
+            if (measurements.size() > 10)
+                return 0;
+
+            int howManyMoreIterations = 1;
+            measurements.reserve(measurements.size() + howManyMoreIterations);
+
+            return howManyMoreIterations;
         }
-
-        // TODO: configure, until stability, max/min number iterations, ...
-        if (duration >= 1s) 
-            return 0;
-        if (measurements.size() > 10)
-            return 0;
-
-        int howManyMoreIterations = 1;
-        measurements.reserve(measurements.size() + howManyMoreIterations);
-
-        return howManyMoreIterations;
-        #elif ROSETTA_VERIFY
-       return 1 - iterationsSoFar;
-        #else 
-        #error Bench or verify it must be
-        #endif 
     }
 
-#if ROSETTA_BENCH
+
 #if ROSETTA_PLATFORM_NVIDIA
      /// FIXME: Called from other threads. Require Mutex?
      void handleCuptiActivity(CUpti_Activity* record) {
@@ -1000,7 +992,7 @@ public:
          }
     }
 #endif 
-#endif 
+
 };
 
 
@@ -1034,6 +1026,8 @@ void DataHandler<double>::fake(double *data, ssize_t count) {
 
 
 void DataHandler<double>::verify(double* data, ssize_t count) {
+    if (!impl->isVerifyRun()) return ;
+
     for (ssize_t i = 0; i < count; i+=1) {
         // TODO: precision
         if (i > 0)
@@ -1163,65 +1157,66 @@ struct Rosetta {
     }
 
    static  BenchmarkRun *currentRun ;
-  static void run(std::filesystem ::path executable, std::string program, int n, int repeats) {       
-            BenchmarkRun executor(repeats);
+  static void run(std::filesystem ::path executable, std::string program, bool verify, int n, int repeats) {       
+            BenchmarkRun executor(verify,repeats);
             currentRun = &executor;
             executor.run(program, n);
 
-#if ROSETTA_BENCH
-            int numMeasures = executor.measurements.size();
-            int startMeasures = 0;
-            if (numMeasures >=2 && repeats==-1) {
-                // Remove cold run if we can afford it and no option to omit was given.
-                startMeasures = 1;
-            }
+            if (verify) {
+            } else {
+                int numMeasures = executor.measurements.size();
+                int startMeasures = 0;
+                if (numMeasures >= 2 && repeats == -1) {
+                    // Remove cold run if we can afford it and no option to omit was given.
+                    startMeasures = 1;
+                }
 
 
-#if ROSETTA_SERIAL
-            const char *ppm_variant = "serial";
+#if ROSETTA_PPM_SERIAL
+                const char* ppm_variant = "serial";
 #endif 
-#if ROSETTA_OPENMP_CUDA
-            const char *ppm_variant = "openmp_cuda";
+#if ROSETTA_PPM_CUDA
+                const char* ppm_variant = "cuda";
 #endif 
-#if ROSETTA_OPENMP_PARALLEL
-            const char *ppm_variant = "openmp_parallel";
+#if ROSETTA_PPM_OPENMP_PARALLEL
+                const char* ppm_variant = "openmp-parallel";
 #endif 
-#if ROSETTA_OPENMP_TASK
-            const char *ppm_variant = "openmp_task";
+#if ROSETTA_PPM_OPENMP_TASK
+                const char* ppm_variant = "openmp-task";
 #endif 
-#if ROSETTA_OPENMP_TARGET
-            const char *ppm_variant = "openmp_target";
+#if ROSETTA_PPM_OPENMP_TARGET
+                const char* ppm_variant = "openmp-target";
 #endif 
 
                 std::cout << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
-                std::cout << R"(<benchmarks>)" <<std::endl;
-                std::cout << R"(  <benchmark name=")" << escape(program) <<   R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures <<   "\" peak_alloc=\"" << executor.peakAllocatedBytes <<  "\" ppm=\"" << ppm_variant << R"(">)"<<std::endl;
-                for (int i = startMeasures; i < numMeasures; i+=1) {
-                    auto &m = executor. measurements[i];
-               // for (auto &m :executor. measurements) {
-                    // TODO: custom times and units
+                std::cout << R"(<benchmarks>)" << std::endl;
+                std::cout << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << R"(">)" << std::endl;
+                for (int i = startMeasures; i < numMeasures; i += 1) {
+                    auto& m = executor.measurements[i];
+                    // for (auto &m :executor. measurements) {
+                         // TODO: custom times and units
                     std::cout << "    <iteration";
 
-                    for (int i = 0; i <= MeasureLast; i+=1) {
+                    for (int i = 0; i <= MeasureLast; i += 1) {
                         auto measure = (Measure)i;
-                        auto &val = m.values[measure];
+                        auto& val = m.values[measure];
                         if (std::holds_alternative<std::monostate>(val)) continue;
-                        std::cout <<' ' << measureName[measure] << "=\"" << formatDuration(m.values[measure]) << '\"';
+                        std::cout << ' ' << measureName[measure] << "=\"" << formatDuration(m.values[measure]) << '\"';
                     }
 
 
-                    std::cout << R"(/>)"<<std::endl;  
+                    std::cout << R"(/>)" << std::endl;
 
                 }
                 // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
-                std::cout << R"(  </benchmark>)" <<std::endl;
-                std::cout << R"(</benchmarks>)" <<std::endl;
-#endif 
+                std::cout << R"(  </benchmark>)" << std::endl;
+                std::cout << R"(</benchmarks>)" << std::endl;
+            }
 
                 currentRun = nullptr;
         }
 
-#if ROSETTA_BENCH
+
 #if ROSETTA_PLATFORM_NVIDIA
         static void handleCuptiActivity(CUpti_Activity *record) {
             if (!currentRun) {
@@ -1233,7 +1228,7 @@ struct Rosetta {
             currentRun->handleCuptiActivity(record);
         }
 #endif 
-#endif 
+
 };
 
 
@@ -1241,7 +1236,7 @@ BenchmarkRun *Rosetta::currentRun =nullptr;
 
 
 
-#if ROSETTA_BENCH
+
 #if ROSETTA_PLATFORM_NVIDIA
 static
 void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t size, size_t validSize)
@@ -1273,7 +1268,7 @@ void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer,
     free(buffer);
 }
 #endif 
-#endif 
+
 
 
 std::tuple <std::string_view, std::optional<  std::string_view>> nextArg(int argc, char* argv[], int &i) {
@@ -1367,6 +1362,7 @@ int main(int argc, char* argv[]) {
     int repeats = -1;
     int cold = -1;
     int i =1;
+    bool verify = false;
     while (i < argc) {
         auto [name,val] = nextArg(argc, argv, i);
 
@@ -1386,7 +1382,12 @@ int main(int argc, char* argv[]) {
                 val = argv[i]; i+= 1;
             }
             repeats = parseInt(*val);
-        } 
+        } else if (name == "verify") {
+            assert(!val.has_value());
+            verify = true;
+        } else {
+        assert(!"unknown switch");
+        }
     }
 
    
@@ -1442,7 +1443,7 @@ int main(int argc, char* argv[]) {
 
 
     assert(problemsize >= 1);
-    Rosetta::run( program, benchname, problemsize , repeats);
+    Rosetta::run( program, benchname,verify, problemsize , repeats);
 
     return EXIT_SUCCESS;
 }

@@ -211,13 +211,12 @@ option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 set(ROSETTA_REALTYPE "double" CACHE STRING "Which type to prefer for floating-point values ('float' or 'double')")
 
 set(ROSETTA_PROBLEMSIZE "medium" CACHE STRING "Problemsize to use (predefined or path to ini-file)")
-message("ROSETTA_PROBLEMSIZE ${ROSETTA_PROBLEMSIZE}")
+
 
 set(_problemsizefile)
-get_filename_component(_rosetta_predefined "${ROSETTA_PROBLEMSIZE}.problemsize.ini" ABSOLUTE  BASE_DIR "${CMAKE_SOURCE_DIR}/benchmarks"   )
+get_filename_component(_rosetta_predefined "${ROSETTA_PROBLEMSIZE}.problemsize.ini" ABSOLUTE  BASE_DIR "${CMAKE_SOURCE_DIR}/benchmarks")
 get_filename_component(_rosetta_filename "${ROSETTA_PROBLEMSIZE}" ABSOLUTE  BASE_DIR "${CMAKE_SOURCE_DIR}/benchmarks"   )
 get_filename_component(_rosetta_fullpath "${ROSETTA_PROBLEMSIZE}" ABSOLUTE   )
-message("_rosetta_predefined ${_rosetta_predefined}")
 if (NOT _problemsizefile  AND EXISTS "${_rosetta_predefined}")
   set(_problemsizefile "${_rosetta_predefined}")
 endif ()
@@ -242,20 +241,13 @@ add_subdirectory(rosetta)
 # Benchmarks -------------------------------------------------------------------
 
 add_custom_target(build)
-# TODO: build-bench
-add_custom_target(build-verify)
-
 if (ROSETTA_PPM_SERIAL)
   add_custom_target(build-serial)
-  add_custom_target(build-serial-verify)
-  add_dependencies(build build-serial build-serial-verify)
-  add_dependencies(build-verify build-serial-verify)
+  add_dependencies(build build-serial)
 endif ()
 if (ROSETTA_PPM_CUDA)
   add_custom_target(build-cuda)
-  add_custom_target(build-cuda-verify)
   add_dependencies(build build-cuda)
-  add_dependencies(build-verify build-cuda-verify)
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP_TARGET)
@@ -263,24 +255,18 @@ if (ROSETTA_PPM_OPENMP_PARALLEL OR ROSETTA_PPM_OPENMP_TASK OR ROSETTA_PPM_OPENMP
 endif ()
 if (ROSETTA_PPM_OPENMP_PARALLEL)
   add_custom_target(build-openmp-parallel)
-  add_custom_target(build-openmp-parallel-verify)
-  add_dependencies(build build-openmp-parallel)
-  add_dependencies(build-verify build-openmp-parallel-verify)
   add_dependencies(build-openmp build-openmp-parallel)
+  add_dependencies(build build-openmp-parallel)
 endif ()
 if (ROSETTA_PPM_OPENMP_TASK)
   add_custom_target(build-openmp-task)
-  add_custom_target(build-openmp-task-verify)
-  add_dependencies(build build-openmp-task)
-  add_dependencies(build-verify build-openmp-task-verify)
   add_dependencies(build-openmp build-openmp-task)
+  add_dependencies(build build-openmp-task)
 endif ()
 if (ROSETTA_PPM_OPENMP_TARGET)
   add_custom_target(build-openmp-target)
-  add_custom_target(build-openmp-target-verify)
-  add_dependencies(build build-openmp-target)
-  add_dependencies(build-verify build-openmp-target-verify)
   add_dependencies(build-openmp build-openmp-target)
+  add_dependencies(build build-openmp-target)
 endif ()
 
 
@@ -291,40 +277,32 @@ add_subdirectory(benchmarks)
 ## Run #########################################################################
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
-get_property(_verifications_serial GLOBAL PROPERTY verifications_serial)
 get_property(_references GLOBAL PROPERTY references)
 
 
 # TODO: separate verifications lists should not be necessary
 list(APPEND _benchmarks ${_benchmarks_serial})
 get_property(_benchmarks_cuda GLOBAL PROPERTY benchmarks_cuda)
-get_property(_verifications_cuda GLOBAL PROPERTY verifications_cuda)
 list(APPEND _benchmarks ${_benchmarks_cuda})
 get_property(_benchmarks_openmp_parallel GLOBAL PROPERTY benchmarks_openmp_parallel)
-get_property(_verifications_openmp_parallel GLOBAL PROPERTY verifications_openmp_parallel)
 list(APPEND _benchmarks ${_benchmarks_openmp_parallel})
 get_property(_benchmarks_openmp_task GLOBAL PROPERTY benchmarks_openmp_task)
-get_property(_verifications_openmp_task GLOBAL PROPERTY verifications_openmp_task)
 list(APPEND _benchmarks ${_benchmarks_openmp_task})
 get_property(_benchmarks_openmp_target GLOBAL PROPERTY benchmarks_openmp_target)
-get_property(_verifications_openmp_target GLOBAL PROPERTY verifications_openmp_target)
 list(APPEND _benchmarks ${_benchmarks_openmp_target})
 
 set(_benchmarks_run_arglist)
 
 
 function (enable_ppm name shortname displayname)
-  cmake_parse_arguments(_arg "" "" "BENCHMARKS;VERIFICATIONS"  ${ARGN})
+  cmake_parse_arguments(_arg "" "" "BENCHMARKS"  ${ARGN})
 
   append_global_property(enabled_ppms "${name}")
 
   set(_benchmarks_run)
   foreach (_target IN LISTS _arg_BENCHMARKS)
-    list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}')")
-  endforeach ()
-  foreach (_target IN LISTS _arg_VERIFICATIONS)
-    get_property(_reffile TARGET ${_target} PROPERTY REFERENCE_FILE)
-    list(APPEND _benchmarks_run "register_verification('${_target}', exepath='$<TARGET_FILE:${_target}>', refpath='${_reffile}', config='$<CONFIG>', ppm='${shortname}')")
+  get_property(_reffile TARGET "${_target}" PROPERTY REFERENCE_FILE)
+    list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}', refpath='${_reffile}')")
   endforeach ()
   list(JOIN _benchmarks_run "\n" _benchmarks_pylist)
 
@@ -336,7 +314,7 @@ function (enable_ppm name shortname displayname)
 if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-from rosetta import runner_main, register_benchmark, register_verification
+from rosetta import runner_main, register_benchmark
 
 ${_benchmarks_pylist}
 
@@ -352,12 +330,12 @@ if __name__ == '__main__':
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
     add_custom_target("run-${name}"
-      COMMAND Python::Interpreter "run-${name}.py"
+      COMMAND Python::Interpreter "run-${name}.py" "--problemsizefile=${_problemsizefile}"
       COMMENT "Run ${displayname} benchmarks ..."
       USES_TERMINAL VERBATIM
     )
     add_custom_target("verify-${name}"
-      COMMAND Python::Interpreter "run-${name}.py" "--verify"
+      COMMAND Python::Interpreter "run-${name}.py" "--problemsizefile=${_problemsizefile}" "--verify"
       COMMENT "Run ${displayname} correctness checks ..."
       USES_TERMINAL VERBATIM
     )
@@ -368,23 +346,23 @@ endfunction()
 
 
 if (ROSETTA_PPM_SERIAL)
-  enable_ppm(serial serial Serial BENCHMARKS ${_benchmarks_serial} VERIFICATIONS ${_verifications_serial})
+  enable_ppm(serial serial Serial BENCHMARKS ${_benchmarks_serial})
 endif ()
 
 if (ROSETTA_PPM_CUDA)
-  enable_ppm(cuda cuda CUDA BENCHMARKS ${_benchmarks_cuda} VERIFICATIONS ${_verifications_cuda})
+  enable_ppm(cuda cuda CUDA BENCHMARKS ${_benchmarks_cuda})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL)
-  enable_ppm(openmp-parallel omp_parallel "OpenMP parallel" BENCHMARKS ${_benchmarks_openmp_parallel} VERIFICATIONS ${_verifications_openmp_parallel}) 
+  enable_ppm(openmp-parallel omp_parallel "OpenMP parallel" BENCHMARKS ${_benchmarks_openmp_parallel}) 
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TASK)
-  enable_ppm(openmp-task omp_task "OpenMP Tasks" BENCHMARKS ${_benchmarks_openmp_task} VERIFICATIONS ${_verifications_openmp_task})
+  enable_ppm(openmp-task omp_task "OpenMP Tasks" BENCHMARKS ${_benchmarks_openmp_task})
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TARGET)
-  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" BENCHMARKS ${_benchmarks_openmp_target} VERIFICATIONS ${_verifications_openmp_target})
+  enable_ppm(openmp-target omp_target "OpenMP Target Offloading" BENCHMARKS ${_benchmarks_openmp_target})
 endif ()
 
 
@@ -441,13 +419,12 @@ if (_default_build_type)
   )
   add_dependencies(run build)
 
-  # TODO: Individial verify targets
   add_custom_target(verify
     COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
     COMMENT "Verify all benchmarks ..."
     USES_TERMINAL VERBATIM
   )
-  add_dependencies(verify build-verify ${_references})
+  add_dependencies(verify build ${_references})
 endif ()
 
 
@@ -483,7 +460,7 @@ endif ()
 message("Default problem size: ${_problemsizefilename}")
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
-  get_property(_cxx_standard TARGET rosetta-serial-bench PROPERTY "CXX_STANDARD")
+  get_property(_cxx_standard TARGET rosetta-serial PROPERTY "CXX_STANDARD")
   if (NOT _cxx_standard STREQUAL "")
     set (_cxx_standard "${CMAKE_CXX_STANDARD_DEFAULT}")
   endif ()

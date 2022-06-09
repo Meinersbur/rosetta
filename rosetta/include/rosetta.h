@@ -623,11 +623,7 @@ public:
 
     void fakedata() {  DataHandler<T>(impl).fake(mydata,size/sizeof(T)); }
     void verifydata() {
-#if ROSETTA_VERIFY
         DataHandler<T>(impl).verify(mydata,size/sizeof(T));
-#else
-        // Don't do anything in benchmark mode
-#endif 
     }
 
 
