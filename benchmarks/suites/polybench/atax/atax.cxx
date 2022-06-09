@@ -28,14 +28,14 @@ void run(State& state, int pbsize) {
     size_t m = pbsize;
 
 
-    auto A  = state.fakedata_array<double>(n*m,/*verify*/false);   
-    auto x  = state.alloc_array<double>(n,/*verify*/false);   
-    auto y  = state.alloc_array<double>(n,/*verify*/true);  
-    auto tmp  = state.alloc_array<double>(n);  
+    auto A = state.allocate_array<double>({n,m}, /*fakedata*/true, /*verify*/false); 
+    auto x = state.allocate_array<double>({ n },/*fakedata*/false,/*verify*/false);
+    auto y = state.allocate_array<double>({ n },/*fakedata*/false,/*verify*/true);
+    auto tmp = state.allocate_array<double>({ n },/*fakedata*/false,/*verify*/false);
 
 
 
     for (auto &&_ : state) 
-        kernel(n, m, multarray<real, 2>(A.data(), { m, n }), multarray<real, 1>(x.data(), { n }), multarray<real, 1>(y.data(), { n }), multarray<real, 1>(tmp.data(), {m}));
+        kernel(n, m, A, x, y, tmp);
 }
 
