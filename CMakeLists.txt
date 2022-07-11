@@ -371,7 +371,7 @@ get_property(enabled_ppms GLOBAL PROPERTY enabled_ppms)
 
 set(_ppms_pylist)
 foreach (_name IN LISTS enabled_ppms)
-  list(APPEND _ppms_pylist "load_register_file('run-${_name}-$<CONFIG>.py')")
+  list(APPEND _ppms_pylist "load_register_file(thisscriptdir / 'run-${_name}-$<CONFIG>.py')")
 endforeach ()
 list(JOIN _ppms_pylist "\n" _ppms_pylist)
 
@@ -380,12 +380,14 @@ file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
     CONTENT "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-    
+
 if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-
+import pathlib
 from rosetta import runner_main, load_register_file
+thisscriptdir = pathlib.Path(__file__).parent
+
 ${_ppms_pylist}
 
 if __name__ == '__main__':

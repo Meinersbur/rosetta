@@ -12,6 +12,7 @@ def _str_to_bool(s):
     return {'true': True, 'false': False, '1':True, '0':False,'y':True,'n':False, 'yes':True,'no':False, 'on':True,'of':False}[s.lower()]
 
 
+# TODO: argparse.BooleanOptionalAction
 def add_boolean_argument(parser, name, default=False, dest=None, help=None):
     """Add a boolean argument to an ArgumentParser instance."""
 
