@@ -628,7 +628,13 @@ def getPPMDisplayStr(s:str):
 
 
 def run_verify(problemsizefile):
-     for e in benchmarks:
+    if not problemsizefile:
+        die("Problemsizes required")  
+    if not problemsizefile.is_file():
+        # TODO: Embed default sizes
+        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
+
+    for e in benchmarks:
             exepath = e.exepath
             refpath = e.refpath
             #print(f"{exepath=}")
@@ -648,7 +654,21 @@ def run_verify(problemsizefile):
                     exit (1)
 
 
-def run_bench(problemsizefile):
+def get_problemsizefile(srcdir, problemsizefile):
+    if not problemsizefile:
+        if not srcdir:
+            die("Problemsizefile must be defined")
+        return mkpath(srcdir) / 'benchmarks' / 'medium.problemsize.ini'
+    if not problemsizefile.is_file():
+        # TODO: Embed default sizes
+        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
+
+    
+
+
+def run_bench(problemsizefile=None, srcdir=None):
+    problemsizefile = get_problemsizefile(srcdir, problemsizefile)
+
     results = []
     for e in benchmarks:
         results += list(run_gbench(e,problemsizefile=problemsizefile))
@@ -793,6 +813,9 @@ def probe_bench(bench:Benchmark, limit_walltime, limit_rss, limit_alloc):
 
 
 def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
+    if not problemsizefile:
+        die("Problemsizes required")  
+
     problemsizecontent = []
     for bench in benchmarks:
         n = probe_bench(bench=bench, limit_walltime=limit_walltime,limit_rss=limit_rss,limit_alloc=limit_alloc)
@@ -833,22 +856,13 @@ def runner_main():
 
 
     if args.probe:
-        return     run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
-
-
-    problemsizefile = args.problemsizefile
-    if not problemsizefile:
-        die("Problemsizes required")  
-    if not problemsizefile.is_file():
-        # TODO: Embed default sizes
-        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
-
+        return run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
     if args.verify:
-       return run_verify(problemsizefile=problemsizefile)
+       return run_verify(problemsizefile=args.problemsizefile)
 
 
-    return run_bench(problemsizefile=problemsizefile)
+    return run_bench(problemsizefile=args.problemsizefile)
 
 
 
@@ -865,8 +879,9 @@ def register_benchmark(target,exepath,config,ppm,refpath):
 
 def load_register_file(filename):
     import importlib
+    filename = str(filename)
     spec = importlib.util.spec_from_file_location(filename, filename)
-    module =  importlib.util.module_from_spec( spec)
+    module =  importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
 
