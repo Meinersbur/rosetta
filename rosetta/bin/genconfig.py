@@ -22,7 +22,7 @@ def cquote(s):
     return '"' + s + '"'
 
 
-def gen_config(output, benchname,problemsizefile,resultsdir,compiler,compilerflags):
+def gen_config(output, benchname,problemsizefile,resultsdir,compiler,compilerflags,configname):
     config = configparser.ConfigParser()
     config.read(problemsizefile)
     n = config.getint(benchname, 'n')
@@ -33,6 +33,7 @@ def gen_config(output, benchname,problemsizefile,resultsdir,compiler,compilerfla
 
 // Configuration properties
 const char *rosetta_default_results_dir = {cquote(resultsdir)};
+const char *rosetta_configname = {cquote(configname)}
 const char *rosetta_compiler = {cquote(compiler)};
 const char *rosetta_compiler_flags = {cquote(compilerflags)};
 
@@ -53,6 +54,7 @@ def main():
     parser.add_argument('--resultsdir', type=pathlib.Path)
     parser.add_argument('--compiler', type=pathlib.Path)
     parser.add_argument('--compiler-flags')
+    parser.add_argument('--configname')
 
     parser.add_argument('--benchname')
     parser.add_argument('--problemsizefile',  type=pathlib.Path)
@@ -60,7 +62,7 @@ def main():
 
     gen_config(output = args.output, benchname = args.benchname, problemsizefile =args.problemsizefile,resultsdir=args.resultsdir,
     compiler=args.compiler,
-    compilerflags=args.compiler_flags)
+    compilerflags=args.compiler_flags,configname=args.configname)
 
 
 
