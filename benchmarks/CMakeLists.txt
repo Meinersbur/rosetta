@@ -20,6 +20,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
 
   set(_genconfig_target "genconfig-${benchname}")
   set(_benchprop_filename "${benchname}.benchprop.cxx")
+  # TODO: Simpler if using configure_file?
   if (NOT TARGET "${_genconfig_target}")
     add_custom_command(
       OUTPUT "${_benchprop_filename}"
@@ -31,6 +32,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
         "--resultsdir=${ROSETTA_RESULTS_DIR}" 
         "--compiler=${CMAKE_CXX_COMPILER}" # FIXME: Depends on PPM
         "--compiler-flags=${CMAKE_CXX_FLAGS}" # FIXME: Not complete and depends on configuration and PPM
+        "--configname=${ROSETTA_CONFIGNAME}"
       COMMENT "Generate ${benchname} properties file ..."
     )
     add_custom_target("${_genconfig_target}"

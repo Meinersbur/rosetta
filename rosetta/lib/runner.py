@@ -522,9 +522,10 @@ class BenchVariants:
 
 
 class BenchResult:
-    def __init__(self, name:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
+    def __init__(self, name:str, ppm:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         #self.bench=bench
         self.name=name
+        self.ppm = ppm
         self.count=count
         #self.wtime=wtime
         #self.utime=utime
@@ -534,6 +535,8 @@ class BenchResult:
         self.maxrss=maxrss
         self.cold_count = cold_count
         self.peak_alloc = peak_alloc
+
+
 
 
 # TODO: enough precision for nanoseconds?
@@ -599,6 +602,7 @@ def evaluate(resultfiles):
             n = benchmark.attrib['n']
             cold_count = benchmark.attrib['cold_iterations']
             peak_alloc = benchmark.attrib['peak_alloc']
+            ppm  = benchmark.attrib['ppm']
             count = len(benchmark)
 
             time_per_key = defaultdict(lambda :  [])
@@ -610,7 +614,7 @@ def evaluate(resultfiles):
             for k,data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            results.append( BenchResult( name=name, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc) )
+            results.append( BenchResult( name=name, ppm=ppm, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc) )
 
 
     stats_per_key = defaultdict(lambda :  [])
@@ -674,7 +678,7 @@ def evaluate(resultfiles):
 
     for r in results:
         # TODO: acceltime doesn't always apply
-        table.add_row(program=r.bench.target , ppm=r.bench.ppm, config=r.bench.config, n=r.count,**r.durations)
+        table.add_row(program=r.name , ppm=r.ppm, config=r.bench.config, n=r.count,**r.durations)
 
     
     table.print()
