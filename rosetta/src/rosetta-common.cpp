@@ -92,17 +92,18 @@ using usage_duration_t =  std::chrono::microseconds;
 #endif 
 
 
+using common_duration_t = std::chrono::duration<double,std::chrono::seconds::period> ;
 
-// TODO: filter out duplicates
+// TODO: filter out duplicates; may result in ambiguous operator= errors. Or use make it explicit which counter uses which type (e.g. std::in_place_index)
 // TODO: make extendable
 using duration_t = std::variant< std::monostate
-   , std::chrono::duration<double,std::chrono::seconds::period>  // lowest common denominator
+   , common_duration_t // lowest common denominator
    , std::chrono::high_resolution_clock::duration // for wall time
    , usage_duration_t  // for user/kernel time
-#if ROSETTA_PPM_NVIDIA
+#ifdef ROSETTA_PPM_NVIDIA
     ,std::chrono::duration<double,std::chrono::milliseconds::period> // Used by CUDA events
 #endif
-#if ROSETTA_PLATFORM_NVIDIA
+#ifdef ROSETTA_PLATFORM_NVIDIA
    , std::chrono::duration<uint64_t,std::chrono::nanoseconds::period> // Used by cupti
 #endif
 >;
@@ -139,7 +140,7 @@ namespace {
     }
 
     static
-    std::pair<  usage_duration_t,usage_duration_t>  MakeTime(struct rusage const& ru) {
+    std::pair<usage_duration_t,usage_duration_t>  MakeTime(struct rusage const& ru) {
         return  { MakeTime(ru.ru_utime),MakeTime(ru.ru_stime) };
   //      return { static_cast<double>(ru.ru_utime.tv_sec) + static_cast<double>(ru.ru_utime.tv_usec) * 1e-6, static_cast<double>(ru.ru_stime.tv_sec) + static_cast<double>(ru.ru_stime.tv_usec) * 1e-6 };
       //  return (static_cast<double>(ru.ru_utime.tv_sec) +  static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 + static_cast<double>(ru.ru_stime.tv_sec) + static_cast<double>(ru.ru_stime.tv_usec) * 1e-6);
@@ -1180,6 +1181,7 @@ static duration_t internal_add(const T  &lhs, const Y &rhs) {
         }
         using CommonTy = std::common_type<T, Y>;
         // TODO: std::common_type, but requires all combinations of T,Y to be supported
+        // TODO: fall back to double/seconds (lower common denominator)
         // return lhs + rhs;
     }
     abort();
@@ -1205,6 +1207,30 @@ const duration_t &operator +=( duration_t& lhs, const duration_t& rhs) {
 }
 
 
+const char *getMeasureDesc(Measure m) {
+    switch (m) {
+    case WallTime:
+        return "Wall time";
+    case UserTime:
+        return "User time";
+    case KernelTime:
+        return "Kernel time";
+    case OpenMPWTime:
+        return "OpenMP time";
+    case AccelTime:
+        return "CUDA Event time";
+    case Cupti:
+        return "Nvprof total time";
+    case CuptiCompute:
+        return "Nvprof compute time";
+    case CuptiTransferToDevice:
+        return "Nvprof H->D time";
+    case CuptiTransferToHost:
+        return "Nvprof D->H time";
+    }
+    abort();
+}
+
 
 // TODO: make singleton?
 struct Rosetta {
@@ -1215,8 +1241,8 @@ struct Rosetta {
         return s; // TODO
     }
 
-   static  BenchmarkRun *currentRun ;
-  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, int n, int repeats) {       
+static  BenchmarkRun *currentRun ;
+static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, int n, int repeats) {       
             BenchmarkRun executor(verify,repeats);
             currentRun = &executor;
             executor.run(program, n);
@@ -1229,7 +1255,6 @@ struct Rosetta {
                     // Remove cold run if we can afford it and no option to omit was given.
                     startMeasures = 1;
                 }
-
 
 #if ROSETTA_PPM_SERIAL
                 const char* ppm_variant = "serial";
@@ -1247,28 +1272,42 @@ struct Rosetta {
                 const char* ppm_variant = "openmp-target";
 #endif 
 
-                // TODO: Print summary on console
-                std::cout << "Benchmarking done.\n";
-                duration_t sum ;
+           
+                std::cout << "Benchmarking done, " << numMeasures << " measurements recorded.\n";
+ 
+                duration_t sum [MeasureCount];
                 for (int i = startMeasures; i < numMeasures; i += 1) {
-                    auto& m = executor.measurements[i];
-                    auto& val = m.values[WallTime];
-                    sum += sum;
+                    for (int k = 0; k <= MeasureLast; k += 1) {
+                        auto&& m = executor.measurements[i];
+                        auto&& val = m.values[k];
+                        sum[k] += val;
+                    }
                 }
-// TODO: Implement division for duration_t so we don't need to always emit 
-                std::cout << "Avg wall time: " << to_seconds(sum)/numMeasures << "s (" << numMeasures << " measurements)\n";
+
+                // TODO: exclude cold iterations
+                std::cout << "Average (arithmetic mean) times:\n"; 
+                    for (int k = 0; k <= MeasureLast; k += 1) {  // TODO: make an iterator over all measures to make such a loop nices (and make Measure an enum class)
+                        auto && thesum = sum[k];
+                        if (std::holds_alternative<std::monostate>(thesum))
+                            continue;
+                        auto avg = to_seconds(thesum)/numMeasures;
+
+                        // TODO: Scale avg to ns/us/ms/s/m/h as needed
+                        std::cout << getMeasureDesc((Measure)k) << ": " << avg << "s\n";
+                    }
+                
+
 
         
+
                 if (!xmlout.empty() )  {
                     std::cout << "Writing result file: " << xmlout << "\n";
                     std::ofstream cxml(xmlout, std::ios::trunc);
 
-
-
                     cxml << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
                     cxml << R"(<benchmarks>)" << std::endl;
                     cxml << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << R"(">)" << std::endl;
-                    for (int i = startMeasures; i < numMeasures; i += 1) {
+                    for (int i = startMeasures; i < numMeasures; i += 1) { 
                         auto& m = executor.measurements[i];
                         // for (auto &m :executor. measurements) {
                              // TODO: custom times and units
@@ -1413,10 +1452,36 @@ impl->curAllocatedBytes -= size;
 extern const char *bench_name;
 extern int64_t bench_default_problemsize;
 
+
+// TODO: do this randomly once between benchmarking?
+static void warn_load() {
+    // Ensure lazy symbol resolution has happened
+    ProcessCPUUsage();
+    std::chrono:: steady_clock::now();
+ 
+
+    // Do 100ms of computation and see whether user time agrees
+ auto   [startUser, startKernel] = ProcessCPUUsage();
+    auto start =  std::chrono:: steady_clock::now();
+  auto wtime = start -start ;
+    while (true ) {
+         wtime  =  std::chrono::steady_clock::now()-start;
+        if (wtime >= 100ms)
+            break;
+    }
+    auto   [stopUser, stopKerne] = ProcessCPUUsage();
+    auto utime  =stopUser - startUser;
+
+    // 2ms noise allowance
+    if (wtime - 2ms > utime) {
+        std::cerr << "WARNING: Additional load detected during benchmarking (wall time spent " <<   std::chrono::duration_cast<std::chrono::milliseconds>(wtime).count() << "ms but only " <<   std::chrono::duration_cast<std::chrono::milliseconds>(utime).count() << "ms was available to this process)\n";
+    }
+}
+
 int main(int argc, char* argv[]) {
     assert(argc >= 1);
 
-    std::filesystem ::path program ( argv[0]);
+    std::filesystem ::path program (argv[0]);
     std::string benchname;
     if (bench_name) {
         // preferably use program name linked into the program
@@ -1474,7 +1539,7 @@ int main(int argc, char* argv[]) {
 
    
     // TODO: default problem size
-    int64_t n;
+    int64_t n = -1;
     if (problemsize >= 0) {
         // Explicit problemsize has priority
         n = problemsize;
@@ -1514,7 +1579,7 @@ int main(int argc, char* argv[]) {
 
             if (key == "n") {
                 auto nval = parseInt(val);
-                problemsize = nval;
+                n = nval;
                 continue;
             }
         }
@@ -1535,7 +1600,7 @@ int main(int argc, char* argv[]) {
             resultsfilename = rosetta_default_results_dir;
             resultsfilename /= benchname;
         } else {
-         // Use cwd, without subdirs
+            // Use cwd, without subdirs
         }
 
         std::string suffix;
@@ -1558,7 +1623,10 @@ int main(int argc, char* argv[]) {
 
     // TOOD: allow more than one benchmark per executable
     assert(n >= 1);
+
+    warn_load();
     Rosetta::run(program, benchname, resultsfilename, verify, n, repeats);
+    warn_load();
 
     return EXIT_SUCCESS;
 }

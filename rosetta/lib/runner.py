@@ -522,8 +522,8 @@ class BenchVariants:
 
 
 class BenchResult:
-    def __init__(self,bench, name:str, count:int, durations, maxrss, cold_count, peak_alloc):
-        self.bench=bench
+    def __init__(self, name:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
+        #self.bench=bench
         self.name=name
         self.count=count
         #self.wtime=wtime
@@ -536,7 +536,7 @@ class BenchResult:
         self.peak_alloc = peak_alloc
 
 
-# TODO: enough prevision for nanoseconds?
+# TODO: enough precision for nanoseconds?
 # TODO: Use alternative duration class
 def parse_time(s:str):
     if s.endswith("ns"):
@@ -565,113 +565,53 @@ def parse_memsize(s:str):
     return int(s)
 
 
-def do_run(bench,args) :
+def do_run(bench,args,resultfile) :
     exe = bench.exepath 
 
     start = datetime.datetime.now()
-    print ("Executing", shjoin( [exe] + args))
-    p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
-    stdout = p.stdout.read()
-    unused_pid, exitcode, ru = os.wait4(p.pid, 0)
+    args.append(f'--xmlout={resultfile}')
+    print("Executing", shjoin([exe] + args))
+    #p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
+    p = subprocess.Popen([exe] + args)
+    #stdout = p.stdout.read()
+    unused_pid, exitcode, ru = os.wait4(p.pid, 0) # TODO: Integrate into invoke TODO: Fallback on windows TODO: should measure this in-process
+    
+
     stop = datetime.datetime.now()
+    p.wait() # To let python now as well that it has finished
+
+    assert resultfile.is_file(), "Expecting result file to be written by benchmark"
 
     wtime = max(stop - start,datetime.timedelta(0))
     utime = ru.ru_utime
     stime = ru.ru_stime
     maxrss = ru.ru_maxrss * 1024
-
-    benchmarks = et.fromstring(stdout)
-
-    count = 0
-    for benchmark in benchmarks:
-        name = benchmark.attrib['name']
-        n = benchmark.attrib['n']
-        cold_count = benchmark.attrib['cold_iterations']
-        peak_alloc = benchmark.attrib['peak_alloc']
-        count = len( benchmark)
-
-        time_per_key = defaultdict(lambda :  [])
-        for b in benchmark :
-            for k, v in b.attrib.items():
-                time_per_key[k] .append(parse_time(v))
-
-        stat_per_key = {}
-        for k,data in time_per_key.items():
-            stat_per_key[k] = statistic(data)
-
-        yield BenchResult(bench=bench, name=name, count=count,durations=stat_per_key, maxrss=maxrss,cold_count=cold_count,peak_alloc=peak_alloc) 
+    return resultfile
 
 
-
-def run_gbench(bench,problemsizefile):
-    yield from do_run(bench=bench, args=[f'--problemsizefile={problemsizefile}'])
-        
-
-
-def align_decimal(s):
-    # FIXME: Don't align in scientific notation?
-    pos = s.find('.')
-    if pos >= 0:
-        return StrAlign(s, pos)
-    return StrAlign(s, printlength(s))
-
-
-
-def getMeasureDisplayStr(s:str):
-   return  {'walltime': "Wall", 'usertime': "User", 'kerneltime': "Kernel", 
-   'acceltime': "CUDA Event", 
-   'cupti': "nvprof", 'cupti_compute': "nvprof Kernel", 'cupti_todev': "nvprof H->D", 'cupti_fromdev': "nvprof D->H"}.get(s, s)
-
-
-def getPPMDisplayStr(s:str):
-    return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel", 'omp_task' : "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s,s)
-
-
-def run_verify(problemsizefile):
-    if not problemsizefile:
-        die("Problemsizes required")  
-    if not problemsizefile.is_file():
-        # TODO: Embed default sizes
-        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
-
-    for e in benchmarks:
-            exepath = e.exepath
-            refpath = e.refpath
-            #print(f"{exepath=}")
-
-            args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
-            p = invoke.call(*args, return_stdout=True, print_command=True)
-            data = p.stdout 
-            #print(f"{data=}")
-
-            with refpath.open() as f:
-                refdata = f.read()
-                if refdata != data:
-                    # TODO: allow floating-point differences
-                    print(f"Output different from reference for {e.target}")
-                    print("Output   ", data)
-                    print("Reference", refdata)
-                    exit (1)
-
-
-def get_problemsizefile(srcdir, problemsizefile):
-    if not problemsizefile:
-        if not srcdir:
-            die("Problemsizefile must be defined")
-        return mkpath(srcdir) / 'benchmarks' / 'medium.problemsize.ini'
-    if not problemsizefile.is_file():
-        # TODO: Embed default sizes
-        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
-
-    
-
-
-def run_bench(problemsizefile=None, srcdir=None):
-    problemsizefile = get_problemsizefile(srcdir, problemsizefile)
-
+def evaluate(resultfiles):
     results = []
-    for e in benchmarks:
-        results += list(run_gbench(e,problemsizefile=problemsizefile))
+    for resultfile in resultfiles:
+        benchmarks = et.parse(resultfile).getroot()
+
+        for benchmark in benchmarks:
+            name = benchmark.attrib['name']
+            n = benchmark.attrib['n']
+            cold_count = benchmark.attrib['cold_iterations']
+            peak_alloc = benchmark.attrib['peak_alloc']
+            count = len(benchmark)
+
+            time_per_key = defaultdict(lambda :  [])
+            for b in benchmark :
+                for k, v in b.attrib.items():
+                    time_per_key[k] .append(parse_time(v))
+
+            stat_per_key = {}
+            for k,data in time_per_key.items():
+                stat_per_key[k] = statistic(data)
+
+            results.append( BenchResult( name=name, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc) )
+
 
     stats_per_key = defaultdict(lambda :  [])
     for r in results:
@@ -740,13 +680,113 @@ def run_bench(problemsizefile=None, srcdir=None):
     table.print()
 
 
+
+def run_gbench(bench,problemsizefile,resultfile):
+    return do_run(bench=bench, args=[f'--problemsizefile={problemsizefile}'],resultfile=resultfile)
+        
+
+
+def align_decimal(s):
+    # FIXME: Don't align in scientific notation?
+    pos = s.find('.')
+    if pos >= 0:
+        return StrAlign(s, pos)
+    return StrAlign(s, printlength(s))
+
+
+
+def getMeasureDisplayStr(s:str):
+   return  {'walltime': "Wall", 'usertime': "User", 'kerneltime': "Kernel", 
+   'acceltime': "CUDA Event", 
+   'cupti': "nvprof", 'cupti_compute': "nvprof Kernel", 'cupti_todev': "nvprof H->D", 'cupti_fromdev': "nvprof D->H"}.get(s, s)
+
+
+def getPPMDisplayStr(s:str):
+    return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel", 'omp_task' : "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s,s)
+
+
+def run_verify(problemsizefile):
+    if not problemsizefile:
+        die("Problemsizes required")  
+    if not problemsizefile.is_file():
+        # TODO: Embed default sizes
+        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
+
+    for e in benchmarks:
+        exepath = e.exepath
+        refpath = e.refpath
+        #print(f"{exepath=}")
+
+        args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
+        p = invoke.call(*args, return_stdout=True, print_command=True)
+        data = p.stdout 
+        #print(f"{data=}")
+
+        with refpath.open() as f:
+            refdata = f.read()
+            if refdata != data:
+                # TODO: allow floating-point differences
+                print(f"Output different from reference for {e.target}")
+                print("Output   ", data)
+                print("Reference", refdata)
+                exit (1)
+
+
+def get_problemsizefile(srcdir, problemsizefile):
+    if problemsizefile:
+        if not problemsizefile.is_file():
+            # TODO: Embed default sizes
+            die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
+        return problemsizefile
+    
+    # Default; 
+    # TODO: executable should know the default itself already
+    if not srcdir:
+        die("Problemsizefile must be defined")
+    return mkpath(srcdir) / 'benchmarks' / 'medium.problemsize.ini'
+
+
+    
+
+def make_resultssubdir():
+    global resultsdir
+    assert resultsdir
+    now = datetime.datetime.now()
+    i = 0
+    suffix=''
+    while True:
+        resultssubdir = resultsdir / f"{now:%Y%m%d_%H%M}{suffix}" 
+        if not resultssubdir.exists():
+            resultssubdir.mkdir(parents=True)
+            return resultssubdir
+        i += 1
+        suffix = r'_{i}'
+
+
+def run_bench(problemsizefile=None, srcdir=None):
+    problemsizefile = get_problemsizefile(srcdir, problemsizefile)
+
+    results = []
+    resultssubdir = make_resultssubdir()
+    for e in benchmarks:
+        thisresultdir = resultssubdir
+        configname = e.configname
+        if configname:
+            thisresultdir /= configname
+        thisresultdir /= f'{e.name}.xml'
+        results .append (run_gbench(e,problemsizefile=problemsizefile,resultfile=thisresultdir))
+    return results
+
+
+
 class Benchmark:
-    def __init__(self,target,exepath,config,ppm,refpath):
+    def __init__(self,target,exepath,config,ppm,refpath,configname):
         self.target=target
         self.exepath =exepath 
         self.config=config
         self.ppm = ppm
         self.refpath = refpath
+        self.configname = configname
 
     @property 
     def name(self):
@@ -861,24 +901,26 @@ def runner_main():
     if args.verify:
        return run_verify(problemsizefile=args.problemsizefile)
 
+    resultfiles = run_bench(problemsizefile=args.problemsizefile)
 
-    return run_bench(problemsizefile=args.problemsizefile)
-
-
+    evaluate(resultfiles)
 
 
 
 
 resultsdir = None
 def rosetta_config(resultsdir):
+    def set_global(dir):
+        global resultsdir
+        resultsdir = mkpath(dir)
     # TODO: Check if already set and different
-    resultsdir = mkpath(resultsdir)
+    set_global(resultsdir)
 
 
 
 benchmarks =[]
-def register_benchmark(target,exepath,config,ppm,refpath):
-    bench = Benchmark(target,exepath=mkpath(exepath), config=config,ppm=ppm,refpath=mkpath(refpath))
+def register_benchmark(target,exepath,config,ppm,refpath,configname):
+    bench = Benchmark(target,exepath=mkpath(exepath), config=config,ppm=ppm,refpath=mkpath(refpath),configname=configname)
     benchmarks.append(bench)
 
 

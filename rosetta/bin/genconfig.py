@@ -47,7 +47,7 @@ int64_t bench_default_problemsize = {n};
 
 
 
-def main() :
+def main():
     parser = argparse.ArgumentParser(description="Benchmark configuration file generator", allow_abbrev=False)
     parser.add_argument('--output', type=pathlib.Path)
     parser.add_argument('--resultsdir', type=pathlib.Path)
