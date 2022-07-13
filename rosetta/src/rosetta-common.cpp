@@ -1165,6 +1165,7 @@ void Iteration::stop() {
   }
 
 extern const char *rosetta_default_results_dir;
+extern const char *rosetta_configname;
 
 
 
@@ -1230,6 +1231,10 @@ const char *getMeasureDesc(Measure m) {
     }
     abort();
 }
+
+extern const char *bench_name;
+extern int64_t bench_default_problemsize;
+extern const char * bench_buildtype;
 
 
 // TODO: make singleton?
@@ -1306,7 +1311,12 @@ static void run(std::filesystem::path executable, std::string program, std::file
 
                     cxml << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
                     cxml << R"(<benchmarks>)" << std::endl;
-                    cxml << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << R"(">)" << std::endl;
+                    cxml << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant  << '\"';
+                    if (strlen(rosetta_configname)>=1)
+                        cxml << " configname=\"" << escape(rosetta_configname) << '\"';
+                    if (strlen(bench_buildtype) >=1)
+                        cxml << " buildtype=\"" << escape(bench_buildtype) << '\"';
+                    cxml  << ">" << std::endl;
                     for (int i = startMeasures; i < numMeasures; i += 1) { 
                         auto& m = executor.measurements[i];
                         // for (auto &m :executor. measurements) {
@@ -1449,8 +1459,7 @@ impl->curAllocatedBytes -= size;
 
 
 
-extern const char *bench_name;
-extern int64_t bench_default_problemsize;
+
 
 
 // TODO: do this randomly once between benchmarking?
