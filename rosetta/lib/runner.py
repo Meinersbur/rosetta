@@ -522,10 +522,11 @@ class BenchVariants:
 
 
 class BenchResult:
-    def __init__(self, name:str, ppm:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
+    def __init__(self, name:str, ppm:str,buildtype:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         #self.bench=bench
         self.name=name
         self.ppm = ppm
+        self.buildtype = buildtype
         self.count=count
         #self.wtime=wtime
         #self.utime=utime
@@ -603,6 +604,7 @@ def evaluate(resultfiles):
             cold_count = benchmark.attrib['cold_iterations']
             peak_alloc = benchmark.attrib['peak_alloc']
             ppm  = benchmark.attrib['ppm']
+            buildtype  = benchmark.attrib['buildtype']
             count = len(benchmark)
 
             time_per_key = defaultdict(lambda :  [])
@@ -614,7 +616,7 @@ def evaluate(resultfiles):
             for k,data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            results.append( BenchResult( name=name, ppm=ppm, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc) )
+            results.append( BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc) )
 
 
     stats_per_key = defaultdict(lambda :  [])
@@ -670,7 +672,7 @@ def evaluate(resultfiles):
 
     table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
     table.add_column('ppm', title="PPM",formatter=ppm_formatter)
-    table.add_column('config', title="Config")
+    table.add_column('buildtype', title="Buildtype")
     table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
     for k,summary in summary_per_key.items():
         table.add_column(k, title=StrColor( getMeasureDisplayStr(k), colorama.Style.BRIGHT),formatter=duration_formatter(summary.minimum,summary.maximum))
@@ -678,7 +680,7 @@ def evaluate(resultfiles):
 
     for r in results:
         # TODO: acceltime doesn't always apply
-        table.add_row(program=r.name , ppm=r.ppm, config=r.bench.config, n=r.count,**r.durations)
+        table.add_row(program=r.name , ppm=r.ppm, buildtype=r.buildtype, n=r.count,**r.durations)
 
     
     table.print()
