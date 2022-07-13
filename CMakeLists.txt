@@ -305,7 +305,7 @@ function (enable_ppm name shortname displayname)
   set(_benchmarks_run)
   foreach (_target IN LISTS _arg_BENCHMARKS)
   get_property(_reffile TARGET "${_target}" PROPERTY REFERENCE_FILE)
-    list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}', refpath='${_reffile}')")
+    list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}', refpath='${_reffile}', configname='${ROSETTA_CONFIGNAME}')")
   endforeach ()
   list(JOIN _benchmarks_run "\n" _benchmarks_pylist)
 
@@ -317,7 +317,7 @@ function (enable_ppm name shortname displayname)
 if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-from rosetta import runner_main, register_benchmark,rosetta_config
+from rosetta import runner_main,register_benchmark,rosetta_config
 rosetta_config(resultsdir='${ROSETTA_RESULTS_DIR}')
 
 ${_benchmarks_pylist}

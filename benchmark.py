@@ -221,8 +221,6 @@ def main(argv):
         runner.run_bench(srcdir= thisscriptdir, problemsizefile=args.problemsizefile)
         #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
     
-
-
     if args.evaluate:
         pass
 
