@@ -14,6 +14,9 @@
 #include <charconv>
 #include <fstream>
 #include <filesystem>
+#include <iostream>
+#include <string>
+#include <string_view>
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cupti.h>
@@ -92,12 +95,16 @@ using usage_duration_t =  std::chrono::microseconds;
 
 // TODO: filter out duplicates
 // TODO: make extendable
-using duration_t = std::variant<std::monostate,
-    std::chrono::duration<double,std::chrono::seconds::period>,  // lowest common denominator
-    std::chrono::high_resolution_clock::duration, // for wall time
-    usage_duration_t , // for user/kernel time
-    std::chrono::duration<double,std::chrono::milliseconds::period>, // Used by CUDA events
-    std::chrono::duration<uint64_t,std::chrono::nanoseconds::period> // Used by cupti
+using duration_t = std::variant< std::monostate
+   , std::chrono::duration<double,std::chrono::seconds::period>  // lowest common denominator
+   , std::chrono::high_resolution_clock::duration // for wall time
+   , usage_duration_t  // for user/kernel time
+#if ROSETTA_PPM_NVIDIA
+    ,std::chrono::duration<double,std::chrono::milliseconds::period> // Used by CUDA events
+#endif
+#if ROSETTA_PLATFORM_NVIDIA
+   , std::chrono::duration<uint64_t,std::chrono::nanoseconds::period> // Used by cupti
+#endif
 >;
 
 
@@ -885,7 +892,7 @@ public:
 
 
 #if ROSETTA_PLATFORM_NVIDIA
-        auto firstEvent  =  std::min({ cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther  }) ;
+        auto firstEvent  =  std::min({cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther  }) ;
         auto lastEvent  =  std::max({cuptiStopHtoD, cuptiStopDtoH, cuptiStopCompute, cuptiStopOther  }) ;
 #endif 
 
@@ -1102,8 +1109,7 @@ void Iteration::stop() {
       }
 
       template<typename Ratio>
-      void printUnit() {
-      }
+      void printUnit() {      }
 
       template <typename T,  typename Ratio>
       void operator() (std::chrono::duration<T,Ratio> v) {
@@ -1132,6 +1138,19 @@ void Iteration::stop() {
   } ;
 
 
+  static 
+      double to_seconds(const duration_t &lhs) {
+        return   std::visit(
+          [](const auto &lhs) {
+              using T =  std::remove_const_t< std::remove_reference_t< decltype(lhs)>>;
+              if constexpr (! std::is_same_v<T, std::monostate>)
+                  return (double)std::chrono::duration_cast<std::chrono::seconds>(lhs).count();
+                 return 0.0;
+          },
+          lhs);
+  }
+
+
 
   static std::string formatDuration(duration_t duration) {
       std::ostringstream buf;
@@ -1139,13 +1158,53 @@ void Iteration::stop() {
           return "";       // Should not have been called
 
       duration_formatter callme{buf};
-
-      std::visit( callme, duration);
-
-
+      std::visit(callme, duration);
 
       return buf.str();
   }
+
+extern const char *rosetta_default_results_dir;
+
+
+
+template<typename T, typename Y>
+static duration_t internal_add(const T  &lhs, const Y &rhs) {
+    if constexpr (std::is_same_v<T, std::monostate>) {
+        return rhs;
+    }else     if constexpr (std::is_same_v<T, std::monostate>) {
+        return lhs;
+    }
+    else {
+        if constexpr (std::is_same_v<T, Y>) {
+            return lhs + rhs;
+        }
+        using CommonTy = std::common_type<T, Y>;
+        // TODO: std::common_type, but requires all combinations of T,Y to be supported
+        // return lhs + rhs;
+    }
+    abort();
+}
+
+static 
+duration_t operator +(const duration_t &lhs, const duration_t &rhs) {
+  return   std::visit(
+     [&rhs](const auto &lhs) {
+        return  std::visit(
+            [&lhs](const auto&rhs) {
+                return internal_add(lhs,rhs);
+            }
+            , rhs);
+     },
+    lhs);
+}
+
+static 
+const duration_t &operator +=( duration_t& lhs, const duration_t& rhs) {
+    lhs = lhs + rhs;
+    return lhs;
+}
+
+
 
 // TODO: make singleton?
 struct Rosetta {
@@ -1157,7 +1216,7 @@ struct Rosetta {
     }
 
    static  BenchmarkRun *currentRun ;
-  static void run(std::filesystem ::path executable, std::string program, bool verify, int n, int repeats) {       
+  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, int n, int repeats) {       
             BenchmarkRun executor(verify,repeats);
             currentRun = &executor;
             executor.run(program, n);
@@ -1188,32 +1247,50 @@ struct Rosetta {
                 const char* ppm_variant = "openmp-target";
 #endif 
 
-                std::cout << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
-                std::cout << R"(<benchmarks>)" << std::endl;
-                std::cout << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << R"(">)" << std::endl;
+                // TODO: Print summary on console
+                std::cout << "Benchmarking done.\n";
+                duration_t sum ;
                 for (int i = startMeasures; i < numMeasures; i += 1) {
                     auto& m = executor.measurements[i];
-                    // for (auto &m :executor. measurements) {
-                         // TODO: custom times and units
-                    std::cout << "    <iteration";
-
-                    for (int i = 0; i <= MeasureLast; i += 1) {
-                        auto measure = (Measure)i;
-                        auto& val = m.values[measure];
-                        if (std::holds_alternative<std::monostate>(val)) continue;
-                        std::cout << ' ' << measureName[measure] << "=\"" << formatDuration(m.values[measure]) << '\"';
-                    }
-
-
-                    std::cout << R"(/>)" << std::endl;
-
+                    auto& val = m.values[WallTime];
+                    sum += sum;
                 }
-                // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
-                std::cout << R"(  </benchmark>)" << std::endl;
-                std::cout << R"(</benchmarks>)" << std::endl;
+// TODO: Implement division for duration_t so we don't need to always emit 
+                std::cout << "Avg wall time: " << to_seconds(sum)/numMeasures << "s (" << numMeasures << " measurements)\n";
+
+        
+                if (!xmlout.empty() )  {
+                    std::cout << "Writing result file: " << xmlout << "\n";
+                    std::ofstream cxml(xmlout, std::ios::trunc);
+
+
+
+                    cxml << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
+                    cxml << R"(<benchmarks>)" << std::endl;
+                    cxml << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << R"(">)" << std::endl;
+                    for (int i = startMeasures; i < numMeasures; i += 1) {
+                        auto& m = executor.measurements[i];
+                        // for (auto &m :executor. measurements) {
+                             // TODO: custom times and units
+                        cxml << "    <iteration";
+
+                        for (int i = 0; i <= MeasureLast; i += 1) {
+                            auto measure = (Measure)i;
+                            auto& val = m.values[measure];
+                            if (std::holds_alternative<std::monostate>(val)) continue;
+                            cxml << ' ' << measureName[measure] << "=\"" << formatDuration(m.values[measure]) << '\"';
+                        }
+
+                        cxml << R"(/>)" << std::endl;
+
+                    }
+                    // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
+                    cxml << R"(  </benchmark>)" << std::endl;
+                    cxml << R"(</benchmarks>)" << std::endl;
+                }
             }
 
-                currentRun = nullptr;
+            currentRun = nullptr;
         }
 
 
@@ -1228,7 +1305,6 @@ struct Rosetta {
             currentRun->handleCuptiActivity(record);
         }
 #endif 
-
 };
 
 
@@ -1357,7 +1433,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::string_view problemsizefile ;
+    std::string_view problemsizefile; // TOOD: Use std::filesystem::path
+    std::string_view xmlout;
     int problemsize = -1;
     int repeats = -1;
     int cold = -1;
@@ -1385,8 +1462,13 @@ int main(int argc, char* argv[]) {
         } else if (name == "verify") {
             assert(!val.has_value());
             verify = true;
+        } else if (name == "xmlout") {
+             if (!val.has_value() && i < argc) {
+                val = argv[i]; i+= 1;
+            }
+            xmlout = *val;
         } else {
-        assert(!"unknown switch");
+          assert(!"unknown switch");
         }
     }
 
@@ -1398,7 +1480,7 @@ int main(int argc, char* argv[]) {
         n = problemsize;
     } else if (!problemsizefile.empty()) {
         std::vector<std::string> lines;
-        {
+        { 
             std::ifstream psfile(std::string(problemsizefile).c_str(), std::ios::in);
             std::string myline;
             for (std::string myline; std::getline(psfile, myline); )
@@ -1423,13 +1505,12 @@ int main(int argc, char* argv[]) {
             i+=1;
         }
 
-
         for (auto &&line : seclines) {
             auto lineview = std::string_view(line);
             auto eqpos = line.find_first_of('=');
             if (eqpos == std::string::npos) continue;
-            auto key = trim(  lineview.substr(0, eqpos) );
-            auto val = trim( lineview.substr(eqpos + 1) );
+            auto key = trim(lineview.substr(0, eqpos) );
+            auto val = trim(lineview.substr(eqpos + 1) );
 
             if (key == "n") {
                 auto nval = parseInt(val);
@@ -1438,12 +1519,46 @@ int main(int argc, char* argv[]) {
             }
         }
     }    else {
-    n = bench_default_problemsize;
+        n = bench_default_problemsize;
     }
 
 
-    assert(problemsize >= 1);
-    Rosetta::run( program, benchname,verify, problemsize , repeats);
+    // TODO: Check for system load and warn if usertime!=walltime
+
+    std::filesystem::path resultsfilename;
+    if (!xmlout.empty()) {
+         resultsfilename = xmlout;
+    } else {
+        // Generate unique filename. Keep in sync with rosetta.py
+        // $ROSETTA_RESULTS_DIR/$benchname/{datetime}.xml
+        if (strlen(rosetta_default_results_dir) > 0) {
+            resultsfilename = rosetta_default_results_dir;
+            resultsfilename /= benchname;
+        } else {
+         // Use cwd, without subdirs
+        }
+
+        std::string suffix;
+        int i = 0;
+        while (true) {
+            auto now = std::chrono::system_clock::now();
+            std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+            auto q = std::ctime(&now_time);
+             char buf[200];
+            std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M", std::localtime(&now_time));
+            auto filename = std::string(buf) + "_" + benchname + suffix + ".xml";
+           // auto filename = std::vformat("{0:%F_%R}_{1}{2}.xml",now,benchname, suffix  );
+            resultsfilename /= filename;
+            if (! std::filesystem:: exists (resultsfilename))
+                break;
+            i+=1;
+            suffix =  "_" + std::to_string(i);
+        }
+    }
+
+    // TOOD: allow more than one benchmark per executable
+    assert(n >= 1);
+    Rosetta::run(program, benchname, resultsfilename, verify, n, repeats);
 
     return EXIT_SUCCESS;
 }

@@ -15,7 +15,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
 
   file(RELATIVE_PATH _relpath  "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
-  set(benchname "${_relpath_dots}")
+  set(benchname "${_relpath_dots}") 
   set(basename "${_relpath_dots}")
 
   set(_genconfig_target "genconfig-${benchname}")
@@ -24,7 +24,13 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
     add_custom_command(
       OUTPUT "${_benchprop_filename}"
       DEPENDS "${_problemsizefile}" "${GENCONFIG_EXECUTABLE}"
-      COMMAND Python::Interpreter "${GENCONFIG_EXECUTABLE}" "--benchname=${benchname}" "--problemsizefile=${_problemsizefile}" "--output=${_benchprop_filename}" 
+      COMMAND Python::Interpreter "${GENCONFIG_EXECUTABLE}" 
+        "--benchname=${benchname}" 
+        "--problemsizefile=${_problemsizefile}" 
+        "--output=${_benchprop_filename}"  
+        "--resultsdir=${ROSETTA_RESULTS_DIR}" 
+        "--compiler=${CMAKE_CXX_COMPILER}" # FIXME: Depends on PPM
+        "--compiler-flags=${CMAKE_CXX_FLAGS}" # FIXME: Not complete and depends on configuration and PPM
       COMMENT "Generate ${benchname} properties file ..."
     )
     add_custom_target("${_genconfig_target}"
