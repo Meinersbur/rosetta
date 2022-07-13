@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.17) # CMAKE_CROSS_CONFIGS
+cmake_minimum_required(VERSION 3.17) # CMAKE_CROSS_CONFIGS (https://cmake.org/cmake/help/latest/release/3.17.html)
 project(rosetta
-  VERSION 0.0.1
+  VERSION 0.0.2
   LANGUAGES CXX
 )
 
@@ -165,6 +165,9 @@ endif ()
 
 ## Configuration ###############################################################
 
+set(ROSETTA_RESULTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/results" CACHE PATH "Default path for results (.xml files)")
+
+
 # TODO: Make possible to a reference that is not serial (serial may include optimizations)
 option(ROSETTA_PPM_REFERENCE "Enable reference code" ON)
 
@@ -314,7 +317,8 @@ function (enable_ppm name shortname displayname)
 if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-from rosetta import runner_main, register_benchmark
+from rosetta import runner_main, register_benchmark,rosetta_config
+rosetta_config(resultsdir='${ROSETTA_RESULTS_DIR}')
 
 ${_benchmarks_pylist}
 

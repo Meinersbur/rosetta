@@ -199,7 +199,7 @@ def main(argv):
             config.builddir.mkdir(exist_ok=True)
             # TODO: Support other generators as well
             opts = config.gen_cmake_args()
-            invoke_verbose('cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULT_DIR={resultdir}', *opts, cwd=config.builddir)
+            invoke_verbose('cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}', *opts, cwd=config.builddir)
 
         if args.build:
             # TODO: Select subset to be build 

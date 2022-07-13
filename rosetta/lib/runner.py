@@ -5,23 +5,23 @@ from cmath import exp
 from itertools import count
 import sys
 import argparse
-import psutil
 import subprocess
 import pathlib
 import os
-import resource
 import datetime
 import json
 import xml.etree.ElementTree as et
 import colorama  
-import cwcwidth
 import math
-import tqdm # progress meter
 import argparse
 from collections import defaultdict
 import invoke
 import io
 from support import *
+
+# Not included batteries
+import cwcwidth
+#import tqdm # progress meter
 
 
 # FIXME: Hack
@@ -680,7 +680,7 @@ def run_bench(problemsizefile=None, srcdir=None):
 
     summary_per_key = {} # mean of means
     for k,data in stats_per_key.items():
-        summary_per_key[k] = statistic(  d.mean for d in data)
+        summary_per_key[k] = statistic(d.mean for d in data)
 
 
     table = Table()
@@ -866,6 +866,13 @@ def runner_main():
 
 
 
+
+
+
+resultsdir = None
+def rosetta_config(resultsdir):
+    # TODO: Check if already set and different
+    resultsdir = mkpath(resultsdir)
 
 
 
