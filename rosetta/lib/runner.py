@@ -682,8 +682,11 @@ def evaluate(resultfiles):
         # TODO: acceltime doesn't always apply
         table.add_row(program=r.name , ppm=r.ppm, buildtype=r.buildtype, n=r.count,**r.durations)
 
-    
     table.print()
+
+
+
+
 
 
 
@@ -754,14 +757,15 @@ def get_problemsizefile(srcdir, problemsizefile):
 
     
 
-def make_resultssubdir():
+def make_resultssubdir(within=None):
     global resultsdir
-    assert resultsdir
+    within = within or resultsdir
+    assert within
     now = datetime.datetime.now()
     i = 0
     suffix=''
     while True:
-        resultssubdir = resultsdir / f"{now:%Y%m%d_%H%M}{suffix}" 
+        resultssubdir = within / f"{now:%Y%m%d_%H%M}{suffix}" 
         if not resultssubdir.exists():
             resultssubdir.mkdir(parents=True)
             return resultssubdir

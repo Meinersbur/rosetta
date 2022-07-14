@@ -208,7 +208,7 @@ def main(argv):
     if args.verify or args.run:
         for config in configs:
             # Load available benchmarks
-            runconfigfile = config.builddir / 'run-Release.py'
+            runconfigfile = config.builddir / 'run-Release.py' # TODO: Always Release?
             spec = importlib.util.spec_from_file_location(str(runconfigfile), str(runconfigfile))
             module =  importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
@@ -217,12 +217,19 @@ def main(argv):
     if args.verify:
        runner.run_verify(problemsizefile=args.problemsizefile)
 
+    resultfiles = None
     if args.run:
-        runner.run_bench(srcdir= thisscriptdir, problemsizefile=args.problemsizefile)
+        resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
         #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
     
+
     if args.evaluate:
-        pass
+        if not resultfiles:
+            assert False, "TODO: Lookup last (successful) results dir"
+        if len(configs) == 1:
+            runner.evaluate(resultfiles)
+        else:
+            runner.compare(resultfiles)
 
 
 

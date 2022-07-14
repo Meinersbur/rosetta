@@ -1306,8 +1306,13 @@ static void run(std::filesystem::path executable, std::string program, std::file
         
 
                 if (!xmlout.empty() )  {
-                    std::cout << "Writing result file: " << xmlout << "\n";
+                    std::cout << "Writing result file: " << xmlout << "\n";    
+                    std::filesystem::create_directories(xmlout.parent_path());
                     std::ofstream cxml(xmlout, std::ios::trunc);
+                    if (!cxml.good())
+                        perror("Unable to open xmlout file");
+                    assert(cxml.good());
+                    assert(cxml.is_open());
 
                     cxml << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
                     cxml << R"(<benchmarks>)" << std::endl;
@@ -1336,6 +1341,8 @@ static void run(std::filesystem::path executable, std::string program, std::file
                     // TODO: run properties: num threads, device, executable hash, allocated bytes, num flop (calculated), num updates, performance counters, ..
                     cxml << R"(  </benchmark>)" << std::endl;
                     cxml << R"(</benchmarks>)" << std::endl;
+                    cxml.close();
+                    std::cout << "Done writing to file: " << xmlout << "\n";
                 }
             }
 
@@ -1483,7 +1490,7 @@ static void warn_load() {
 
     // 2ms noise allowance
     if (wtime - 2ms > utime) {
-        std::cerr << "WARNING: Additional load detected during benchmarking (wall time spent " <<   std::chrono::duration_cast<std::chrono::milliseconds>(wtime).count() << "ms but only " <<   std::chrono::duration_cast<std::chrono::milliseconds>(utime).count() << "ms was available to this process)\n";
+        std::cerr << "WARNING: Additional load detected during benchmarking (computed for " <<   std::chrono::duration_cast<std::chrono::milliseconds>(wtime).count() << "ms but only " <<   std::chrono::duration_cast<std::chrono::milliseconds>(utime).count() << "ms was available to this process)\n";
     }
 }
 
