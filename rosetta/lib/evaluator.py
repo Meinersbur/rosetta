@@ -6,12 +6,3 @@
 
 
 
-
-
-
-
-
-
-
-def evaluate(resultfiles):
-    pass

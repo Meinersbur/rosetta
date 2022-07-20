@@ -181,7 +181,7 @@ def main(argv):
                 shutil.rmtree(c)
         else:
             print_verbose("Reusing existing build")
-    resultdir.mkdir(exist_ok=True)
+    resultdir.mkdir(parents=True,exist_ok=True)
 
     for config in configs:
         if config.name:
@@ -229,7 +229,7 @@ def main(argv):
         if len(configs) == 1:
             runner.evaluate(resultfiles)
         else:
-            runner.compare(resultfiles)
+            runner.results_compare(resultfiles, compare_by="configname",compare_val=["walltime"])
 
 
 
