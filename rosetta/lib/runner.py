@@ -10,6 +10,7 @@ import pathlib
 import os
 import datetime
 import json
+from typing import Iterable
 import xml.etree.ElementTree as et
 import colorama  
 import math
@@ -18,6 +19,7 @@ from collections import defaultdict
 import invoke
 import io
 from support import *
+from orderedset import OrderedSet
 
 # Not included batteries
 import cwcwidth
@@ -139,7 +141,7 @@ def default_formatter(v):
 
 
 
-
+# TODO: Support subcolumns
 class Table:
     def __init__(self):
         self.columns = []
@@ -521,12 +523,14 @@ class BenchVariants:
 
 
 
+#TODO: dataclass
 class BenchResult:
-    def __init__(self, name:str, ppm:str,buildtype:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
+    def __init__(self, name:str, ppm:str,buildtype:str,configname:str, count:int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         #self.bench=bench
         self.name=name
         self.ppm = ppm
         self.buildtype = buildtype
+        self.configname = configname
         self.count=count
         #self.wtime=wtime
         #self.utime=utime
@@ -537,6 +541,47 @@ class BenchResult:
         self.cold_count = cold_count
         self.peak_alloc = peak_alloc
 
+
+
+def same_or_none(data):    
+    if not data:
+        return None
+    it = iter(data)
+    common_value = None
+    try:
+        common_value = next(it)
+        while True:
+            next_value = next(it)
+            if common_value != next_value:
+                return None
+    except StopIteration:
+        return common_value
+
+
+def name_or_list(data):
+    if not data :
+        return None
+    if isinstance(data , str):
+        return data
+    if not isinstance(data , Iterable):
+        return data
+    if len(data)==1 :
+        return data[0]
+    return data
+
+
+
+# TODO: dataclass?
+class BenchResultGroup:
+    def __init__(self,results):
+        self.name = name_or_list(unique(r.name for r in results))
+        self.ppm = name_or_list(unique(r.ppm for r in results))
+        self.buildtype =name_or_list( unique(r.buildtype for r in results))
+        self.configname = name_or_list(unique(r.configname for r in results))
+
+        # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
+        measures = unique(k for r in results for k in r.durations.keys())
+        self.durations = { m : statistic( v for r in results for v in r.durations[m]._samples )    for m in measures  }
 
 
 
@@ -593,53 +638,12 @@ def do_run(bench,args,resultfile) :
     return resultfile
 
 
-def evaluate(resultfiles):
-    results = []
-    for resultfile in resultfiles:
-        benchmarks = et.parse(resultfile).getroot()
+def path_formatter(v:pathlib.Path):
+    if v is None:
+        return None
+    return StrColor(pathlib.Path(v).name,colorama.Fore.GREEN)
 
-        for benchmark in benchmarks:
-            name = benchmark.attrib['name']
-            n = benchmark.attrib['n']
-            cold_count = benchmark.attrib['cold_iterations']
-            peak_alloc = benchmark.attrib['peak_alloc']
-            ppm  = benchmark.attrib['ppm']
-            buildtype  = benchmark.attrib['buildtype']
-            count = len(benchmark)
-
-            time_per_key = defaultdict(lambda :  [])
-            for b in benchmark :
-                for k, v in b.attrib.items():
-                    time_per_key[k] .append(parse_time(v))
-
-            stat_per_key = {}
-            for k,data in time_per_key.items():
-                stat_per_key[k] = statistic(data)
-
-            results.append( BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc) )
-
-
-    stats_per_key = defaultdict(lambda :  [])
-    for r in results:
-        for k,stat in r.durations.items():
-            stats_per_key[k] .append(stat)
-
-    summary_per_key = {} # mean of means
-    for k,data in stats_per_key.items():
-        summary_per_key[k] = statistic(d.mean for d in data)
-
-
-    table = Table()
-    def path_formatter(v:pathlib.Path):
-        if v is None:
-            return None
-        return StrColor(pathlib.Path(v).name,colorama.Fore.GREEN)
-    def count_formatter(v:int):
-        s = str(v)
-        return StrAlign( StrColor(str(v),colorama.Fore.BLUE), printlength(s))
-    def ppm_formatter(s:str):
-        return getPPMDisplayStr(s)
-    def duration_formatter(best,worst):
+def duration_formatter(best=None,worst=None):
         def formatter(s: Statistic):
             if s is None:
                 return None
@@ -670,12 +674,62 @@ def evaluate(resultfiles):
             return highlight_extremes(align_decimal(f"{v*1000*1000*1000:.2f}")) + StrColor( "ns", colorama.Style.DIM) + errstr
         return formatter
 
-    table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE),  formatter=path_formatter)
+
+def load_resultfiles(resultfiles):
+    results = []
+    for resultfile in resultfiles:
+        benchmarks = et.parse(resultfile).getroot()
+
+        for benchmark in benchmarks:
+            name = benchmark.attrib['name']
+            n = benchmark.attrib['n']
+            cold_count = benchmark.attrib.get('cold_iterations') 
+            peak_alloc = benchmark.attrib.get('peak_alloc')
+            ppm  = benchmark.attrib.get('ppm')
+            buildtype  = benchmark.attrib.get('buildtype')
+            configname = benchmark.attrib.get('configname')
+            count = len(benchmark)
+
+            time_per_key = defaultdict(lambda :  [])
+            for b in benchmark :
+                for k, v in b.attrib.items():
+                    time_per_key[k] .append(parse_time(v))
+
+            stat_per_key = {}
+            for k,data in time_per_key.items():
+                stat_per_key[k] = statistic(data)
+
+            results.append( BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc,configname=configname) )
+    return results
+
+
+def evaluate(resultfiles):
+    results = load_resultfiles(resultfiles)
+
+    stats_per_key = defaultdict(lambda :  [])
+    for r in results:
+        for k,stat in r.durations.items():
+            stats_per_key[k] .append(stat)
+
+    summary_per_key = {} # mean of means
+    for k,data in stats_per_key.items():
+        summary_per_key[k] = statistic(d.mean for d in data)
+
+
+    table = Table()
+    def count_formatter(v:int):
+        s = str(v)
+        return StrAlign( StrColor(str(v),colorama.Fore.BLUE), printlength(s))
+    def ppm_formatter(s:str):
+        return getPPMDisplayStr(s)
+
+
+    table.add_column('program', title=StrColor("Benchmark", colorama.Fore.BWHITE), formatter=path_formatter)
     table.add_column('ppm', title="PPM",formatter=ppm_formatter)
     table.add_column('buildtype', title="Buildtype")
     table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT),formatter=count_formatter)
     for k,summary in summary_per_key.items():
-        table.add_column(k, title=StrColor( getMeasureDisplayStr(k), colorama.Style.BRIGHT),formatter=duration_formatter(summary.minimum,summary.maximum))
+        table.add_column(k, title=StrColor(getMeasureDisplayStr(k), colorama.Style.BRIGHT),formatter=duration_formatter(summary.minimum,summary.maximum))
 
 
     for r in results:
@@ -686,6 +740,112 @@ def evaluate(resultfiles):
 
 
 
+def get_column_data(result: BenchResult, colname:str):
+    if result is None:
+        return None
+    if colname == "program":
+        return result.name
+    if colname == "ppm":
+        return result.ppm
+    if colname == "buildtype":
+        return result.buildtype
+    if colname == "configname":
+        return result.configname
+    if colname == "walltime":
+        return result.durations.get("walltime")
+    assert False, "TODO: Add to switch of use getattr"
+
+
+
+def print_comparison(groups_of_results, list_of_resultnames, common_columns=["program"], compare_columns=[]):
+    table = Table()
+
+    # Transpose list of lists
+    #results_of_groups = [] 
+    #for group in groups_of_results:
+    #    if len(group) > len(results_of_groups):
+    #        results_of_groups.extend([[]] * (len(group)  - len(results_of_groups)) )
+    #    for i,result in enumerate(group):
+    #        results_of_groups[i].append(result)
+        
+
+    for col in common_columns:
+        if col == "program": 
+            table.add_column(col, title=StrColor("Benchmark", colorama.Fore.BWHITE), formatter=path_formatter)
+        else: # TODO: proper column name
+            table.add_column(col, title=StrColor(col, colorama.Fore.BWHITE))
+
+    for col in compare_columns:
+        for i, resultname in enumerate(list_of_resultnames): # Common title
+            table.add_column(f"{col}_{i}", title=StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT),formatter=duration_formatter())
+
+    for result in groups_of_results:
+        representative = result[0] # TODO: collect all occuring group values
+        data = dict()
+        for col in common_columns:
+            data[col] = get_column_data(representative, col)
+        for col in compare_columns:
+            for i, resultname in enumerate(list_of_resultnames):
+                data[f"{col}_{i}"] = get_column_data(result[i], col)
+        table.add_row(**data)
+
+    table.print()
+
+
+
+
+def results_compare(resultfiles: list[Path],compare_by,compare_val=None,show_groups=None):
+    results = load_resultfiles(resultfiles)
+
+    # Categorical groupings
+    group_by = ["program", "ppm", "buildtype", "configname"]
+    group_by .remove(compare_by)
+    
+ 
+
+    # Find all fields that could be grouped by and have different values
+    if show_groups is None:
+        show_groups = []
+        for col in group_by:
+            common_value=None
+            has_different_values= False
+            for result in results:
+                val = get_column_data(result, col)
+                if common_value is None:
+                    common_value = val
+                elif common_value == val:
+                    continue
+                else:
+                    has_different_values = True
+                    break
+            if  has_different_values:
+                show_groups.append(col)
+
+
+    results_by_group = defaultdict(lambda :  defaultdict(lambda :  []))
+    all_cmpvals = OrderedSet()
+    for result in results:
+        group = tuple(get_column_data(result, col) for col in group_by)
+        cmpval = get_column_data(result, compare_by)
+        all_cmpvals.add(cmpval)
+        results_by_group[group][cmpval].append(result)
+
+    grouped_results = []
+    all_groups = []
+    for group,group_results in results_by_group.items():
+        group_cmp_results = []
+        for cmpval in all_cmpvals:
+            myresults = group_results.get(cmpval)
+            if myresults:
+                group_cmp_results.append(BenchResultGroup(myresults))
+            else:
+                # No values
+                group_cmp_results.append(None)
+            #is_unique_groups = tuple(same_or_none( g[i] for g in groups) is not None for  i in range(len(group_by)))
+        grouped_results.append(group_cmp_results)
+        all_groups.append(group)
+
+    print_comparison(groups_of_results=grouped_results, list_of_resultnames=list(all_cmpvals), common_columns=show_groups, compare_columns=compare_val)
 
 
 
@@ -962,6 +1122,28 @@ def main(argv):
 
     if args.gen_reference:
         gen_reference(*args.gen_reference,problemsizefile=args.problemsizefile)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
