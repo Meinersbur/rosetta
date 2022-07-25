@@ -38,6 +38,6 @@ void run(State& state, int n) {
 
 
 
-    for (auto &&_ : state) 
+    for (auto &&_ : state)
         kernel(n,  alpha , beta,A, u1,v1,u2,v2,w,x,y,z);
 }
