@@ -1,3 +1,7 @@
+# Adapted from Polybench/C 4.2.1 beta
+# https://web.cse.ohio-state.edu/~pouchet.2/software/polybench/
+# Only LARGE_DATASET (default) has the same dataset size as --pbsize=large
+
 # datamining
 add_subdirectory(correlation)
 add_subdirectory(covariance)
@@ -26,3 +30,6 @@ add_subdirectory(gramschmidt)
 add_subdirectory(lu)
 add_subdirectory(ludcmp)
 add_subdirectory(trisolv)
+
+# medley
+add_subdirectory(deriche)
