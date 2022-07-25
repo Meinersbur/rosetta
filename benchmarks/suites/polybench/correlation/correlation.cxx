@@ -7,8 +7,8 @@ void kernel(int m, int n,
 			real float_n,
              multarray<real,2> data,
                 multarray<real,2> corr,
-                real *mean,
-                real *stddev){
+                real mean[],
+                real stddev[]){
   real eps = 0.1;
 
 
@@ -56,9 +56,8 @@ void kernel(int m, int n,
 
 
 void run(State& state, int pbsize) {
-    // n is 8%-25% larger than m
     size_t n = pbsize;
-    size_t m = pbsize - pbsize/8;
+    size_t m = pbsize - pbsize/6;
 
     real float_n = n;
     auto data = state.allocate_array<real>({m,n}, /*fakedata*/true, /*verify*/false);
