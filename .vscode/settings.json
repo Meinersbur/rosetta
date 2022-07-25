@@ -1,8 +1,0 @@
-{
-    "python.autoComplete.extraPaths": [
-        "${workspaceFolder}/rosetta/rosetta/lib"
-    ],
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}/rosetta/rosetta/lib"
-    ]
-}
