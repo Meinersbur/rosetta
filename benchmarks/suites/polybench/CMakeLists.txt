@@ -18,3 +18,7 @@ add_subdirectory(atax)
 add_subdirectory(bicg)
 add_subdirectory(doitgen)
 add_subdirectory(mvt)
+
+# linear-algebra/solvers
+add_subdirectory(cholesky)
+add_subdirectory(durbin)
