@@ -39,3 +39,4 @@ add_subdirectory(nussinov)
 # stencils
 add_subdirectory(adi)
 add_subdirectory(fdtd-2d)
+add_subdirectory(heat-3d)
