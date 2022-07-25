@@ -733,9 +733,11 @@ template<typename T>
 
 
 #else 
+    // TODO: Generalize for arbitrary array sizes
+
     template<typename T> 
     owning_array< T,1u > 
-    allocate_array(   typename  _make_tuple< typename  _make_dimlengths<1> ::type>::type sizes, bool fakedata, bool verify   ) {
+    allocate_array(typename  _make_tuple< typename  _make_dimlengths<1> ::type>::type sizes, bool fakedata, bool verify   ) {
         auto  result =  dyn_array<T>( impl, get_stride(sizes) ,verify );
         if (fakedata)
             result.fakedata();
@@ -753,6 +755,17 @@ template<typename T>
         else 
             result.zerodata();
         return    owning_array< T,2u > (  impl, sizes,verify );
+    }
+
+    template<typename T> 
+    owning_array<T,3u > 
+        allocate_array(   typename  _make_tuple< typename  _make_dimlengths<3> ::type>::type sizes, bool fakedata, bool verify   ) {
+        auto  result =  dyn_array<T>( impl, get_stride(sizes) ,verify );
+        if (fakedata)
+            result.fakedata();
+        else 
+            result.zerodata();
+        return    owning_array< T,3u > (  impl, sizes,verify );
     }
 #endif 
 
