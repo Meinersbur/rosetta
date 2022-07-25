@@ -13,5 +13,6 @@ add_subdirectory(trmm)
 
 # linear-algebra/kernels
 add_subdirectory(2mm)
+add_subdirectory(3mm)
 
 add_subdirectory(atax)
