@@ -22,3 +22,4 @@ add_subdirectory(mvt)
 # linear-algebra/solvers
 add_subdirectory(cholesky)
 add_subdirectory(durbin)
+add_subdirectory(gramschmidt)
