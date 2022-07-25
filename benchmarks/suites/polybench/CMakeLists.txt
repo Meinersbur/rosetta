@@ -35,3 +35,6 @@ add_subdirectory(trisolv)
 add_subdirectory(deriche)
 add_subdirectory(floyd-warshall)
 add_subdirectory(nussinov)
+
+# stencils
+add_subdirectory(adi)
