@@ -1,4 +1,5 @@
 BasedOnStyle: LLVM
 ColumnLimit: 0
+DeriveLineEnding: No
 UseCRLF: No
 MaxEmptyLinesToKeep: 3
