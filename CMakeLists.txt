@@ -276,6 +276,42 @@ endif ()
 add_subdirectory(benchmarks)
 
 
+## Maintanance #################################################################
+
+
+add_custom_target(check-format)
+
+set(update_format_depends)
+file(GLOB_RECURSE format_files benchmarks/*.cxx benchmarks/*.h)
+set(i 0)
+foreach (file IN LISTS format_files)
+  add_custom_target(check-format${i}
+    COMMAND clang-format ${file}  --dry-run --color=1 -Werror # | diff -u --color=always ${file} -
+    VERBATIM
+    COMMENT "Checking format of ${file}..."
+  )
+  add_dependencies(check-format "check-format${i}")
+
+  set(_stamp "update-format-stamp${i}")
+  add_custom_command(#check-format${i}
+    OUTPUT ${_stamp}
+    DEPENDS ${file}
+    COMMAND clang-format -i ${file}
+    #COMMAND ${CMAKE_COMMAND} -E echo "Would format ${file}"
+    COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
+    VERBATIM
+    COMMENT "Updating format of ${file}..."
+  )
+  #add_dependencies(update-format "update-format${i}")
+  list(APPEND update_format_depends "${_stamp}")
+
+  math(EXPR i ${i}+1)
+endforeach ()
+
+
+add_custom_target(update-format DEPENDS ${update_format_depends})
+
+
 
 ## Run #########################################################################
 
