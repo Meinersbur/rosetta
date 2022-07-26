@@ -106,4 +106,4 @@
 
 // clang-format on
 
-#endif  // BENCHMARK_INTERNAL_MACROS_H_
+#endif // BENCHMARK_INTERNAL_MACROS_H_

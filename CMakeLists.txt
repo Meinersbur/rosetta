@@ -279,10 +279,10 @@ add_subdirectory(benchmarks)
 ## Maintanance #################################################################
 
 
+# TODO: Introspect availability of clang-format
 add_custom_target(check-format)
-
 set(update_format_depends)
-file(GLOB_RECURSE format_files benchmarks/*.cxx benchmarks/*.h)
+file(GLOB_RECURSE format_files benchmarks/*.cxx benchmarks/*.h rosetta/*.h rosetta/*.cpp)
 set(i 0)
 foreach (file IN LISTS format_files)
   add_custom_target(check-format${i}

@@ -1,15 +1,15 @@
 #ifndef ROSETTA_H_
 #define ROSETTA_H_
 
-#include <cstdlib>
-#include <cstdio>
-#include <string>
-#include <cstring>
+#include <array>
 #include <chrono>
 #include <cmath>
-#include <variant>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
 #include <type_traits>
-#include <array>
+#include <variant>
 
 
 // TODO: ROSETTA_PLATFORM_NVIDIA
@@ -30,10 +30,13 @@ typedef SSIZE_T ssize_t;
 #endif
 
 
-#define BENCH_CUDA_TRY(call)                                                         \
-  do {                                                                               \
-    auto const status = (call);                                                      \
-    if (cudaSuccess != status) { printf("CUDA call '" #call "' returned %d\n", status);  abort(); } \
+#define BENCH_CUDA_TRY(call)                                 \
+  do {                                                       \
+    auto const status = (call);                              \
+    if (cudaSuccess != status) {                             \
+      printf("CUDA call '" #call "' returned %d\n", status); \
+      abort();                                               \
+    }                                                        \
   } while (0);
 
 
@@ -49,172 +52,153 @@ class State;
 
 
 
-
-
-
-template<typename T , int DIMS>
+template <typename T, int DIMS>
 class multarray;
 
 
-template<typename T, int... __L> class array;
+template <typename T, int... __L>
+class array;
 
 template <int64_t>
 class _inttype {
 public:
-    typedef int64_t type;
+  typedef int64_t type;
 };
 
 template <int64_t...>
 class _dimlengths; // Never instantiate, used to store a sequence of integers, namely the size of several dimensions
 
 
-template<size_t DIMS, int64_t... DIMLENGTHS>
+template <size_t DIMS, int64_t... DIMLENGTHS>
 struct _make_dimlengths {
-    using type = /*recursion call*/ typename _make_dimlengths<DIMS-1, 0, DIMLENGTHS...>::type;
+  using type = /*recursion call*/ typename _make_dimlengths<DIMS - 1, 0, DIMLENGTHS...>::type;
 };
 
 
-template<int64_t... DIMLENGTHS>
-struct _make_dimlengths<0,  DIMLENGTHS...> {
-    using type = _dimlengths<DIMLENGTHS...>;
+template <int64_t... DIMLENGTHS>
+struct _make_dimlengths<0, DIMLENGTHS...> {
+  using type = _dimlengths<DIMLENGTHS...>;
 };
 
 
 #pragma region _make_index_sequence
 // Based on http://stackoverflow.com/a/6454211
-//template<int...> struct index_tuple{}; 
-template<size_t...> 
-class _indices {}; 
+// template<int...> struct index_tuple{};
+template <size_t...>
+class _indices {};
 
-//template<std::size_t I, typename IndexTuple, typename... Types>
-//struct make_indices_impl;
-template<std::size_t I/*counter*/, typename IndexTuple/*the index list in construction*/, typename... Types>
+// template<std::size_t I, typename IndexTuple, typename... Types>
+// struct make_indices_impl;
+template <std::size_t I /*counter*/, typename IndexTuple /*the index list in construction*/, typename... Types>
 struct _index_sequence;
 
-//template<std::size_t I, std::size_t... Indices, typename T, typename... Types>
-//struct make_indices_impl<I, index_tuple<Indices...>, T, Types...>
+// template<std::size_t I, std::size_t... Indices, typename T, typename... Types>
+// struct make_indices_impl<I, index_tuple<Indices...>, T, Types...>
 //{
-//   typedef typename make_indices_impl<I + 1, index_tuple<Indices...,
-//I>, Types...>::type type;
-//};
-template<std::size_t I, std::size_t... Indices, typename T/*unqueue*/, typename... Types/*remaining in queue*/>
-struct _index_sequence<I, _indices<Indices...>, T, Types...>
-{
-    typedef typename /*recursion call*/_index_sequence<I + 1, _indices<Indices..., I>, Types...>::type type;
+//    typedef typename make_indices_impl<I + 1, index_tuple<Indices...,
+// I>, Types...>::type type;
+// };
+template <std::size_t I, std::size_t... Indices, typename T /*unqueue*/, typename... Types /*remaining in queue*/>
+struct _index_sequence<I, _indices<Indices...>, T, Types...> {
+  typedef typename /*recursion call*/ _index_sequence<I + 1, _indices<Indices..., I>, Types...>::type type;
 };
 
-//template<std::size_t I, std::size_t... Indices>
-//struct make_indices_impl<I, index_tuple<Indices...> >
+// template<std::size_t I, std::size_t... Indices>
+// struct make_indices_impl<I, index_tuple<Indices...> >
 //{
-//   typedef index_tuple<Indices...> type;
-//};
-template<std::size_t I, std::size_t... Indices>
-struct _index_sequence<I, _indices<Indices...> > 
-{
-    typedef _indices<Indices...> type; // recursion terminator
+//    typedef index_tuple<Indices...> type;
+// };
+template <std::size_t I, std::size_t... Indices>
+struct _index_sequence<I, _indices<Indices...>> {
+  typedef _indices<Indices...> type; // recursion terminator
 };
 
-//template<typename... Types>
-//struct make_indices : make_indices_impl<0, index_tuple<>, Types...>
+// template<typename... Types>
+// struct make_indices : make_indices_impl<0, index_tuple<>, Types...>
 //{};
-template<typename... Types>
-//struct _make_index_sequence : _index_sequence<0, _indices<>, Types...> {}; // Using inheritance because there are no templated typedefs (outside of classes)
+template <typename... Types>
+// struct _make_index_sequence : _index_sequence<0, _indices<>, Types...> {}; // Using inheritance because there are no templated typedefs (outside of classes)
 using _make_index_sequence = _index_sequence<0, _indices<>, Types...>;
 // TODO: Also a version that converts constants parameter packs (instead of type parameter pack)
 #pragma endregion
 
 
 
+template <typename DIMLENGTHS>
+struct _make_tuple;
 
-
-
-
-
-
-
-
-
-
-
-
-
-template<typename DIMLENGTHS>
-struct _make_tuple ;
-
-template<int64_t... DIMLENGTHS>
+template <int64_t... DIMLENGTHS>
 struct _make_tuple<_dimlengths<DIMLENGTHS...>> {
-    using type = typename std::tuple< typename  _inttype<DIMLENGTHS>::type ...> ;
+  using type = typename std::tuple<typename _inttype<DIMLENGTHS>::type...>;
 };
 
 
 
-template <int64_t First, int64_t...Rest>
+template <int64_t First, int64_t... Rest>
 class _unqueue {
 public:
-    typedef _dimlengths<Rest...> rest;
-    typedef _dimlengths<First> first;
-    static const int64_t value = First;
+  typedef _dimlengths<Rest...> rest;
+  typedef _dimlengths<First> first;
+  static const int64_t value = First;
 };
 
-template<typename DIMLENGTH>
+template <typename DIMLENGTH>
 class _unqueue_dimlengths;
 
-template <int64_t First, int64_t...Rest>
+template <int64_t First, int64_t... Rest>
 class _unqueue_dimlengths<_dimlengths<First, Rest...>> {
 public:
-    typedef _dimlengths<Rest...> rest;
-    typedef _dimlengths<First> first;
-    static const int64_t value = First;
+  typedef _dimlengths<Rest...> rest;
+  typedef _dimlengths<First> first;
+  static const int64_t value = First;
 };
 
 
 
-
-template<typename SEQ>
-struct  _tuple_rest_extractor;
+template <typename SEQ>
+struct _tuple_rest_extractor;
 
 template <size_t... SEQ>
-struct _tuple_rest_extractor< std::index_sequence<SEQ...>> {
-    template<typename TUPLE>
-    static auto get_tuple(TUPLE tuple) { return std::make_tuple( std:: get<SEQ + 1 >(tuple)... ); };
+struct _tuple_rest_extractor<std::index_sequence<SEQ...>> {
+  template <typename TUPLE>
+  static auto get_tuple(TUPLE tuple) { return std::make_tuple(std::get<SEQ + 1>(tuple)...); };
 };
 
 
 
-template<typename TUPLE>
+template <typename TUPLE>
 class _unqueue_tuple;
 
-template <typename  First, typename...Rest>
+template <typename First, typename... Rest>
 class _unqueue_tuple<std::tuple<First, Rest...>> {
 
 public:
-    using TupleTy = std::tuple<First, Rest...>;
-    typedef std::tuple<Rest...> rest;
-    typedef First first;
+  using TupleTy = std::tuple<First, Rest...>;
+  typedef std::tuple<Rest...> rest;
+  typedef First first;
 
-    static   first get_first(TupleTy tuple) { return std::get<0>(tuple); }
-    static  rest get_rest(TupleTy tuple) { return _tuple_rest_extractor<std::make_index_sequence<sizeof...(Rest)>  >::  get_tuple(tuple);  }
+  static first get_first(TupleTy tuple) { return std::get<0>(tuple); }
+  static rest get_rest(TupleTy tuple) { return _tuple_rest_extractor<std::make_index_sequence<sizeof...(Rest)>>::get_tuple(tuple); }
 };
 
 
-template<typename TUPLE, size_t... Is> 
-static auto extract_subtuple( TUPLE tuple, std::index_sequence<Is...>  ) {
-    return std::make_tuple(std:: get<Is>(tuple)... );
+template <typename TUPLE, size_t... Is>
+static auto extract_subtuple(TUPLE tuple, std::index_sequence<Is...>) {
+  return std::make_tuple(std::get<Is>(tuple)...);
 }
 
 
-template<typename TUPLE> 
+template <typename TUPLE>
 static ssize_t get_stride(TUPLE tuple) {
-    static_assert(std::tuple_size<TUPLE>::value >= 1);
-    if constexpr (std::tuple_size<TUPLE>::value == 1) {
-        return std::get<0>(tuple);
-    }
-    if constexpr (std::tuple_size<TUPLE>::value > 1) {
-        return _unqueue_tuple<TUPLE>::get_first(tuple) * get_stride(_unqueue_tuple<TUPLE>::get_rest(tuple));
-    }
-    return 1;
+  static_assert(std::tuple_size<TUPLE>::value >= 1);
+  if constexpr (std::tuple_size<TUPLE>::value == 1) {
+    return std::get<0>(tuple);
+  }
+  if constexpr (std::tuple_size<TUPLE>::value > 1) {
+    return _unqueue_tuple<TUPLE>::get_first(tuple) * get_stride(_unqueue_tuple<TUPLE>::get_rest(tuple));
+  }
+  return 1;
 }
-
 
 
 
@@ -224,13 +208,8 @@ class __dimlengths_inttype;
 template <int64_t... DIMLENGTHS>
 class __dimlengths_inttype<_dimlengths<DIMLENGTHS...>> {
 public:
-    typedef int64_t type;
+  typedef int64_t type;
 };
-
-
-
-
-
 
 
 
@@ -252,121 +231,113 @@ struct  _flatindex {
         result += 
     }
 };
-#endif 
+#endif
 
 
 
-
-
-
-
-template<typename T/*Elt type*/, int Togo/*coordinates to go*/ >
+template <typename T /*Elt type*/, int Togo /*coordinates to go*/>
 class _multarray_partial_subscript {
-    static_assert(Togo > 1, "Specialization for more-coordinates-to-come");
-    static const int nTogo = Togo;
+  static_assert(Togo > 1, "Specialization for more-coordinates-to-come");
+  static const int nTogo = Togo;
 
-    typedef _multarray_partial_subscript<T, Togo -1 > subty;
-    using RemainingLengthsTy = typename  _make_tuple< typename  _make_dimlengths<Togo> ::type>::type;
+  typedef _multarray_partial_subscript<T, Togo - 1> subty;
+  using RemainingLengthsTy = typename _make_tuple<typename _make_dimlengths<Togo>::type>::type;
 
-    T *data;
-    RemainingLengthsTy remainingLengths;
+  T *data;
+  RemainingLengthsTy remainingLengths;
+
 public:
-    _multarray_partial_subscript( T *data, RemainingLengthsTy remainingLengths)  
-        : data(data), remainingLengths(remainingLengths) {    }
+  _multarray_partial_subscript(T *data, RemainingLengthsTy remainingLengths)
+      : data(data), remainingLengths(remainingLengths) {}
 
-# if 0
+#if 0
 private:
     template<size_t... Indices>
     subty buildSubtyHelper(_indices<Indices...>/*unused*/, int64_t coords[sizeof...(Indices)], int64_t appendCoord)   {
         return subty(owner, coords[Indices]..., appendCoord);
     }
-#endif 
+#endif
 
 public:
-    subty operator[](int64_t i) /*TODO: const*/ {
-        auto len = _unqueue_tuple<RemainingLengthsTy>::get_first(remainingLengths);
-        assert(0 <= i);
-        assert(i < len);
+  subty operator[](int64_t i) /*TODO: const*/ {
+    auto len = _unqueue_tuple<RemainingLengthsTy>::get_first(remainingLengths);
+    assert(0 <= i);
+    assert(i < len);
 
-        auto rest = _unqueue_tuple<RemainingLengthsTy>::get_rest(remainingLengths);
-        return  _multarray_partial_subscript<T, nTogo-1>(data +  get_stride(rest) , rest );
-    }
+    auto rest = _unqueue_tuple<RemainingLengthsTy>::get_rest(remainingLengths);
+    return _multarray_partial_subscript<T, nTogo - 1>(data + get_stride(rest), rest);
+  }
 }; // class _multarray_partial_subscript
 
 
 
-
-
-template<typename T>
+template <typename T>
 class _multarray_partial_subscript<T, 1> {
-    static constexpr  int nTogo = 1;
+  static constexpr int nTogo = 1;
 
-    using RemainingLengthsTy = size_t;
+  using RemainingLengthsTy = size_t;
 
-    T *data;
-    RemainingLengthsTy remainingLength;
-public:
-    _multarray_partial_subscript(T* data, std::tuple<int64_t> remainingLength ) 
-        : data(data),  remainingLength(std::get<0>( remainingLength)) {    }
+  T *data;
+  RemainingLengthsTy remainingLength;
 
 public:
-    T &operator[](int64_t i)  {
-        assert(0 <= i);
-        assert(i < remainingLength);
-        return data[i];
-    }
+  _multarray_partial_subscript(T *data, std::tuple<int64_t> remainingLength)
+      : data(data), remainingLength(std::get<0>(remainingLength)) {}
+
+public:
+  T &operator[](int64_t i) {
+    assert(0 <= i);
+    assert(i < remainingLength);
+    return data[i];
+  }
 }; // class _multarray_partial_subscript
 
 
 
-
-
-template<typename T, int DIMS>
+template <typename T, int DIMS>
 class multarray {
-    typedef T ElementType;
-    static const auto Dims = DIMS;
-    using __L = typename _make_dimlengths<DIMS>::type;
-    using  TupleTy =   typename _make_tuple<__L>::type;
-    using PtrTy = T*;
+  typedef T ElementType;
+  static const auto Dims = DIMS;
+  using __L = typename _make_dimlengths<DIMS>::type;
+  using TupleTy = typename _make_tuple<__L>::type;
+  using PtrTy = T *;
 
 private:
-    PtrTy data;
-    TupleTy DimLengths;
+  PtrTy data;
+  TupleTy DimLengths;
 
 public:
-    multarray(T* data, TupleTy lengths) : data(data), DimLengths(lengths) {  }
+  multarray(T *data, TupleTy lengths) : data(data), DimLengths(lengths) {}
 
 
 #if 0
     /* constexpr */ int length(int d) const { 
         return DimLengths[d];
     }
-#endif 
+#endif
 
 
-    template<typename Dummy = void>
-    typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS==1), T&>::type
-        operator[](int64_t i)  { 
-        auto len = std::get<0>(DimLengths);
-        assert(0 <= i);
-        assert(i < len);
-        return data[i];
-    }
-
-
+  template <typename Dummy = void>
+  typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS == 1), T &>::type
+  operator[](int64_t i) {
+    auto len = std::get<0>(DimLengths);
+    assert(0 <= i);
+    assert(i < len);
+    return data[i];
+  }
 
 
 
-    template<typename Dummy = void>
-    typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS>1),  _multarray_partial_subscript<T, DIMS-1>  >::type
-        operator[](int64_t i)  { 
-        auto len = _unqueue_tuple<TupleTy>::get_first(DimLengths);
-        assert(0 <= i);
-        assert(i < len);
+  template <typename Dummy = void>
+  typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS > 1), _multarray_partial_subscript<T, DIMS - 1>>::type
+  operator[](int64_t i) {
+    auto len = _unqueue_tuple<TupleTy>::get_first(DimLengths);
+    assert(0 <= i);
+    assert(i < len);
 
-        auto rest = _unqueue_tuple<TupleTy>::get_rest(DimLengths);
-        return  _multarray_partial_subscript<T, DIMS-1>(data +  get_stride(rest) , rest );
-    }
+    auto rest = _unqueue_tuple<TupleTy>::get_rest(DimLengths);
+    return _multarray_partial_subscript<T, DIMS - 1>(data + get_stride(rest), rest);
+  }
 
 
 
@@ -377,7 +348,7 @@ public:
         /* constexpr */  length() { 
         return length(0);
     }
-#endif 
+#endif
 
 
 
@@ -412,7 +383,7 @@ public:
         }
         return localdata + flatindex;
     }
-#endif 
+#endif
 
 
 #if 0
@@ -430,49 +401,41 @@ public:
         operator[](int64_t i) {
         return subty(this, i);
     }
-#endif 
-} ; // class multarray
-
-
-
-
-
-
-
-
+#endif
+}; // class multarray
 
 
 
 enum Measure {
-     WallTime,
-     UserTime,
-     KernelTime, // TODO:
-     OpenMPWTime,
-     AccelTime,  // CUDA Event
-     Cupti, // CUPTI duration from first to last event
-     CuptiCompute, // CUPTI duration from first kernel launch to last kernel finish
-     CuptiTransferToDevice, // CUPTI duration from start of first transfer to device start to last to finish (TODO: Would be nice to subtract the time when no transfer is active)
-     CuptiTransferToHost, // CUPTI duration from start of first transfer from device start to last to finish
-     MeasureLast = CuptiTransferToHost
+  WallTime,
+  UserTime,
+  KernelTime, // TODO:
+  OpenMPWTime,
+  AccelTime,             // CUDA Event
+  Cupti,                 // CUPTI duration from first to last event
+  CuptiCompute,          // CUPTI duration from first kernel launch to last kernel finish
+  CuptiTransferToDevice, // CUPTI duration from start of first transfer to device start to last to finish (TODO: Would be nice to subtract the time when no transfer is active)
+  CuptiTransferToHost,   // CUPTI duration from start of first transfer from device start to last to finish
+  MeasureLast = CuptiTransferToHost
 };
-constexpr int MeasureCount = MeasureLast+1;
-
+constexpr int MeasureCount = MeasureLast + 1;
 
 
 
 class Iteration {
   template <typename I>
   friend class Iterator;
-   friend class State;
-      friend class Rosetta;
-      friend class Scope;
-public :
-  ~Iteration () {   // TODO: stop if not yet stopped
-  }
-   Scope scope() ;
+  friend class State;
+  friend class Rosetta;
+  friend class Scope;
 
-void start();
-void stop();
+public:
+  ~Iteration() { // TODO: stop if not yet stopped
+  }
+  Scope scope();
+
+  void start();
+  void stop();
 
 protected:
   explicit Iteration(State &state) : state(state) {}
@@ -483,42 +446,42 @@ protected:
 
 
 class Scope {
-    friend class Iteration;
-    friend class AutoIteration;
-    template <typename I>
-    friend class Iterator;
-    friend class Range;
-    friend class State;
+  friend class Iteration;
+  friend class AutoIteration;
+  template <typename I>
+  friend class Iterator;
+  friend class Range;
+  friend class State;
+
 public:
-    ~Scope() {
-        it.stop();
-    }
+  ~Scope() {
+    it.stop();
+  }
 
 private:
-    Scope(Iteration& it) : it(it) {
-        it.start();
-    }
+  Scope(Iteration &it) : it(it) {
+    it.start();
+  }
 
-    Iteration &it;
+  Iteration &it;
 };
 
-inline
-Scope Iteration::scope() {
-    return Scope(*this);
+inline Scope Iteration::scope() {
+  return Scope(*this);
 }
 
 
 
-
 class AutoIteration : public Iteration {
-    template <typename I>
-    friend class Iterator;
-public :
-  ~AutoIteration () {}
+  template <typename I>
+  friend class Iterator;
+
+public:
+  ~AutoIteration() {}
 
 private:
   AutoIteration(State &state) : Iteration(state), scope(*this) {
-//printf("AutoIteration\n");
+    // printf("AutoIteration\n");
   }
 
   Scope scope;
@@ -526,30 +489,20 @@ private:
 
 
 
-
-
-
 class Range {
-friend class State;
-  public:
-    Iterator<Iteration> begin() ;
-     Iterator<Iteration> end()  ;
+  friend class State;
 
-    private:
-explicit Range(State &state) : state(state) {}
+public:
+  Iterator<Iteration> begin();
+  Iterator<Iteration> end();
 
-    State &state;
+private:
+  explicit Range(State &state) : state(state) {}
+
+  State &state;
 };
 
 class BenchmarkRun;
-
-
-
-
-
-
-
-
 
 
 
@@ -557,166 +510,168 @@ template <typename T>
 class DataHandler;
 
 class DataHandlerBase {
-    friend class State;
-protected:
-    explicit DataHandlerBase(BenchmarkRun* impl) : impl(impl) {}
+  friend class State;
 
-    BenchmarkRun *impl;
+protected:
+  explicit DataHandlerBase(BenchmarkRun *impl) : impl(impl) {}
+
+  BenchmarkRun *impl;
 };
 
 template <>
-class DataHandler<double> :  public DataHandlerBase {
-    friend class State;
-public:
-    explicit DataHandler(BenchmarkRun* impl) : DataHandlerBase(impl) {}
+class DataHandler<double> : public DataHandlerBase {
+  friend class State;
 
-    void fake(double *data, ssize_t count);
-    void verify(double *data, ssize_t count);
+public:
+  explicit DataHandler(BenchmarkRun *impl) : DataHandlerBase(impl) {}
+
+  void fake(double *data, ssize_t count);
+  void verify(double *data, ssize_t count);
 };
 
 
 
-
-class dyn_array_base{
+class dyn_array_base {
 protected:
-    dyn_array_base(BenchmarkRun* impl, int size, bool verify) ;
-    dyn_array_base(dyn_array_base&& that)  : impl(that.impl), size(that.size), verify(that.verify)   { that.impl=nullptr; that.verify= false;  that.size=0; }
-    ~dyn_array_base() ;
+  dyn_array_base(BenchmarkRun *impl, int size, bool verify);
+  dyn_array_base(dyn_array_base &&that) : impl(that.impl), size(that.size), verify(that.verify) {
+    that.impl = nullptr;
+    that.verify = false;
+    that.size = 0;
+  }
+  ~dyn_array_base();
 
-    BenchmarkRun *impl;
-    size_t size;
-    bool verify ;
+  BenchmarkRun *impl;
+  size_t size;
+  bool verify;
 };
 
 
 
-
-template<typename T> 
+template <typename T>
 class dyn_array : dyn_array_base {
-    friend class State;
-    template<typename X, size_t DIMS> friend class owning_array;
+  friend class State;
+  template <typename X, size_t DIMS>
+  friend class owning_array;
+
 public:
-    ~dyn_array() { 
-        if (verify) verifydata();
-        verify=false;
-        delete[] mydata;  
-        mydata = nullptr;
-    }
+  ~dyn_array() {
+    if (verify)
+      verifydata();
+    verify = false;
+    delete[] mydata;
+    mydata = nullptr;
+  }
 
-    dyn_array(const dyn_array &that) = delete;
-    dyn_array & operator=(const dyn_array &that) =delete;
-
-
-    dyn_array(dyn_array&& that) : dyn_array_base(std::move(that)), mydata(that.mydata) {
-        that.mydata=nullptr;
-    }
+  dyn_array(const dyn_array &that) = delete;
+  dyn_array &operator=(const dyn_array &that) = delete;
 
 
-    T* data() { return mydata ;};
-    const T* data()const  { return mydata ;};
-
-    void zerodata() {
-        std::memset(mydata, '\0', size);
-    }
-
-    void fakedata() {  DataHandler<T>(impl).fake(mydata,size/sizeof(T)); }
-    void verifydata() {
-        DataHandler<T>(impl).verify(mydata,size/sizeof(T));
-    }
+  dyn_array(dyn_array &&that) : dyn_array_base(std::move(that)), mydata(that.mydata) {
+    that.mydata = nullptr;
+  }
 
 
+  T *data() { return mydata; };
+  const T *data() const { return mydata; };
+
+  void zerodata() {
+    std::memset(mydata, '\0', size);
+  }
+
+  void fakedata() { DataHandler<T>(impl).fake(mydata, size / sizeof(T)); }
+  void verifydata() {
+    DataHandler<T>(impl).verify(mydata, size / sizeof(T));
+  }
 
 
-    // TODO: realloc
+
+  // TODO: realloc
 private:
-    dyn_array(BenchmarkRun* impl, int count, bool verify  ) : dyn_array_base(impl, count * sizeof(T), verify ), mydata(new T[count]) {      }
+  dyn_array(BenchmarkRun *impl, int count, bool verify) : dyn_array_base(impl, count * sizeof(T), verify), mydata(new T[count]) {}
 
-    // typed, to ensure TBAA can be effective
-        T* mydata;
+  // typed, to ensure TBAA can be effective
+  T *mydata;
 };
 
 
 
-
-
-
-template<typename T, size_t DIMS> 
+template <typename T, size_t DIMS>
 class owning_array {
 public:
-    owning_array(BenchmarkRun* impl,typename  _make_tuple<typename _make_dimlengths<DIMS>::type >::type sizes, bool verify) : mydata(impl, get_stride(sizes), verify), sizes(sizes) {}
+  owning_array(BenchmarkRun *impl, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes, bool verify) : mydata(impl, get_stride(sizes), verify), sizes(sizes) {}
 
-    multarray<T, DIMS> get() {
-        return multarray<T, DIMS> (mydata.data(),sizes );
-    }
+  multarray<T, DIMS> get() {
+    return multarray<T, DIMS>(mydata.data(), sizes);
+  }
 
 
-    operator multarray<T, DIMS>() {  return get(); }
+  operator multarray<T, DIMS>() { return get(); }
 
- //  template<  typename  std::enable_if<DIMS==1,bool> ::type =  true >
- //  operator T*() {  return  mydata.data(); }
+  //  template<  typename  std::enable_if<DIMS==1,bool> ::type =  true >
+  //  operator T*() {  return  mydata.data(); }
 
-    // Implicit conversion to pointer only for flat arrays
-   template<typename U =T, typename = typename std::enable_if<std::is_same<U,T>::value && DIMS==1,T>::type   >
-   operator T*() {  return  mydata.data(); }
+  // Implicit conversion to pointer only for flat arrays
+  template <typename U = T, typename = typename std::enable_if<std::is_same<U, T>::value && DIMS == 1, T>::type>
+  operator T *() { return mydata.data(); }
 
 private:
-    dyn_array<T> mydata;
-    typename _make_tuple<typename _make_dimlengths<DIMS>::type >::type sizes;
+  dyn_array<T> mydata;
+  typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes;
 };
-
- 
 
 
 
 class State {
   template <typename I>
-      friend class Iterator;
-   friend class Iteration;
-   friend class Rosetta;
-   friend class BenchmarkRun;
-   friend class dyn_array_base;
-   template <typename T>
-   friend class dyn_array;
+  friend class Iterator;
+  friend class Iteration;
+  friend class Rosetta;
+  friend class BenchmarkRun;
+  friend class dyn_array_base;
+  template <typename T>
+  friend class dyn_array;
+
 public:
-     Iterator<AutoIteration>  begin();
-     Iterator<AutoIteration>  end();
+  Iterator<AutoIteration> begin();
+  Iterator<AutoIteration> end();
 
-Range manual() { return Range(*this) ; }
+  Range manual() { return Range(*this); }
 
-template<typename T>
-struct InternalData {
+  template <typename T>
+  struct InternalData {
     size_t size;
     T Data[];
-};
+  };
 
-// TODO: return some smart ptr, we are C++ after all
-// TODO: ensure alignment
-template<typename T>
-    T* malloc(size_t count) {   
-          auto result = (InternalData<T>*) ::malloc(sizeof(InternalData<T>) + sizeof( T) * count );
-          result->size = count * sizeof(T);
-          addAllocatedBytes(count * sizeof(T));
-          return &result->Data[0];
-}
+  // TODO: return some smart ptr, we are C++ after all
+  // TODO: ensure alignment
+  template <typename T>
+  T *malloc(size_t count) {
+    auto result = (InternalData<T> *)::malloc(sizeof(InternalData<T>) + sizeof(T) * count);
+    result->size = count * sizeof(T);
+    addAllocatedBytes(count * sizeof(T));
+    return &result->Data[0];
+  }
 
-    template<typename T>
-    dyn_array<T> alloc_array(size_t count,  bool verify= false) {   
-        return  dyn_array<T>( impl, count ,verify );
-    }
+  template <typename T>
+  dyn_array<T> alloc_array(size_t count, bool verify = false) {
+    return dyn_array<T>(impl, count, verify);
+  }
 
-    template<typename T>
-    dyn_array<T> calloc_array(size_t count , bool verify=false) {   
-        auto  result =  dyn_array<T>( impl, count, verify  );
-        result.zerodata();
-        return result;
-    }
+  template <typename T>
+  dyn_array<T> calloc_array(size_t count, bool verify = false) {
+    auto result = dyn_array<T>(impl, count, verify);
+    result.zerodata();
+    return result;
+  }
 
-    template<typename T>
-    dyn_array<T> fakedata_array(size_t count, bool verify=false) {   
-        auto  result =  dyn_array<T>( impl, count ,verify );
-        result.fakedata();
-        return result;
-    }
+  template <typename T>
+  dyn_array<T> fakedata_array(size_t count, bool verify = false) {
+    auto result = dyn_array<T>(impl, count, verify);
+    result.fakedata();
+    return result;
+  }
 
 
 #if 0
@@ -732,72 +687,71 @@ template<typename T>
     }
 
 
-#else 
-    // TODO: Generalize for arbitrary array sizes
+#else
+  // TODO: Generalize for arbitrary array sizes
 
-    template<typename T> 
-    owning_array< T,1u > 
-    allocate_array(typename  _make_tuple< typename  _make_dimlengths<1> ::type>::type sizes, bool fakedata, bool verify   ) {
-        auto  result =  dyn_array<T>( impl, get_stride(sizes) ,verify );
-        if (fakedata)
-            result.fakedata();
-        else 
-            result.zerodata();
-        return    owning_array< T,1u > (  impl, sizes,verify );
-    }
+  template <typename T>
+  owning_array<T, 1u>
+  allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type sizes, bool fakedata, bool verify) {
+    auto result = dyn_array<T>(impl, get_stride(sizes), verify);
+    if (fakedata)
+      result.fakedata();
+    else
+      result.zerodata();
+    return owning_array<T, 1u>(impl, sizes, verify);
+  }
 
-    template<typename T> 
-    owning_array<T,2u > 
-        allocate_array(   typename  _make_tuple< typename  _make_dimlengths<2> ::type>::type sizes, bool fakedata, bool verify   ) {
-        auto  result =  dyn_array<T>( impl, get_stride(sizes) ,verify );
-        if (fakedata)
-            result.fakedata();
-        else 
-            result.zerodata();
-        return    owning_array< T,2u > (  impl, sizes,verify );
-    }
+  template <typename T>
+  owning_array<T, 2u>
+  allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify) {
+    auto result = dyn_array<T>(impl, get_stride(sizes), verify);
+    if (fakedata)
+      result.fakedata();
+    else
+      result.zerodata();
+    return owning_array<T, 2u>(impl, sizes, verify);
+  }
 
-    template<typename T> 
-    owning_array<T,3u > 
-        allocate_array(   typename  _make_tuple< typename  _make_dimlengths<3> ::type>::type sizes, bool fakedata, bool verify   ) {
-        auto  result =  dyn_array<T>( impl, get_stride(sizes) ,verify );
-        if (fakedata)
-            result.fakedata();
-        else 
-            result.zerodata();
-        return    owning_array< T,3u > (  impl, sizes,verify );
-    }
-#endif 
-
-
+  template <typename T>
+  owning_array<T, 3u>
+  allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify) {
+    auto result = dyn_array<T>(impl, get_stride(sizes), verify);
+    if (fakedata)
+      result.fakedata();
+    else
+      result.zerodata();
+    return owning_array<T, 3u>(impl, sizes, verify);
+  }
+#endif
 
 
-template<typename T>
-void fakedata(T *data, size_t count) {
-    DataHandler<T>(impl).fake(data,count);
-}
+
+  template <typename T>
+  void fakedata(T *data, size_t count) {
+    DataHandler<T>(impl).fake(data, count);
+  }
 
 
-template<typename T>
-void verifydata(T* data, size_t count) {
+  template <typename T>
+  void verifydata(T *data, size_t count) {
 #if ROSETTA_VERIFY
-    DataHandler<T>(impl).verify(data,count);
+    DataHandler<T>(impl).verify(data, count);
 #else
     // Don't do anything in benchmark mode
-#endif 
-}
+#endif
+  }
 
-template<typename T>
-void free (T *ptr) { 
-    auto internaldata =(InternalData<T>*)  (((char*)ptr) -offsetof(InternalData<T>, Data)); 
+  template <typename T>
+  void free(T *ptr) {
+    auto internaldata = (InternalData<T> *)(((char *)ptr) - offsetof(InternalData<T>, Data));
 
-   subAllocatedBytes(internaldata->size);
-   ::free(internaldata);
-}
+    subAllocatedBytes(internaldata->size);
+    ::free(internaldata);
+  }
 
 private:
-    State (BenchmarkRun *impl) : impl(impl) {}
- // State (std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}
+  State(BenchmarkRun *impl) : impl(impl) {}
+  // State (std::chrono::steady_clock::time_point startTime) : startTime(startTime) {}
 
   void start();
   void stop();
@@ -811,123 +765,63 @@ private:
 
 
 
-
 template <typename I>
 class Iterator {
-    friend class Range;
-    friend class State;
-    friend class Rosetta;
+  friend class Range;
+  friend class State;
+  friend class Rosetta;
 
-public :
-    typedef std::forward_iterator_tag iterator_category;
-    typedef  I value_type;
-    typedef  I &reference;
-    typedef  I *pointer;
-    typedef std::ptrdiff_t difference_type;
+public:
+  typedef std::forward_iterator_tag iterator_category;
+  typedef I value_type;
+  typedef I &reference;
+  typedef I *pointer;
+  typedef std::ptrdiff_t difference_type;
 
 
-    BENCHMARK_ALWAYS_INLINE
-        I operator*() const {
-         //  printf("operator*()\n");  
-        return I(state);
-    }
+  BENCHMARK_ALWAYS_INLINE
+  I operator*() const {
+    //  printf("operator*()\n");
+    return I(state);
+  }
 
-    BENCHMARK_ALWAYS_INLINE
-        Iterator& operator++() {
-        assert(remaining > 0 );
-        remaining -= 1;
-        return *this;
-    }
+  BENCHMARK_ALWAYS_INLINE
+  Iterator &operator++() {
+    assert(remaining > 0);
+    remaining -= 1;
+    return *this;
+  }
 
-    BENCHMARK_ALWAYS_INLINE 
-        bool operator!=(Iterator const& that) const {
-        if (BENCHMARK_BUILTIN_EXPECT(remaining != 0, true)) return true;
-        remaining = state.refresh();
-        assert(remaining >= 0 );
-        return remaining != 0;
-    }
+  BENCHMARK_ALWAYS_INLINE
+  bool operator!=(Iterator const &that) const {
+    if (BENCHMARK_BUILTIN_EXPECT(remaining != 0, true))
+      return true;
+    remaining = state.refresh();
+    assert(remaining >= 0);
+    return remaining != 0;
+  }
 
 private:
-    explicit Iterator(State &state, bool IsEnd) : state(state), isEnd(IsEnd) {}
+  explicit Iterator(State &state, bool IsEnd) : state(state), isEnd(IsEnd) {}
 
-    State &state;
-    mutable int remaining = 0;
-    bool isEnd;
+  State &state;
+  mutable int remaining = 0;
+  bool isEnd;
 };
 
 
 
-
 inline Iterator<Iteration> Range::begin() { return Iterator<Iteration>(state, false); }
-inline Iterator<Iteration> Range::end()   { return Iterator<Iteration>(state, true);  }
+inline Iterator<Iteration> Range::end() { return Iterator<Iteration>(state, true); }
 
 
-inline Iterator<AutoIteration>  State::begin() { return Iterator<AutoIteration>(*this, false); }
-inline Iterator<AutoIteration>State::end()     { return Iterator<AutoIteration>(*this, true);}
+inline Iterator<AutoIteration> State::begin() { return Iterator<AutoIteration>(*this, false); }
+inline Iterator<AutoIteration> State::end() { return Iterator<AutoIteration>(*this, true); }
 
 
 #ifdef ROSETTA_REALTYPE
 typedef ROSETTA_REALTYPE real;
-#endif 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif
 
 
 
@@ -1121,7 +1015,6 @@ public:
    // TODO: Support sizeof...(__L)==0
 template<typename T, int... __L>
 class  array: public LocalStore, public field<T, sizeof...(__L)> {
-
 
 
 
@@ -1416,6 +1309,6 @@ private:
 } ; // class array
 #endif
 
-#endif 
+#endif
 
 #endif /* ROSETTA_H_ */
