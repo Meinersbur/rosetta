@@ -295,7 +295,7 @@ foreach (file IN LISTS format_files)
   set(_stamp "update-format-stamp${i}")
   add_custom_command(#check-format${i}
     OUTPUT ${_stamp}
-    DEPENDS ${file}
+    DEPENDS .clang-format ${file}
     COMMAND clang-format -i ${file}
     #COMMAND ${CMAKE_COMMAND} -E echo "Would format ${file}"
     COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
