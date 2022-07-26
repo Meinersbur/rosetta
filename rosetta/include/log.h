@@ -9,62 +9,62 @@
 namespace benchmark {
 namespace internal {
 
-typedef std::basic_ostream<char>&(EndLType)(std::basic_ostream<char>&);
+typedef std::basic_ostream<char> &(EndLType)(std::basic_ostream<char> &);
 
 class LogType {
-  friend LogType& GetNullLogInstance();
-  friend LogType& GetErrorLogInstance();
+  friend LogType &GetNullLogInstance();
+  friend LogType &GetErrorLogInstance();
 
   // FIXME: Add locking to output.
   template <class Tp>
-  friend LogType& operator<<(LogType&, Tp const&);
-  friend LogType& operator<<(LogType&, EndLType*);
+  friend LogType &operator<<(LogType &, Tp const &);
+  friend LogType &operator<<(LogType &, EndLType *);
 
- private:
-  LogType(std::ostream* out) : out_(out) {}
-  std::ostream* out_;
+private:
+  LogType(std::ostream *out) : out_(out) {}
+  std::ostream *out_;
   BENCHMARK_DISALLOW_COPY_AND_ASSIGN(LogType);
 };
 
 template <class Tp>
-LogType& operator<<(LogType& log, Tp const& value) {
+LogType &operator<<(LogType &log, Tp const &value) {
   if (log.out_) {
     *log.out_ << value;
   }
   return log;
 }
 
-inline LogType& operator<<(LogType& log, EndLType* m) {
+inline LogType &operator<<(LogType &log, EndLType *m) {
   if (log.out_) {
     *log.out_ << m;
   }
   return log;
 }
 
-inline int& LogLevel() {
+inline int &LogLevel() {
   static int log_level = 0;
   return log_level;
 }
 
-inline LogType& GetNullLogInstance() {
+inline LogType &GetNullLogInstance() {
   static LogType log(nullptr);
   return log;
 }
 
-inline LogType& GetErrorLogInstance() {
+inline LogType &GetErrorLogInstance() {
   static LogType log(&std::clog);
   return log;
 }
 
-inline LogType& GetLogInstanceForLevel(int level) {
+inline LogType &GetLogInstanceForLevel(int level) {
   if (level <= LogLevel()) {
     return GetErrorLogInstance();
   }
   return GetNullLogInstance();
 }
 
-}  // end namespace internal
-}  // end namespace benchmark
+} // end namespace internal
+} // end namespace benchmark
 
 // clang-format off
 #define BM_VLOG(x)                                                               \

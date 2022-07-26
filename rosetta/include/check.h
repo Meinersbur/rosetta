@@ -16,25 +16,25 @@ namespace internal {
 typedef void(AbortHandlerT)();
 
 BENCHMARK_EXPORT
-AbortHandlerT*& GetAbortHandler();
+AbortHandlerT *&GetAbortHandler();
 
 BENCHMARK_NORETURN inline void CallAbortHandler() {
   GetAbortHandler()();
-  std::abort();  // fallback to enforce noreturn
+  std::abort(); // fallback to enforce noreturn
 }
 
 // CheckHandler is the class constructed by failing BM_CHECK macros.
 // CheckHandler will log information about the failures and abort when it is
 // destructed.
 class CheckHandler {
- public:
-  CheckHandler(const char* check, const char* file, const char* func, int line)
+public:
+  CheckHandler(const char *check, const char *file, const char *func, int line)
       : log_(GetErrorLogInstance()) {
     log_ << file << ":" << line << ": " << func << ": Check `" << check
          << "' failed. ";
   }
 
-  LogType& GetLog() { return log_; }
+  LogType &GetLog() { return log_; }
 
 #if defined(COMPILER_MSVC)
 #pragma warning(push)
@@ -48,16 +48,16 @@ class CheckHandler {
 #pragma warning(pop)
 #endif
 
-  CheckHandler& operator=(const CheckHandler&) = delete;
-  CheckHandler(const CheckHandler&) = delete;
+  CheckHandler &operator=(const CheckHandler &) = delete;
+  CheckHandler(const CheckHandler &) = delete;
   CheckHandler() = delete;
 
- private:
-  LogType& log_;
+private:
+  LogType &log_;
 };
 
-}  // end namespace internal
-}  // end namespace benchmark
+} // end namespace internal
+} // end namespace benchmark
 
 // The BM_CHECK macro returns a std::ostream object that can have extra
 // information written to it.

@@ -1,7 +1,7 @@
 #if 0
 #include "rosetta.h"
-#include <vector>
 #include <cstdio>
+#include <vector>
 
 // Pointer to ensure no static ctor call avoiding static initialization order fiasco.
 static RosettaBenchmark *benchmarkListFirst=nullptr;
