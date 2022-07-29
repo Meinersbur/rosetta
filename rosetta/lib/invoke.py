@@ -8,6 +8,7 @@ import io
 import threading
 import datetime
 import contextlib
+from collections.abc import Iterable
 from support import *
 
 
@@ -32,8 +33,10 @@ class Invoke:
         if isinstance(arg, str):  # A filename
             return [arg]
         if isinstance(arg,pathlib.PurePath):
-            return[str(arg)]
-        return list(arg)
+            return [str(arg)]
+        if isinstance(arg, Iterable):
+             return list(l for a in arg for l in Invoke.hlist(a))
+        return list(arg) # A file handle
 
 
     @staticmethod

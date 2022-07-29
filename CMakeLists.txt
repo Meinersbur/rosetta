@@ -167,9 +167,12 @@ endif ()
 
 set(ROSETTA_RESULTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/results" CACHE PATH "Default path for results (.xml files)")
 
+string(RANDOM LENGTH 8 ALPHABET "0123456789" _randseed_default)
+set(ROSETTA_RANDSEED "${_randseed_default}" CACHE STRING "Seed for compile-time randomness")
 
-# TODO: Make possible to a reference that is not serial (serial may include optimizations)
-option(ROSETTA_PPM_REFERENCE "Enable reference code" ON)
+
+
+option(ROSETTA_PPM_REFERENCE "Enable reference code; use serial if there is no explicit reference version" ON)
 
 option(ROSETTA_PPM_SERIAL "Enable serial" ON)
 
@@ -278,11 +281,10 @@ add_subdirectory(benchmarks)
 
 ## Maintanance #################################################################
 
-
 # TODO: Introspect availability of clang-format
 add_custom_target(check-format)
 set(update_format_depends)
-file(GLOB_RECURSE format_files benchmarks/*.cxx benchmarks/*.h rosetta/*.h rosetta/*.cpp)
+file(GLOB_RECURSE format_files benchmarks/*.cxx benchmarks/*.cu benchmarks/*.h rosetta/*.h rosetta/*.cpp)
 set(i 0)
 foreach (file IN LISTS format_files)
   add_custom_target(check-format${i}
@@ -340,8 +342,9 @@ function (enable_ppm name shortname displayname)
 
   set(_benchmarks_run)
   foreach (_target IN LISTS _arg_BENCHMARKS)
-  get_property(_reffile TARGET "${_target}" PROPERTY REFERENCE_FILE)
-    list(APPEND _benchmarks_run "register_benchmark('${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}', refpath='${_reffile}', configname='${ROSETTA_CONFIGNAME}')")
+    get_property(_reffile TARGET "${_target}" PROPERTY REFERENCE_FILE)
+    get_property(_basename TARGET "${_target}" PROPERTY ROSETTA_BASENAME)
+    list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', config='$<CONFIG>', ppm='${shortname}', configname='${ROSETTA_CONFIGNAME}')")
   endforeach ()
   list(JOIN _benchmarks_run "\n" _benchmarks_pylist)
 

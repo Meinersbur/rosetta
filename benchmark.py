@@ -11,10 +11,13 @@ import shutil
 import re
 import importlib
 
+
+
 # TODO: There must be a better way, including for vscode to find it
 # TODO: move all the plumbing into lib
 if __name__ == '__main__':
-  sys.path.insert(0, '/home/meinersbur/src/rosetta/rosetta/lib')
+    #  FIXME: hardcoded path
+    sys.path.insert(0, '/home/meinersbur/src/rosetta/rosetta/lib') 
 import rosetta
 runner = rosetta.runner
 
@@ -24,6 +27,7 @@ thisscriptdir = thisscript.parent
 
 sys.path.insert(0,str( (thisscript.parent / 'rosetta' /  'lib').absolute() ))
 from rosetta import *
+
 
 
 
@@ -79,7 +83,7 @@ configsplitarg =         re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>
 configsplitdef =         re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)(\=(?P<defvalue>.*))?')
 configsplitdefrequired = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)\=(?P<defvalue>.*)')
 configppm =         re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<ppm>[a-zA-Z\-]+)')
-def parse_build_configs(args):
+def parse_build_configs(args,implicit_reference):
     def parse_arglists(l):
         raw = defaultdict(lambda: [])
         if l is None:
@@ -108,12 +112,15 @@ def parse_build_configs(args):
     compiler_def = parse_deflists(args.compiler_def,valrequired=False)
     ppm = parse_arglists(args.ppm)
 
-    keys = set()
+    keys = OrderedSet()
+    if implicit_reference:
+        keys.add("REF")
     keys |= cmake_arg.keys()
     keys |= cmake_def.keys()
     keys |= compiler_arg.keys()
     keys |= compiler_def.keys()
-    keys |= ppm.keys()
+
+
     configs = []
     for k in keys:
         if not k:
@@ -134,6 +141,7 @@ def invoke_verbose(*args, **kwargs):
         invoke.diag(*args, **kwargs)
     else:
         invoke.run(*args, **kwargs)
+
 
 def main(argv):
     global verbose
@@ -165,49 +173,74 @@ def main(argv):
     verbose = args.verbose
 
     # TODO: If not specified, just reuse existing configs 
-    configs = parse_build_configs(args)
+    configs = parse_build_configs(args,implicit_reference=args.verify)
 
     srcdir = script.parent
     builddir = srcdir / 'build'
     resultdir = builddir / 'results'
 
-    if builddir.exists():
-        if args.clean:
-            # TODO: Do this automatically when necessary (hash the CMakeLists.txt)
-            print_verbose("Cleaning previous builds")
-            for c in builddir.iterdir():
-                if c.name == 'results':
-                    continue
-                shutil.rmtree(c)
-        else:
-            print_verbose("Reusing existing build")
+    #if builddir.exists():
+    #    if args.clean:
+    #        # TODO: Do this automatically when necessary (hash the CMakeLists.txt)
+    #        print_verbose("Cleaning previous builds")
+    #        for c in builddir.iterdir():
+    #            if c.name == 'results':
+    #                continue
+    #            shutil.rmtree(c)
+    #    else:
+    #        print_verbose("Reusing existing build")
     resultdir.mkdir(parents=True,exist_ok=True)
 
+    
     for config in configs:
-        if config.name:
-            config.builddir = builddir / f'build-{config.name}'
+        if not config.name:
+              config.builddir  = builddir / 'defaultbuild'
+        elif config.name == "REF":
+            # TODO: same as defaultbuild?
+            config.builddir  = builddir / 'refbuild'
         else:
-            config.buildir  = builddir / 'defaultbuild'
+            config.builddir = builddir / f'build-{config.name}'
 
-    # TODO: recognize "module" system
+
+    # TODO: Recognize "module" system
     # TODO: Recognize famous machines (JLSE, Summit, Aurora, Frontier, ...)
 
+
     for config in configs:
-        if (config.builddir / 'build.ninja').exists():
-            print_verbose("Already configured (Ninja will reconfigure when necessary automatically)")
-        else:
-            config.builddir.mkdir(exist_ok=True)
-            # TODO: Support other generators as well
-            opts = config.gen_cmake_args()
-            invoke_verbose('cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}', *opts, cwd=config.builddir)
+        builddir = config.builddir 
+        configdescfile  = builddir/'RosettaCache.txt'
+
+        # TODO: Support other generators as well
+        opts = ['cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
+        opts += config.gen_cmake_args()
+        expectedopts = shjoin(opts)
+
+        reusebuilddir = False
+        if not args.clean and configdescfile.is_file() and (builddir / 'build.ninja').exists():
+            existingopts = readfile(configdescfile)            
+            if existingopts == expectedopts:
+                reusebuilddir=True
+
+        if not reusebuilddir:
+            if builddir.exists():
+                shutil.rmtree(builddir)
+            builddir.mkdir(exist_ok=True,parents=True)
+            invoke_verbose(*opts, cwd=config.builddir)
+            createfile(configdescfile, expectedopts)
+        
+
+          
+            
+            
 
         if args.build:
             # TODO: Select subset to be build 
             invoke_verbose('ninja', cwd=config.builddir)
 
+
+    # Load all available benchmarks
     if args.verify or args.run:
         for config in configs:
-            # Load available benchmarks
             runconfigfile = config.builddir / 'run-Release.py' # TODO: Always Release?
             spec = importlib.util.spec_from_file_location(str(runconfigfile), str(runconfigfile))
             module =  importlib.util.module_from_spec(spec)
@@ -215,10 +248,19 @@ def main(argv):
 
 
     if args.verify:
-       runner.run_verify(problemsizefile=args.problemsizefile)
+       def only_REF(bench):
+           return bench.configname =='REF' 
+       [refconfig] = (c for c in configs if c.name == 'REF')
+       refdir = refconfig.builddir / 'references'
+       refdir.mkdir(exist_ok=True,parents=True)
+       runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+
+       runner.run_verify(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+
 
     resultfiles = None
     if args.run:
+        # TODO: Filter way 'REF' config
         resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
         #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
     

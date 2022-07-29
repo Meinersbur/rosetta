@@ -17,14 +17,18 @@ import colorama
 import math
 import argparse
 from collections import defaultdict
-import invoke
 import io
-from support import *
-from orderedset import OrderedSet
+import configparser
+
 
 # Not included batteries
 import cwcwidth
 #import tqdm # progress meter
+
+# Rosetta-provided
+import invoke
+from support import *
+from orderedset import OrderedSet
 
 
 # FIXME: Hack
@@ -96,22 +100,12 @@ class StrColor:
 
 
  
-class NamedObj:
-    def __init__(self,name):
-        self.name = name
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f'<NamedObj: {self.name}>'
-
 
 
 class StrAlign:
-    LEFT= NamedObj('LEFT')
-    CENTER= NamedObj('CENTER')
-    RIGHT= NamedObj('RIGHT')
+    LEFT= NamedSentinel('LEFT')
+    CENTER= NamedSentinel('CENTER')
+    RIGHT= NamedSentinel('RIGHT')
 
     # TODO: swap align/pos
     def __init__(self, s, align=None, pos=LEFT): 
@@ -1015,34 +1009,8 @@ def getPPMDisplayStr(s:str):
     return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel", 'omp_task' : "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s,s)
 
 
-def run_verify(problemsizefile):
-    if not problemsizefile:
-        die("Problemsizes required")  
-    if not problemsizefile.is_file():
-        # TODO: Embed default sizes
-        die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
 
-    for e in benchmarks:
-        exepath = e.exepath
-        refpath = e.refpath
-        #print(f"{exepath=}")
-
-        args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
-        p = invoke.call(*args, return_stdout=True, print_command=True)
-        data = p.stdout 
-        #print(f"{data=}")
-
-        with refpath.open() as f:
-            refdata = f.read()
-            if refdata != data:
-                # TODO: allow floating-point differences
-                print(f"Output different from reference for {e.target}")
-                print("Output   ", data)
-                print("Reference", refdata)
-                exit (1)
-
-
-def get_problemsizefile(srcdir, problemsizefile):
+def get_problemsizefile(srcdir=None, problemsizefile=None):
     if problemsizefile:
         if not problemsizefile.is_file():
             # TODO: Embed default sizes
@@ -1054,6 +1022,75 @@ def get_problemsizefile(srcdir, problemsizefile):
     if not srcdir:
         die("Problemsizefile must be defined")
     return mkpath(srcdir) / 'benchmarks' / 'medium.problemsize.ini'
+
+
+def get_problemsize(bench, problemsizefile):
+    config = configparser.ConfigParser()
+    config.read(problemsizefile)
+    n = config.getint(bench.name, 'n')
+    return n
+
+
+
+def get_refpath(bench,refdir,problemsizefile):
+    pbsize = get_problemsize(bench,problemsizefile=problemsizefile)
+    reffilename = f"{bench.name}.{pbsize}.reference_output"
+    refpath = refdir/reffilename
+    return refpath
+
+
+
+def ensure_reffile(bench,refdir,problemsizefile):
+    refpath = get_refpath(bench,refdir=refdir,problemsizefile=problemsizefile)
+
+    if refpath.is_file():
+        # Reference output already exists
+        print(f"Reference output of {bench.name} already exists at {refpath}")
+        return 
+
+    # Invoke reference executable and write to file
+    args = [bench.exepath, f'--verify', f'--problemsizefile={problemsizefile}']
+    invoke.call(*args, stdout=[refpath], print_command=True)    
+    print(f"Reference output of {bench.name} written to {refpath}")
+ 
+
+
+def ensure_reffiles(refdir,problemsizefile,filterfunc=None,srcdir=None):
+    problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
+    for bench in benchmarks:
+        if filterfunc and not filterfunc(bench):
+            continue
+        ensure_reffile(bench,refdir=refdir,problemsizefile=problemsizefile)
+
+
+
+def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
+    problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
+    if not problemsizefile:
+        die("Problemsizes required")
+
+
+
+    for e in benchmarks:
+        if filterfunc and not filterfunc(e):
+            continue
+
+        exepath = e.exepath
+        refpath = get_refpath(e,refdir=refdir,problemsizefile=problemsizefile)
+
+        args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
+        p = invoke.call(*args, return_stdout=True, print_command=True)
+        data = p.stdout 
+
+        with refpath.open() as f:
+            refdata = f.read()
+            if refdata != data:
+                # TODO: allow floating-point differences
+                print(f"Output different from reference for {e.target}")
+                print("Output   ", data)
+                print("Reference", refdata)
+                exit (1)
+
 
 
     
@@ -1091,18 +1128,18 @@ def run_bench(problemsizefile=None, srcdir=None):
 
 
 class Benchmark:
-    def __init__(self,target,exepath,config,ppm,refpath,configname):
+    def __init__(self,basename,target,exepath,config,ppm,configname):
+        self.basename = basename
         self.target=target
         self.exepath =exepath 
         self.config=config
         self.ppm = ppm
-        self.refpath = refpath
         self.configname = configname
 
     @property 
     def name(self):
-        return self.target
-        #return self.target.split(sep='.', maxsplit=1)[0]
+        return self.basename
+
 
 
 
@@ -1230,8 +1267,8 @@ def rosetta_config(resultsdir):
 
 
 benchmarks =[]
-def register_benchmark(target,exepath,config,ppm,refpath,configname):
-    bench = Benchmark(target,exepath=mkpath(exepath), config=config,ppm=ppm,refpath=mkpath(refpath),configname=configname)
+def register_benchmark(basename,target,exepath,config,ppm,configname):
+    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), config=config,ppm=ppm,configname=configname)
     benchmarks.append(bench)
 
 
