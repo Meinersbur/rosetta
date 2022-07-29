@@ -50,6 +50,8 @@ def shcombine(arg=None,args=None):
 
   return result
 
+
+
 # from https://stackoverflow.com/questions/1714027/version-number-comparison-in-python
 def version_cmp(v1, v2):
     def convert_int(v):
@@ -312,6 +314,10 @@ def max_none(first, *args):
     return result
 
 
+def readfile(filepath):
+  filepath = mkpath(filepath)
+  with filepath.open('r') as f:
+    return f.read()
 
 def createfile(filename,contents):
     if isinstance(filename,Path):

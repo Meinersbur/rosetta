@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <charconv>
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cuda.h>
@@ -678,16 +679,24 @@ private:
 
   bool verify;
   int exactRepeats = -1;
+  std::filesystem::path verifyoutpath;
+
+public:
+  std::ofstream verifyout;
 
 public:
   bool isVerifyRun() const { return verify; }
   bool isBenchRun() const { return !verify; }
 
 public:
-  explicit BenchmarkRun(bool verify, int exactRepeats) : verify(verify), exactRepeats(exactRepeats) {}
+  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {}
 
   void run(std::string program, int n) {
     startTime = std::chrono::steady_clock::now();
+
+    if (!verifyoutpath.empty()) {
+        verifyout.open(verifyoutpath, std::ios::trunc);
+    }
 
     State state{this};
 
@@ -848,6 +857,9 @@ public:
     started = false;
 
 
+    if (verifyout.is_open()) 
+        verifyout.close();
+
 #if ROSETTA_PLATFORM_NVIDIA
     auto firstEvent = std::min({cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther});
     auto lastEvent = std::max({cuptiStopHtoD, cuptiStopDtoH, cuptiStopCompute, cuptiStopOther});
@@ -985,15 +997,37 @@ void DataHandler<double>::fake(double *data, ssize_t count) {
 }
 
 
-void DataHandler<double>::verify(double *data, ssize_t count) {
+void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size_t> dims, std::string_view name) {
+    for (ssize_t i = 0; i < count; i += 1) {
+        auto val = data[i];
+        if (std::isinf(val) || std::isnan(val)) {
+            std::cerr << "WARNING: Inf/NaN output\n";
+        }
+    }
+
   if (!impl->isVerifyRun())
     return;
 
+ auto &verifyout =  impl->verifyout;
+ 
+ verifyout << dims.size();
+ for (auto l : dims)
+     verifyout << ' ' << l;
+
+ if (!name.empty())
+     verifyout << ' ' << name;
+
+ verifyout << ':';
+
   for (ssize_t i = 0; i < count; i += 1) {
     // TODO: precision
-    if (i > 0)
-      std::cout << ' ';
-    std::cout << data[i];
+      auto val = data[i];
+
+      std::array<char, 16> str;
+      auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val,std::chars_format::general );
+      assert(ec == std::errc());
+   
+    std::cout << ' ' << std::string_view(str.data(), ptr - str.data())  ;
   }
   std::cout << '\n';
 }
@@ -1193,8 +1227,8 @@ struct Rosetta {
   }
 
   static BenchmarkRun *currentRun;
-  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, int n, int repeats) {
-    BenchmarkRun executor(verify, repeats);
+  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify,std::filesystem::path verifyout,  int n, int repeats) {
+    BenchmarkRun executor(verify, repeats, verifyout);
     currentRun = &executor;
     executor.run(program, n);
 
@@ -1393,7 +1427,7 @@ static int parseInt(std::string_view s) {
 
 
 dyn_array_base::
-    dyn_array_base(BenchmarkRun *impl, int size, bool verify) : impl(impl), size(size), verify(verify) {
+    dyn_array_base(BenchmarkRun *impl, int size, bool verify, std::vector<size_t> dims , std::string_view name) : impl(impl), size(size), verify(verify), dims(std::move(dims)), name(name) {
   if (!impl)
     return;
   impl->curAllocatedBytes += size;
@@ -1436,6 +1470,9 @@ static void warn_load() {
   }
 }
 
+
+
+
 int main(int argc, char *argv[]) {
   assert(argc >= 1);
 
@@ -1451,12 +1488,12 @@ int main(int argc, char *argv[]) {
 
     auto dotpos = progname.find_first_of('.');
     benchname = progname;
-    if (dotpos != std::string::npos) {
+    if (dotpos != std::string::npos) 
       benchname = progname.substr(0, dotpos);
-    }
   }
 
   std::string_view problemsizefile; // TOOD: Use std::filesystem::path
+  std::string_view verifyfile;
   std::string_view xmlout;
   int problemsize = -1;
   int repeats = -1;
@@ -1466,7 +1503,7 @@ int main(int argc, char *argv[]) {
   while (i < argc) {
     auto [name, val] = nextArg(argc, argv, i);
 
-    if (name == "n") {
+    if (name == "n" || name=="problemsize") {
       if (!val.has_value() && i < argc) {
         val = argv[i];
         i += 1;
@@ -1487,6 +1524,13 @@ int main(int argc, char *argv[]) {
     } else if (name == "verify") {
       assert(!val.has_value());
       verify = true;
+    } else if (name == "verifyfile") {
+        assert(val.has_value() && i < argc);
+        if (!val.has_value() && i < argc) {
+            val = argv[i];
+            i += 1;
+        }
+        verifyfile = *val;
     } else if (name == "xmlout") {
       if (!val.has_value() && i < argc) {
         val = argv[i];
@@ -1497,9 +1541,8 @@ int main(int argc, char *argv[]) {
       assert(!"unknown switch");
     }
   }
+  
 
-
-  // TODO: default problem size
   int64_t n = -1;
   if (problemsize >= 0) {
     // Explicit problemsize has priority
@@ -1551,7 +1594,7 @@ int main(int argc, char *argv[]) {
   }
 
 
-  // TODO: Check for system load and warn if usertime!=walltime
+
 
   std::filesystem::path resultsfilename;
   if (!xmlout.empty()) {
@@ -1588,7 +1631,7 @@ int main(int argc, char *argv[]) {
   assert(n >= 1);
 
   warn_load();
-  Rosetta::run(program, benchname, resultsfilename, verify, n, repeats);
+  Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats);
   warn_load();
 
   return EXIT_SUCCESS;

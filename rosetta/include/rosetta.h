@@ -526,15 +526,15 @@ public:
   explicit DataHandler(BenchmarkRun *impl) : DataHandlerBase(impl) {}
 
   void fake(double *data, ssize_t count);
-  void verify(double *data, ssize_t count);
+  void verify(double *data, ssize_t count, std::vector <size_t> dims, std::string_view name);
 };
 
 
 
 class dyn_array_base {
 protected:
-  dyn_array_base(BenchmarkRun *impl, int size, bool verify);
-  dyn_array_base(dyn_array_base &&that) : impl(that.impl), size(that.size), verify(that.verify) {
+  dyn_array_base(BenchmarkRun *impl, int size, bool verify, std::vector<size_t> dims , std::string_view name);
+  dyn_array_base(dyn_array_base &&that) : impl(that.impl), size(that.size), verify(that.verify), dims(std::move(that.dims)), name(std::move(that.name)) {
     that.impl = nullptr;
     that.verify = false;
     that.size = 0;
@@ -544,6 +544,8 @@ protected:
   BenchmarkRun *impl;
   size_t size;
   bool verify;
+  std::vector<size_t> dims;
+  std::string name;
 };
 
 
@@ -581,14 +583,17 @@ public:
 
   void fakedata() { DataHandler<T>(impl).fake(mydata, size / sizeof(T)); }
   void verifydata() {
-    DataHandler<T>(impl).verify(mydata, size / sizeof(T));
+    
+      //dims.reserve(DIMS);
+
+    DataHandler<T>(impl).verify(mydata, size / sizeof(T), dims, name );
   }
 
 
 
   // TODO: realloc
 private:
-  dyn_array(BenchmarkRun *impl, int count, bool verify) : dyn_array_base(impl, count * sizeof(T), verify), mydata(new T[count]) {}
+  dyn_array(BenchmarkRun *impl, int count, bool verify, std::vector<size_t> dims , std::string_view name) : dyn_array_base(impl, count * sizeof(T), verify,std::move(dims), name), mydata(new T[count]) {}
 
   // typed, to ensure TBAA can be effective
   T *mydata;
@@ -599,7 +604,7 @@ private:
 template <typename T, size_t DIMS>
 class owning_array {
 public:
-  owning_array(BenchmarkRun *impl, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes, bool verify) : mydata(impl, get_stride(sizes), verify), sizes(sizes) {}
+  owning_array(BenchmarkRun *impl, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes, bool verify, std::vector<size_t> dims , std::string_view name) : mydata(impl, get_stride(sizes), verify, std::move( dims), name), sizes(sizes) {}
 
   multarray<T, DIMS> get() {
     return multarray<T, DIMS>(mydata.data(), sizes);
@@ -666,12 +671,14 @@ public:
     return result;
   }
 
+#if 0
   template <typename T>
   dyn_array<T> fakedata_array(size_t count, bool verify = false) {
     auto result = dyn_array<T>(impl, count, verify);
     result.fakedata();
     return result;
   }
+#endif 
 
 
 #if 0
@@ -692,35 +699,38 @@ public:
 
   template <typename T>
   owning_array<T, 1u>
-  allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type sizes, bool fakedata, bool verify) {
-    auto result = dyn_array<T>(impl, get_stride(sizes), verify);
+  allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+      std::vector<size_t> dims{(size_t)std::get<0>(sizes)};
+      auto result = dyn_array<T>(impl, get_stride(sizes), verify,dims , name);
     if (fakedata)
       result.fakedata();
     else
       result.zerodata();
-    return owning_array<T, 1u>(impl, sizes, verify);
+    return owning_array<T, 1u>(impl, sizes, verify, dims, name );
   }
 
   template <typename T>
   owning_array<T, 2u>
-  allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify) {
-    auto result = dyn_array<T>(impl, get_stride(sizes), verify);
+  allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+      std::vector<size_t>dims{(size_t)std::get<0>(sizes),(size_t)std:: get<1>(sizes)};
+      auto result = dyn_array<T>(impl, get_stride(sizes), verify,dims , name);
     if (fakedata)
       result.fakedata();
     else
       result.zerodata();
-    return owning_array<T, 2u>(impl, sizes, verify);
+    return owning_array<T, 2u>(impl, sizes, verify, dims,name);
   }
 
   template <typename T>
   owning_array<T, 3u>
-  allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify) {
-    auto result = dyn_array<T>(impl, get_stride(sizes), verify);
+  allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+      std::vector<size_t> dims{(size_t)std::get<0>(sizes), (size_t)std::get<1>(sizes), (size_t)std::get<2>(sizes)};
+      auto result = dyn_array<T>(impl, get_stride(sizes), verify, dims, name);
     if (fakedata)
       result.fakedata();
     else
       result.zerodata();
-    return owning_array<T, 3u>(impl, sizes, verify);
+    return owning_array<T, 3u>(impl, sizes, verify, dims,name);
   }
 #endif
 
