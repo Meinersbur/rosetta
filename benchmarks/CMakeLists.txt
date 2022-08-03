@@ -39,10 +39,11 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
     add_custom_target("${_genconfig_target}"
       DEPENDS "${_benchprop_filename}"
     )
+    set_target_properties("${_genconfig_target}" PROPERTIES  FOLDER "Benchmarks/Genconfig")
   endif ()
 
-  foreach(_buildtype IN LISTS _build_types)
-  endforeach()
+  #foreach(_buildtype IN LISTS _build_types)
+  #endforeach()
    
 
 
@@ -54,7 +55,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
   add_executable("${_bench_target}" ${_sources})
   set_target_properties("${_bench_target}" 
     PROPERTIES 
-      FOLDER "Benchmarks"
+      FOLDER "Benchmarks/${ppm}"
       ROSETTA_BASENAME "${basename}"
     )
   target_link_libraries("${_bench_target}" PRIVATE "${_library}")
@@ -86,27 +87,35 @@ endfunction ()
 
 
 function (make_reference_output basename ppm ppm_shortname _library)
-  set(_reference_dir "${CMAKE_PROJECT_BINARY_DIR}/reference_outputs")
-  if (CMAKE_BUILD_TYPE)
-    set(_reference_filename "${basename}.reference")
-  else ()
-    set(_reference_filename "${basename}.$<CONFIG>.reference")
-  endif ()
+  set(_reference_dir "${PROJECT_BINARY_DIR}/references")
+  #if (CMAKE_BUILD_TYPE)
+    set(_reference_filename "${basename}.${ROSETTA_PROBLEMSIZE}.reference_output")
+  #else ()
+  #  set(_reference_filename "${basename}.$<CONFIG>.reference")
+  #endif ()
   set(_reffile "${_reference_dir}/${_reference_filename}")
+  set(_bench_target "${basename}.${ppm_shortname}")
 
   # TODO: different reference file for each problemsize? Hardcode problemsize for verification?
+  #add_custom_command(
+  #  OUTPUT "${_reference_filename}"
+  #  DEPENDS "${_bench_target}" "${RUNNER_EXECUTABLE}"
+  #  COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--problemsizefile=${_problemsizefile}" "--gen-reference" "$<TARGET_FILE:${_bench_target}>" "${_reffile}"
+  #  COMMENT "Generate ${basename} reference output (using serial output) ..."
+  #)
   add_custom_command(
-    OUTPUT "${_reference_filename}"
-    DEPENDS "${_bench_target}" "${RUNNER_EXECUTABLE}"
-    COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--problemsizefile=${_problemsizefile}" "--gen-reference" "$<TARGET_FILE:${_bench_target}>" "${_reffile}"
-    COMMENT "Generate ${basename} reference output (using serial output) ..."
+    OUTPUT "${_reffile}"
+    DEPENDS "${_bench_target}" 
+    COMMAND "${_bench_target}" --verify --verifyfile "${_reffile}"
+    COMMENT "Generate ${basename} reference output (using serial output)..."
   )
+
   add_custom_target("reference-${basename}"
-    DEPENDS "${_reference_filename}"
+    DEPENDS "${_reffile}"
   )
   append_global_property(references "reference-${basename}")
   set_property(TARGET ${_verify_target}    
-    PROPERTY REFERENCE_FILE "${_reference}"
+    PROPERTY REFERENCE_FILE "${_reffile}"
   )
   append_global_property(references_serial "${_reference}")
 endfunction()
@@ -118,6 +127,7 @@ function (add_benchmark_serial basename)
     return ()
   endif ()
   add_benchmark_ppm("${basename}" "serial" "serial" "rosetta-serial" ${ARGN} SOURCES "${basename}.cxx")
+  # TODO: Support separate reference code
   #make_reference_output("${basename}" "serial" "serial" "rosetta-serial")
 endfunction ()
 

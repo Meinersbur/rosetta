@@ -368,3 +368,8 @@ def join_natural(l, separator=', ', lastseparator = ' and '):
     else:
       result +=  str(separator) + str(v)
   return result
+
+
+def pystr(s):
+  s = str (s)
+  return '"' + s.replace('\\', '\\\\').replace('"', '\\\"') + '"'

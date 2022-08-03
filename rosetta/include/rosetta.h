@@ -10,6 +10,7 @@
 #include <string>
 #include <type_traits>
 #include <variant>
+#include <iostream>
 
 
 // TODO: ROSETTA_PLATFORM_NVIDIA
@@ -336,7 +337,8 @@ public:
     assert(i < len);
 
     auto rest = _unqueue_tuple<TupleTy>::get_rest(DimLengths);
-    return _multarray_partial_subscript<T, DIMS - 1>(data + get_stride(rest), rest);
+    //std::cerr << "DIMS=" << DIMS << " i=" <<i << " len=" << len <<  " i*get_stride(rest)=" << i* get_stride(rest) << "\n";
+    return _multarray_partial_subscript<T, DIMS - 1>(data + i* get_stride(rest), rest);
   }
 
 
@@ -604,12 +606,20 @@ private:
 template <typename T, size_t DIMS>
 class owning_array {
 public:
-  owning_array(BenchmarkRun *impl, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes, bool verify, std::vector<size_t> dims , std::string_view name) : mydata(impl, get_stride(sizes), verify, std::move( dims), name), sizes(sizes) {}
+  owning_array(BenchmarkRun *impl, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes, bool verify, std::vector<size_t> dims , std::string_view name) 
+   : mydata(impl, get_stride(sizes), verify, std::move( dims), name), sizes(sizes) {}
+ //   owning_array(dyn_array<T>& mydata) : mydata(impl, get_stride(sizes), verify, std::move(dims), name), sizes(sizes) {}
 
   multarray<T, DIMS> get() {
     return multarray<T, DIMS>(mydata.data(), sizes);
   }
 
+  void fakedata() {
+      mydata.fakedata();
+  }
+  void zerodata() {
+      mydata.zerodata();
+  }
 
   operator multarray<T, DIMS>() { return get(); }
 
@@ -671,6 +681,8 @@ public:
     return result;
   }
 
+
+
 #if 0
   template <typename T>
   dyn_array<T> fakedata_array(size_t count, bool verify = false) {
@@ -701,36 +713,36 @@ public:
   owning_array<T, 1u>
   allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
       std::vector<size_t> dims{(size_t)std::get<0>(sizes)};
-      auto result = dyn_array<T>(impl, get_stride(sizes), verify,dims , name);
-    if (fakedata)
-      result.fakedata();
-    else
-      result.zerodata();
-    return owning_array<T, 1u>(impl, sizes, verify, dims, name );
+      owning_array<T, 1u> result(impl, sizes, verify, dims,name);
+      if (fakedata)
+          result. fakedata();
+      else
+          result.zerodata();
+      return result;
   }
 
   template <typename T>
   owning_array<T, 2u>
   allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
       std::vector<size_t>dims{(size_t)std::get<0>(sizes),(size_t)std:: get<1>(sizes)};
-      auto result = dyn_array<T>(impl, get_stride(sizes), verify,dims , name);
-    if (fakedata)
-      result.fakedata();
-    else
-      result.zerodata();
-    return owning_array<T, 2u>(impl, sizes, verify, dims,name);
+     owning_array<T, 2u> result(impl, sizes, verify, dims,name);
+     if (fakedata)
+         result. fakedata();
+     else
+         result.zerodata();
+     return result;
   }
 
   template <typename T>
   owning_array<T, 3u>
   allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
       std::vector<size_t> dims{(size_t)std::get<0>(sizes), (size_t)std::get<1>(sizes), (size_t)std::get<2>(sizes)};
-      auto result = dyn_array<T>(impl, get_stride(sizes), verify, dims, name);
-    if (fakedata)
-      result.fakedata();
-    else
-      result.zerodata();
-    return owning_array<T, 3u>(impl, sizes, verify, dims,name);
+      owning_array<T, 3u> result(impl, sizes, verify, dims,name);
+      if (fakedata)
+          result. fakedata();
+      else
+          result.zerodata();
+      return result;
   }
 #endif
 
@@ -828,16 +840,15 @@ inline Iterator<Iteration> Range::end() { return Iterator<Iteration>(state, true
 inline Iterator<AutoIteration> State::begin() { return Iterator<AutoIteration>(*this, false); }
 inline Iterator<AutoIteration> State::end() { return Iterator<AutoIteration>(*this, true); }
 
-
+ 
 #ifdef ROSETTA_REALTYPE
 typedef ROSETTA_REALTYPE real;
 #endif
 
 
+typedef size_t idx_t; // ssize_r
 
 #if 0
-
-
 template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >
 class _array_partial_subscript; // Never instantiate, use specializations only 
 

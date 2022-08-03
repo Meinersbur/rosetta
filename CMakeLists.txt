@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17) # CMAKE_CROSS_CONFIGS (https://cmake.org/cmake/help/latest/release/3.17.html)
+cmake_minimum_required(VERSION 3.19) # COMMAND_ERROR_IS_FATAL 
 project(rosetta
   VERSION 0.0.2
   LANGUAGES CXX
@@ -11,6 +11,9 @@ list(INSERT CMAKE_MODULE_PATH 0
 include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 
+
+# Use Folders in Visual Studio IDE
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # TODO: use set_property(GLOBAL APPEND benchmarks_serial "${_target}")
 function (append_global_property propname)
@@ -239,6 +242,57 @@ endif ()
 
 ## Build #######################################################################
 
+
+# Thttps://stackoverflow.com/a/52714922
+set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/refsizes.cmake")
+# Python::Interpreter does not work?
+#message("Python_EXECUTABLE: ${Python_EXECUTABLE}")
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/rosetta/bin/genrefsizes.py" "--problemsizefile=${_problemsizefile}" "--output=${_refsizeinclude}"
+  COMMAND_ERROR_IS_FATAL  ANY
+)
+
+# Mark the input files as configure step dependencies so that the execute_process
+# commands are retriggered on input file change.
+#file(STRINGS ${CMAKE_CURRENT_BINARY_DIR}/generated/cmake/input_files _input_files)
+# TODO: add_property
+set_property(
+  DIRECTORY APPEND PROPERTY 
+    CMAKE_CONFIGURE_DEPENDS "${_problemsizefile};${CMAKE_SOURCE_DIR}/rosetta/bin/genrefsizes.py"
+)
+
+add_custom_target(references)
+
+set(_reference_dir "${PROJECT_BINARY_DIR}/references")
+function(rosetta_add_reference basename pbsize)
+  message("rosetta_add_reference(${basename} ${pbsize})")
+  
+  set(_reffile "${_reference_dir}/${basename}.${pbsize}.reference_output")
+  set(_bench_target "${basename}.serial") # TODO: Allow non-serial
+
+
+  add_custom_command(
+    OUTPUT "${_reffile}"
+    DEPENDS "${_bench_target}" 
+    COMMAND "${_bench_target}" --verify --verifyfile "${_reffile}"
+    COMMENT "Generate ${basename} reference output (using serial output) at ${_reffile}..."
+  )
+  add_custom_target("reference-${basename}"
+    DEPENDS "${_reffile}"
+  )
+  set_target_properties("reference-${basename}"
+  PROPERTIES 
+    FOLDER "Reference outputs"
+  )
+  add_dependencies(references "reference-${basename}")
+endfunction()
+
+# Add the generated CMake targets.
+include("${_refsizeinclude}")
+
+
+
+
 # Library ----------------------------------------------------------------------
 
 add_subdirectory(rosetta)
@@ -283,6 +337,8 @@ add_subdirectory(benchmarks)
 
 # TODO: Introspect availability of clang-format
 add_custom_target(check-format)
+set_target_properties("check-format" PROPERTIES FOLDER "Check format")
+
 set(update_format_depends)
 file(GLOB_RECURSE format_files benchmarks/*.cxx benchmarks/*.cu benchmarks/*.h rosetta/*.h rosetta/*.cpp)
 set(i 0)
@@ -291,6 +347,10 @@ foreach (file IN LISTS format_files)
     COMMAND clang-format ${file}  --dry-run --color=1 -Werror # | diff -u --color=always ${file} -
     VERBATIM
     COMMENT "Checking format of ${file}..."
+  )
+  set_target_properties("check-format${i}"
+  PROPERTIES 
+    FOLDER "Check format"
   )
   add_dependencies(check-format "check-format${i}")
 
