@@ -690,6 +690,10 @@ public:
 
 public:
   explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {}
+ // ~BenchmarkRun() {
+ //   if (verifyout) 
+//        verifyout.close();
+ // }
 
   void run(std::string program, int n) {
     startTime = std::chrono::steady_clock::now();
@@ -698,50 +702,55 @@ public:
         verifyout.open(verifyoutpath, std::ios::trunc);
     }
 
-    State state{this};
+    {
+        State state{ this };
 
 #if ROSETTA_PLATFORM_NVIDIA
-    // TODO: exclude cupti time from startTime
+        // TODO: exclude cupti time from startTime
 
-    // subscribe to CUPTI callbacks
-    // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
+        // subscribe to CUPTI callbacks
+        // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
 
-    // DRIVER_API_CALL(cuInit(0));
-    // CUcontext context = 0;
-    //   CUdevice device = 0;
-    //  DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
-
-
-    // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
-    // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
-
-    size_t attrValue = 0, attrValueSize = sizeof(size_t);
-    // Device activity record is created when CUDA initializes, so we
-    // want to enable it before cuInit() or any CUDA runtime call.
-    CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
-    // Enable all other activity record kinds.
-    // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
-    // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
-    // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
-    CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
-    CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
-    CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_NAME));
-    // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MARKER));
-    CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));
-    // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
-
-    // Register callbacks for buffer requests and for buffers completed by CUPTI.
-    CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
+        // DRIVER_API_CALL(cuInit(0));
+        // CUcontext context = 0;
+        //   CUdevice device = 0;
+        //  DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
 
 
-    uint64_t cuptiStart;
-    CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
-    startTimestamp = cuptiStart;
+        // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+        // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
+
+        size_t attrValue = 0, attrValueSize = sizeof(size_t);
+        // Device activity record is created when CUDA initializes, so we
+        // want to enable it before cuInit() or any CUDA runtime call.
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
+        // Enable all other activity record kinds.
+        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
+        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
+        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_NAME));
+        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MARKER));
+        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));
+        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
+
+        // Register callbacks for buffer requests and for buffers completed by CUPTI.
+        CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
+
+
+        uint64_t cuptiStart;
+        CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
+        startTimestamp = cuptiStart;
 #endif
 
 
-    // TODO: make flexible, this is just on way to find a run function
-    ::run(state, n);
+        // TODO: make flexible, this is just on way to find a run function
+        ::run(state, n);
+    }
+
+    if (verifyout.is_open()) 
+        verifyout.close();
 
 
 #if ROSETTA_PLATFORM_NVIDIA
@@ -753,6 +762,17 @@ public:
 
     // TODO: print basic timing info so user knows something happened
   }
+
+
+
+
+
+
+
+
+
+
+
 
   bool started = false;
 
@@ -857,8 +877,7 @@ public:
     started = false;
 
 
-    if (verifyout.is_open()) 
-        verifyout.close();
+
 
 #if ROSETTA_PLATFORM_NVIDIA
     auto firstEvent = std::min({cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther});
@@ -993,15 +1012,22 @@ void DataHandler<double>::fake(double *data, ssize_t count) {
   // 6. Easily representable in binary floating-point (no 0.1, 0.3)
   // TODO: don't generate same data in every call
   for (ssize_t i = 0; i < count; i += 1)
-    data[i] = 0.5 + i * (0.125);
+    data[i] = 0.5 + i * 0.125;
 }
 
+template<typename T>
+constexpr int log10ceil(T num) {
+    return num < 10? 1: 1 + log10ceil(num / 10);
+}
 
+// TODO: Make template to also cover float
 void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size_t> dims, std::string_view name) {
+   // bool warning_shown = false;
     for (ssize_t i = 0; i < count; i += 1) {
         auto val = data[i];
         if (std::isinf(val) || std::isnan(val)) {
-            std::cerr << "WARNING: Inf/NaN output\n";
+            std::cerr << "WARNING: Inf/NaN output " << val << " at " << name << "[" << i << "]\n";
+            break;
         }
     }
 
@@ -1010,7 +1036,10 @@ void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size
 
  auto &verifyout =  impl->verifyout;
  
- verifyout << dims.size();
+ verifyout << "array"; // Output kind
+ verifyout << " binary64"; // Data format according to IEEE 754-2019
+
+ verifyout << ' ' << dims.size();
  for (auto l : dims)
      verifyout << ' ' << l;
 
@@ -1019,17 +1048,27 @@ void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size
 
  verifyout << ':';
 
+
   for (ssize_t i = 0; i < count; i += 1) {
-    // TODO: precision
       auto val = data[i];
 
-      std::array<char, 16> str;
+      // https://stackoverflow.com/a/68475665
+      // Evaluates to 24
+      constexpr int MaxConvLen = 4 + 
+          std::numeric_limits<double>::max_digits10 + 
+          std::max(2, log10ceil(std::numeric_limits<double>::max_exponent10));
+      std::array<char, MaxConvLen> str; 
+
+      // std::to_chars returns a string representation that allows recovering the original float binary representation, and locale-independent.
+      // FIXME: Does the python part actually do? Could also use std::chars_format::hex or use binary directly.
+      // https://eel.is/c++draft/charconv.to.chars#2
       auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val,std::chars_format::general );
       assert(ec == std::errc());
    
-    std::cout << ' ' << std::string_view(str.data(), ptr - str.data())  ;
+      std::string_view strv(str.data(),  ptr - str.data()); 
+      verifyout << ' ' << strv  ;
   }
-  std::cout << '\n';
+  verifyout << '\n';
 }
 
 
@@ -1504,19 +1543,19 @@ int main(int argc, char *argv[]) {
     auto [name, val] = nextArg(argc, argv, i);
 
     if (name == "n" || name=="problemsize") {
-      if (!val.has_value() && i < argc) {
+      if (!val.has_value() && i <= argc) {
         val = argv[i];
         i += 1;
       }
       problemsize = parseInt(*val);
     } else if (name == "problemsizefile") {
-      if (!val.has_value() && i < argc) {
+      if (!val.has_value() && i <= argc) {
         val = argv[i];
         i += 1;
       }
       problemsizefile = *val;
     } else if (name == "repeats") {
-      if (!val.has_value() && i < argc) {
+      if (!val.has_value() && i <= argc) {
         val = argv[i];
         i += 1;
       }
@@ -1525,14 +1564,14 @@ int main(int argc, char *argv[]) {
       assert(!val.has_value());
       verify = true;
     } else if (name == "verifyfile") {
-        assert(val.has_value() && i < argc);
-        if (!val.has_value() && i < argc) {
+        assert(val.has_value() || i <= argc);
+        if (!val.has_value() && i <= argc) {
             val = argv[i];
             i += 1;
         }
         verifyfile = *val;
     } else if (name == "xmlout") {
-      if (!val.has_value() && i < argc) {
+      if (!val.has_value() && i <= argc) {
         val = argv[i];
         i += 1;
       }
@@ -1630,9 +1669,9 @@ int main(int argc, char *argv[]) {
   // TOOD: allow more than one benchmark per executable
   assert(n >= 1);
 
-  warn_load();
+  if (!verify)  warn_load();
   Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats);
-  warn_load();
+  if (!verify)  warn_load();
 
   return EXIT_SUCCESS;
 }

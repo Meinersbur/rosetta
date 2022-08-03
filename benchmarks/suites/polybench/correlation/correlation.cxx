@@ -3,7 +3,6 @@
 
 
 static void kernel(int m, int n,
-                   real float_n,
                    multarray<real, 2> data,
                    multarray<real, 2> corr,
                    real mean[],
@@ -16,7 +15,7 @@ static void kernel(int m, int n,
     mean[j] = 0.0;
     for (int i = 0; i < n; i++)
       mean[j] += data[i][j];
-    mean[j] /= float_n;
+    mean[j] /= n;
   }
 
 
@@ -24,7 +23,7 @@ static void kernel(int m, int n,
     stddev[j] = 0.0;
     for (int i = 0; i < n; i++)
       stddev[j] += (data[i][j] - mean[j]) * (data[i][j] - mean[j]);
-    stddev[j] /= float_n;
+    stddev[j] /= n;
     stddev[j] = std::sqrt(stddev[j]);
     /* The following in an inelegant but usual way to handle
        near-zero std. dev. values, which below would cause a zero-
@@ -36,7 +35,7 @@ static void kernel(int m, int n,
   for (int i = 0; i < n; i++)
     for (int j = 0; j < m; j++) {
       data[i][j] -= mean[j];
-      data[i][j] /= std::sqrt(float_n) * stddev[j];
+      data[i][j] /= std::sqrt((real)n) * stddev[j];
     }
 
   /* Calculate the m * m correlation matrix. */
@@ -59,12 +58,12 @@ void run(State &state, int pbsize) {
   size_t m = pbsize - pbsize / 6;
 
   real float_n = n;
-  auto data = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ false);
+  auto data = state.allocate_array<real>({ n,m}, /*fakedata*/ true, /*verify*/ false);
   auto corr = state.allocate_array<real>({m, m}, /*fakedata*/ false, /*verify*/ true);
   auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true);
   auto stddev = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true);
 
 
   for (auto &&_ : state)
-    kernel(m, n, float_n, data, corr, mean, stddev);
+    kernel(m, n,  data, corr, mean, stddev);
 }

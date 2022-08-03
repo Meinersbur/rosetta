@@ -10,8 +10,6 @@ static void kernel(int n, real A[]) {
 
 void run(State &state, int n) {
     auto A = state.allocate_array<real>({n}, /*fakedata*/true, /*verify*/true, "A");
-      
-     
 
   for (auto &&_ : state)
     kernel(n, A);

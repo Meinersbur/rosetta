@@ -2,7 +2,6 @@
 
 
 static void kernel(int m, int n,
-                   real float_n,
                    multarray<real, 2> data,
                    multarray<real, 2> cov,
                    real *mean) {
@@ -11,7 +10,7 @@ static void kernel(int m, int n,
     mean[j] = 0.0;
     for (int i = 0; i < n; i++)
       mean[j] += data[i][j];
-    mean[j] /= float_n;
+    mean[j] /= n;
   }
 
   for (int i = 0; i < n; i++)
@@ -23,7 +22,7 @@ static void kernel(int m, int n,
       cov[i][j] = 0.0;
       for (int k = 0; k < n; k++)
         cov[i][j] += data[k][i] * data[k][j];
-      cov[i][j] /= (float_n - 1.0);
+      cov[i][j] /= (n - 1.0);
       cov[j][i] = cov[i][j];
     }
 #pragma endscop
@@ -35,13 +34,11 @@ void run(State &state, int pbsize) {
   size_t n = pbsize;
   size_t m = pbsize - pbsize / 8;
 
-  real float_n = n;
-  auto data = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ false);
+  auto data = state.allocate_array<real>({ n, m}, /*fakedata*/ true, /*verify*/ false);
   auto cov = state.allocate_array<real>({m, m}, /*fakedata*/ false, /*verify*/ true);
   auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true);
 
 
-
   for (auto &&_ : state)
-    kernel(m, n, float_n, data, cov, mean);
+    kernel(m, n,  data, cov, mean);
 }

@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from audioop import mul
 from cmath import exp
 from itertools import count
 import sys
@@ -19,6 +20,7 @@ import argparse
 from collections import defaultdict
 import io
 import configparser
+import typing 
 
 
 # Not included batteries
@@ -27,6 +29,7 @@ import cwcwidth
 
 # Rosetta-provided
 import invoke
+from pandas import isna
 from support import *
 from orderedset import OrderedSet
 
@@ -1039,18 +1042,37 @@ def get_refpath(bench,refdir,problemsizefile):
     return refpath
 
 
+class Benchmark:
+    def __init__(self,basename,target,exepath,config,ppm,configname):
+        self.basename = basename
+        self.target=target
+        self.exepath =exepath 
+        self.config=config
+        self.ppm = ppm
+        self.configname = configname
 
-def ensure_reffile(bench,refdir,problemsizefile):
+    @property 
+    def name(self):
+        return self.basename
+
+
+def ensure_reffile(bench: Benchmark,refdir,problemsizefile):
     refpath = get_refpath(bench,refdir=refdir,problemsizefile=problemsizefile)
 
-    if refpath.is_file():
-        # Reference output already exists
-        print(f"Reference output of {bench.name} already exists at {refpath}")
-        return 
+    if refpath.exists():
+        # Reference output already exists; check that it is the latest
+        benchstat = bench.exepath.stat()
+        refstat  = refpath.stat()
+        if benchstat.st_mtime < refstat.st_mtime:
+            print(f"Reference output of {bench.name} already exists at {refpath} an is up-to-date")
+            return 
+        print(f"Reference output {refpath} an is out-of-date")
+        refpath.unlink()
 
     # Invoke reference executable and write to file
-    args = [bench.exepath, f'--verify', f'--problemsizefile={problemsizefile}']
-    invoke.call(*args, stdout=[refpath], print_command=True)    
+    args = [bench.exepath, f'--verify', f'--problemsizefile={problemsizefile}', f'--verifyfile={refpath}']
+    invoke.call(*args, print_command=True)    
+    assert refpath.is_file()
     print(f"Reference output of {bench.name} written to {refpath}")
  
 
@@ -1069,27 +1091,89 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
     if not problemsizefile:
         die("Problemsizes required")
 
-
-
-    for e in benchmarks:
+    x = tempfile.TemporaryDirectory(prefix=f'verifyout') # TODO: Delete in a non-debug run
+    tmpdir = mkpath(x.name)
+        
+    for e  in benchmarks:
         if filterfunc and not filterfunc(e):
             continue
 
         exepath = e.exepath
         refpath = get_refpath(e,refdir=refdir,problemsizefile=problemsizefile)
+        pbsize = get_problemsize(e,problemsizefile=problemsizefile )
 
-        args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
+    
+        testoutpath = tmpdir / f'{e.name}_{e.ppm}_{pbsize}.testout' 
+
+        args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}', f'--verifyfile={testoutpath}']
         p = invoke.call(*args, return_stdout=True, print_command=True)
-        data = p.stdout 
+    
 
-        with refpath.open() as f:
-            refdata = f.read()
-            if refdata != data:
-                # TODO: allow floating-point differences
-                print(f"Output different from reference for {e.target}")
-                print("Output   ", data)
-                print("Reference", refdata)
-                exit (1)
+        with refpath.open() as fref, testoutpath.open() as ftest:
+            while True:
+               refline = fref.readline()
+               testline = ftest.readline()
+
+               # Reached end-of-file? 
+               if not refline and not testline:
+                break
+
+               refspec,refdata = refline.split(':',maxsplit = 1)     
+               refspec = refspec.split()
+               refkind = refspec[0]
+               refformat = refspec[1]
+               refdim = int(refspec[2])
+               refshape =  [int(i) for i in refspec[3:3+refdim]]
+               refname = refspec[3+refdim] if len(refspec ) > 3+refdim else None
+               refcount = math.prod(refshape)
+
+               refdata = [float(v) for v in refdata.split()]
+               if refcount != len(refdata):
+                die(f"Unexpected array items in {refname}: {refcount} vs {len(refdata)}")
+               
+            
+               testspec,testdata = testline.split(':',maxsplit = 1)  
+               testspec = testspec.split()
+               testkind = testspec[0]
+               testformat = testspec[1]
+               testdim = int(testspec[2])
+               testshape =  [int (i) for i in testspec[3:3+testdim]]
+               testname = testspec[3+testdim] if len(testspec ) > 3+testdim  else None
+               testcount = math.prod(testshape) 
+               
+               testdata = [float(v) for v in testdata.split()]
+               if testcount != len(testdata):
+                die(f"Unexpected array items in {testname}: {testcount} vs {len(testdata)}")
+               
+               if refname is not None and testname is not None and refname != testname:
+                  die(f"Array names {refname} and {testname} disagree")
+
+               for i,(refv,testv) in enumerate(zip(refdata,testdata)):
+                  coord = [str((i // math.prod(refshape[0:j])) % refshape[j]) for j in range(0,refdim)]
+                  coord = '[' + ']['.join(coord) + ']'
+
+                  if math.isnan(refv) and  math.isnan(testv):
+                        print(f"WARNING: NaN in both outputs at {refname}{coord}")
+                        continue
+                  if math. isnan(refv): 
+                    die(f"Array data mismatch: Ref contains NaN at {refname}{coord}")
+                  if math. isnan(testv): 
+                    die(f"Array data mismatch: Output contains NaN at {testname}{coord}")
+                    
+
+                  mid =  (abs(refv)+abs(testv))/2
+                  absd = abs(refv-testv)
+                  if mid == 0:
+                    reld = 0 if absd==0 else math.inf 
+                  else:
+                    reld = absd/mid
+                  if reld != 0:
+                    die("Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord}")
+
+        print(f"Output of {e.exepath} considered correct")       
+
+               
+
 
 
 
@@ -1126,19 +1210,6 @@ def run_bench(problemsizefile=None, srcdir=None):
     return results
 
 
-
-class Benchmark:
-    def __init__(self,basename,target,exepath,config,ppm,configname):
-        self.basename = basename
-        self.target=target
-        self.exepath =exepath 
-        self.config=config
-        self.ppm = ppm
-        self.configname = configname
-
-    @property 
-    def name(self):
-        return self.basename
 
 
 
@@ -1266,7 +1337,7 @@ def rosetta_config(resultsdir):
 
 
 
-benchmarks =[]
+benchmarks : typing .List[Benchmark]  =[]
 def register_benchmark(basename,target,exepath,config,ppm,configname):
     bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), config=config,ppm=ppm,configname=configname)
     benchmarks.append(bench)
