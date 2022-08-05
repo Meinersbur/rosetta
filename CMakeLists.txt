@@ -265,7 +265,7 @@ add_custom_target(references)
 
 set(_reference_dir "${PROJECT_BINARY_DIR}/references")
 function(rosetta_add_reference basename pbsize)
-  message("rosetta_add_reference(${basename} ${pbsize})")
+  #message("rosetta_add_reference(${basename} ${pbsize})")
   
   set(_reffile "${_reference_dir}/${basename}.${pbsize}.reference_output")
   set(_bench_target "${basename}.serial") # TODO: Allow non-serial

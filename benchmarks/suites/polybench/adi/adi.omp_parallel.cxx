@@ -24,8 +24,11 @@ static void kernel(
   real e = 1 + mul2;
   real f = d;
 
+  #pragma omp parallel
+{
   for (int t = 1; t <= tsteps; t++) {
     // Column Sweep
+    #pragma omp for
     for (int i = 1; i < n - 1; i++) {
       v[0][i] = 1;
       p[i][0] = 0;
@@ -40,6 +43,7 @@ static void kernel(
         v[j][i] = p[i][j] * v[j + 1][i] + q[i][j];
     }
     // Row Sweep
+    #pragma omp for
     for (int i = 1; i < n - 1; i++) {
       u[i][0] = 1;
       p[i][0] = 0;
@@ -53,6 +57,7 @@ static void kernel(
         u[i][j] = p[i][j] * u[i][j + 1] + q[i][j];
     }
   }
+}
 #pragma endscop
 }
 
