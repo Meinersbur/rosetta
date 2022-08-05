@@ -43,9 +43,9 @@ static void ensure_posdefinite(int n, multarray<real, 2> A) {
         }
 
 
-    // Make the diagnonal elements too large to be a linear combination of the other columns.
+    // Make the diagnonal elements too large to be a linear combination of the other columns (strictly diagonally dominant).
     for (int i = 0; i < n ; i++)
-        A[i][i] = std::abs( A[i][i]) + 1 + (n+1)*maximum;
+        A[i][i] = std::abs( A[i][i]) + 1 + n*maximum;
 
 
     // FIXME: Repeated invocation will grow the numbers
