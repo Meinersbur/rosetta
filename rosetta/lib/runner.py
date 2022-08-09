@@ -1159,13 +1159,14 @@ def get_refpath(bench,refdir,problemsizefile):
 
 
 class Benchmark:
-    def __init__(self,basename,target,exepath,config,ppm,configname):
+    def __init__(self,basename,target,exepath,config,ppm,configname,sources=None):
         self.basename = basename
         self.target=target
         self.exepath =exepath 
         self.config=config
         self.ppm = ppm
         self.configname = configname
+        self.sources=[mkpath(s) for s in sources]
 
     @property 
     def name(self):

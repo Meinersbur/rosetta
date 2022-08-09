@@ -370,6 +370,13 @@ def join_natural(l, separator=', ', lastseparator = ' and '):
   return result
 
 
+
+def pyescape(s):
+  s = str(s)
+  return s.replace('\\', '\\\\').replace('"', '\\\"') 
+
+
 def pystr(s):
-  s = str (s)
-  return '"' + s.replace('\\', '\\\\').replace('"', '\\\"') + '"'
+  return f'"{pyescape(s)}"'
+
+  

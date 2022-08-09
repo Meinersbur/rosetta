@@ -243,24 +243,6 @@ endif ()
 ## Build #######################################################################
 
 
-# Thttps://stackoverflow.com/a/52714922
-set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/refsizes.cmake")
-# Python::Interpreter does not work?
-#message("Python_EXECUTABLE: ${Python_EXECUTABLE}")
-execute_process(
-  COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/rosetta/bin/genrefsizes.py" "--problemsizefile=${_problemsizefile}" "--output=${_refsizeinclude}"
-  COMMAND_ERROR_IS_FATAL  ANY
-)
-
-# Mark the input files as configure step dependencies so that the execute_process
-# commands are retriggered on input file change.
-#file(STRINGS ${CMAKE_CURRENT_BINARY_DIR}/generated/cmake/input_files _input_files)
-# TODO: add_property
-set_property(
-  DIRECTORY APPEND PROPERTY 
-    CMAKE_CONFIGURE_DEPENDS "${_problemsizefile};${CMAKE_SOURCE_DIR}/rosetta/bin/genrefsizes.py"
-)
-
 add_custom_target(references)
 
 set(_reference_dir "${PROJECT_BINARY_DIR}/references")
@@ -286,10 +268,6 @@ function(rosetta_add_reference basename pbsize)
   )
   add_dependencies(references "reference-${basename}")
 endfunction()
-
-# Add the generated CMake targets.
-include("${_refsizeinclude}")
-
 
 
 
