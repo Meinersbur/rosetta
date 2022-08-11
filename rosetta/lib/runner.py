@@ -380,7 +380,11 @@ class Table:
 
 # Summary statistics
 # Don't trust yet, have to check correctness
+# TODO: Use numpy
 class Statistic:
+    # TODO: Consider using SciPy's scipy.distributions.t.cdf if available
+    # Or just directly use scipy.distributions.ttest_ind
+    # https://pythonguides.com/scipy-confidence-interval/
     studentt_density_95 = list( {
 1: 12.706, 
 2: 4.303, 
@@ -441,6 +445,10 @@ class Statistic:
         self._sumreciproc = sumreciproc
         self._geomean = geomean
  
+    @property
+    def samples (self):
+        return self._samples
+
     @property
     def is_empty(self):
         return not not self._samples
@@ -807,7 +815,7 @@ def duration_formatter(best=None,worst=None):
         return formatter
 
 
-def load_resultfiles(resultfiles):
+def load_resultfiles(resultfiles,filterfunc=None):
     results = []
     for resultfile in resultfiles:
         benchmarks = et.parse(resultfile).getroot()
@@ -831,7 +839,10 @@ def load_resultfiles(resultfiles):
             for k,data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            results.append( BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc,configname=configname) )
+            item = BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc,configname=configname) 
+            if filterfunc and not filterfunc(item):
+                    continue
+            results.append( item)
     return results
 
 
@@ -931,35 +942,18 @@ def print_comparison(groups_of_results, list_of_resultnames, common_columns=["pr
 
 
 
-
-def results_compare(resultfiles: list[Path],compare_by,compare_val=None,show_groups=None):
-    results = load_resultfiles(resultfiles)
-
-    # Categorical groupings
-    group_by = ["program", "ppm", "buildtype", "configname"]
-    group_by .remove(compare_by)
-    
- 
-
-    # Find all fields that could be grouped by and have different values
-    if show_groups is None:
-        show_groups = []
-        for col in group_by:
-            common_value=None
-            has_different_values= False
-            for result in results:
-                val = get_column_data(result, col)
-                if common_value is None:
-                    common_value = val
-                elif common_value == val:
-                    continue
-                else:
-                    has_different_values = True
-                    break
-            if  has_different_values:
-                show_groups.append(col)
+def compareby(results : Iterable[BenchResult], compare_by: str):
+    results_by_group =  defaultdict(lambda :  [])
+    for result in results:
+        cmpval = get_column_data(result, compare_by)
+        results_by_group[cmpval].append(result)
+    return results_by_group
 
 
+
+def grouping(results : Iterable[BenchResult], compare_by: str,  group_by:list[str]=None): 
+    # TODO: allow compare_by multiple columns
+    # TODO: allow each benchmark to be its own group; find description for each such "group"
     results_by_group = defaultdict(lambda :  defaultdict(lambda :  []))
     all_cmpvals = OrderedSet()
     for result in results:
@@ -983,9 +977,131 @@ def results_compare(resultfiles: list[Path],compare_by,compare_val=None,show_gro
         grouped_results.append(group_cmp_results)
         all_groups.append(group)
 
-    print_comparison(groups_of_results=grouped_results, list_of_resultnames=list(all_cmpvals), common_columns=show_groups, compare_columns=compare_val)
+    # Find all fields that could be grouped by and have different values
+    show_groups = []
+    for col in group_by:
+        common_value=None
+        has_different_values= False
+        for result in results:
+            val = get_column_data(result, col)
+            if common_value is None:
+                common_value = val
+            elif common_value == val:
+                continue
+            else:
+                has_different_values = True
+                break
+        if  has_different_values:
+            show_groups.append(col)
+
+    return grouped_results,list(all_cmpvals),show_groups
 
 
+
+def results_compare(resultfiles: list[Path],compare_by,group_by=None,compare_val=None,show_groups=None):
+    results = load_resultfiles(resultfiles)
+
+    # Categorical groupings
+    if group_by is None:
+        group_by = ["program", "ppm", "buildtype", "configname"]
+        group_by.remove(compare_by)
+
+    grouped_results, all_cmpvals, div_groups = grouping(results,compare_by=compare_by,group_by=group_by)
+
+    print_comparison(groups_of_results=grouped_results, list_of_resultnames=all_cmpvals, common_columns=show_groups or div_groups, compare_columns=compare_val)
+
+
+
+
+def lerp(a: float, b: float, t: float) -> float:
+    """Linear interpolate on the scale given by a to b, using t as the point on that scale.
+    Examples
+    --------
+        50 == lerp(0, 100, 0.5)
+        4.2 == lerp(1, 5, 0.8)
+    """
+    return (1 - t) * a + t * b
+
+
+def results_boxplot(resultfiles: list[Path],compare_by=None,filterfunc=None):
+        results = load_resultfiles(resultfiles,filterfunc=filterfunc)
+
+        group_by = None
+        if group_by is None:
+            group_by = ["program", "ppm", "buildtype", "configname"]
+            group_by.remove(compare_by)
+
+        grouped_results,all_cmpvals,div_groups = grouping(results, compare_by='configname',group_by=group_by) 
+        groupdata  = [[b.durations['walltime'].samples for b in group] for group in grouped_results] 
+
+
+
+        def make_label(g: tuple):
+            first = g[0] 
+            return ', '.join( get_column_data(first, k ) for k in div_groups )
+        labels = [make_label(g) for g in grouped_results]
+
+        import matplotlib.colors as mcolors
+        from cycler import cycler
+        import matplotlib.pyplot as plt
+
+        left=1
+        right=0.5
+        numgroups  = len(grouped_results)
+        benchs_per_group = len(all_cmpvals)
+        barwidth = 0.3
+        groupwidth = 0.2 + benchs_per_group * barwidth
+        width = left + right + groupwidth*numgroups
+        fig, ax = plt.subplots(figsize=(width, 10))
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = [c['color'] for j,c in zip( range(benchs_per_group),prop_cycle)] # TODO: Consider seaborn palettes
+
+        fig.subplots_adjust(left=left/width, right=1-right/width, top=0.95, bottom=0.25)
+
+
+        for i, group in enumerate(grouped_results):
+            benchs_this_group = len(group)           
+            for j, benchstat in enumerate(group): # TODO: ensure grouped_results non-jagged so colors match
+                data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
+                rel = (j-benchs_this_group/2)*barwidth
+                box = ax.boxplot(data, positions=[(i+0.5)*groupwidth + rel], 
+                                notch=True,showmeans=False, showfliers=True,sym='+',
+                                widths=barwidth,
+                                  patch_artist=True,  # fill with color
+                                )
+                for b in box['boxes']:
+                        b.set_facecolor(colors[j])
+        ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',  alpha=0.5)
+
+        for j,(c,label) in enumerate(zip(colors,all_cmpvals)):
+            # Dummy item to add a legend handle; like seaborn does
+            rect = plt.Rectangle([0, 0], 0, 0,
+                               # linewidth=self.linewidth / 2,
+                               # edgecolor=self.gray,
+                                facecolor=c,
+                                label=label)
+            ax.add_patch(rect)
+
+
+        # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
+        #x.grid(linestyle='--',axis='y')
+        ax.set(
+            axisbelow=True,  # Hide the grid behind plot objects
+            xlabel='Benchmark',
+            ylabel='Walltime [s]',
+        )
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        ax.set_xticks([groupwidth*i for i in range(len(labels))])
+        ax.set_xticklabels(labels,rotation=20,ha="right",rotation_mode="anchor")
+        
+        plt.legend()
+
+        #for label in ax.get_xticklabels(): # https://stackoverflow.com/a/43153984
+        #    label.set_ha("right")
+        #    label.set_rotation(45)
+        return plt.gcf()
 
 
 def run_gbench(bench,problemsizefile,resultfile):
@@ -1155,9 +1271,9 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                   if math.isnan(refv) and  math.isnan(testv):
                         print(f"WARNING: NaN in both outputs at {refname}{coord}")
                         continue
-                  if math. isnan(refv): 
+                  if math.isnan(refv): 
                     die(f"Array data mismatch: Ref contains NaN at {refname}{coord}")
-                  if math. isnan(testv): 
+                  if math.isnan(testv): 
                     die(f"Array data mismatch: Output contains NaN at {testname}{coord}")
                     
 

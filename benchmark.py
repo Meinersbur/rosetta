@@ -153,7 +153,7 @@ def main(argv):
     add_boolean_argument(parser, 'build', default=True, help="Enable build step")
     add_boolean_argument(parser, 'verify', default=True, help="Enable check step")
     add_boolean_argument(parser, 'run', default=True, help="Enable run step")
-    add_boolean_argument(parser, 'evaluate', default=True, help="Enable run step")
+    add_boolean_argument(parser, 'evaluate', default=True, help="Print results table")
 
     # TODO: Warn/error on unused arguments because action is disable
     parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
@@ -166,6 +166,8 @@ def main(argv):
     parser.add_argument('--compiler-arg', metavar="CONFIG:ARG", action='append')
     parser.add_argument('--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
     parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
+
+    parser.add_argument('--boxplot', type=pathlib.Path)
 
     
 
@@ -271,7 +273,15 @@ def main(argv):
         if len(configs) == 1:
             runner.evaluate(resultfiles)
         else:
-            runner.results_compare(resultfiles, compare_by="configname",compare_val=["walltime"])
+            runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
+
+    if args.boxplot:
+        def no_ref(bench):
+           return bench.configname !='REF' 
+        fig = runner.results_boxplot(resultfiles, compare_by="configname", filterfunc=no_ref)
+        fig.savefig(fname=args.boxplot)
+        fig.canvas.draw_idle() 
+
 
 
 

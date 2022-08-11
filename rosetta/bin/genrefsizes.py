@@ -70,8 +70,8 @@ def main():
     parser.add_argument('--buildir', type=pathlib.Path)
     args = parser.parse_args()
 
-    #gen_refsizeinclude(output=args.output, problemsizefile=args.problemsizefile)
-    gen_benchtargets(output=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir, builddir=args.sbuilddir)
+    gen_refsizeinclude(output=args.output, problemsizefile=args.problemsizefile)
+    #gen_benchtargets(output=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir, builddir=args.builddir)
 
  
 
