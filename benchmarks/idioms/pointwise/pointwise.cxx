@@ -1,4 +1,4 @@
-// BUILD:add_benchmark_serial(sources=[__file__])
+// BUILD:add_benchmark(ppm=serial)
 
 #include "rosetta.h"
 
@@ -13,4 +13,3 @@ void run(State &state, int n) {
   for (auto &&_ : state)
     kernel(n, A);
 }
- 

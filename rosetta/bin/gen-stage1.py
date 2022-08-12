@@ -52,7 +52,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname):
                 spec = importlib.util.spec_from_loader('rosetta.build', loader=None, origin=buildfile)
                 module =  importlib.util.module_from_spec(spec)
                 globals = module.__dict__
-                def add_benchmark_serial(sources=None,basename=None):
+                def add_benchmark(sources=None,basename=None,ppm=None):
                     # Guess sources (same file)
                     if not sources:
                         sources = [buildfile]
@@ -67,13 +67,14 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname):
                         basename = basename.removesuffix('.omp_parallel')
                         basename = '.'.join(list(rel.parts) + [basename])  
                     
-                    target =  basename  + '.serial'   
+                    target =  basename  + '.' + ppm   
 
 
-                    bench = runner.Benchmark(basename=basename,target=target,exepath=None,ppm='serial',configname=configname,config=None,sources=sources)
+                    bench = runner.Benchmark(basename=basename,target=target,exepath=None,ppm=ppm,configname=configname,config=None,sources=sources)
                     benchs.append(bench)
  
-                globals['add_benchmark_serial'] = add_benchmark_serial
+                globals['add_benchmark'] = add_benchmark
+                globals['serial'] = 'serial'
                 globals['__file__'] = buildfile
                 exec(script, module.__dict__)
 
@@ -103,7 +104,6 @@ def main():
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--configname')
     args = parser.parse_args()
-
 
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir, builddir=args.builddir,configname=args.configname)
 
