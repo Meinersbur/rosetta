@@ -1063,8 +1063,8 @@ def results_boxplot(resultfiles: list[Path],compare_by=None,filterfunc=None):
             benchs_this_group = len(group)           
             for j, benchstat in enumerate(group): # TODO: ensure grouped_results non-jagged so colors match
                 data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
-                rel = (j-benchs_this_group/2)*barwidth
-                box = ax.boxplot(data, positions=[(i+0.5)*groupwidth + rel], 
+                rel = (j-benchs_this_group/2.0+0.5)*barwidth
+                box = ax.boxplot(data, positions=[i*groupwidth + rel], 
                                 notch=True,showmeans=False, showfliers=True,sym='+',
                                 widths=barwidth,
                                   patch_artist=True,  # fill with color
