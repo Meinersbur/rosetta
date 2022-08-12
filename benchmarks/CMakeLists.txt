@@ -217,7 +217,7 @@ set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/refsizes.cmake")
 # Python::Interpreter does not work?
 #message("Python_EXECUTABLE: ${Python_EXECUTABLE}")
 execute_process(
-  COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/rosetta/bin/genrefsizes.py" 
+  COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage1.py" 
     "--problemsizefile=${_problemsizefile}" 
     "--output=${_refsizeinclude}"
     "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}"

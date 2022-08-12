@@ -18,24 +18,6 @@ from support import *
 import rosetta
 runner = rosetta.runner
 
-
-def gen_refsizeinclude(output,problemsizefile):
-    #print("problemsizefile", problemsizefile)
-    problemsizefile = runner.get_problemsizefile(problemsizefile=problemsizefile)
-    #print("problemsizefile", problemsizefile)
-
-    config = configparser.ConfigParser()
-    config.read(problemsizefile)
-    
-    #result = f"message({pystr(problemsizefile)})\n"
-    result = ""
-    for secname in config.sections():
-        n = config.getint(section=secname,option="n")
-        print(secname, n)
-        result += f"rosetta_add_reference(\"{secname}\" {n})\n"
-
-    createfile(output, result)
-  
  
 
 
@@ -122,7 +104,7 @@ def main():
     parser.add_argument('--configname')
     args = parser.parse_args()
 
-    #gen_refsizeinclude(output=args.output, problemsizefile=args.problemsizefile)
+
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir, builddir=args.builddir,configname=args.configname)
 
  
