@@ -17,11 +17,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.absolute() / 'lib'))
 from support import *
 import rosetta
 runner = rosetta.runner
-
+generator = rosetta.generator
  
 
 
 buildre = re.compile(r'^\s*//\s*BUILD\:(?P<script>.*)$')
+preparere = re.compile(r'^\s*//\s*PREPARE\:(?P<script>.*)$')
+
+
 
 
 
@@ -70,13 +73,14 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname):
                     target =  basename  + '.' + ppm   
 
 
-                    bench = runner.Benchmark(basename=basename,target=target,exepath=None,ppm=ppm,configname=configname,config=None,sources=sources)
+                    bench = runner.Benchmark(basename=basename,target=target,exepath=None,ppm=ppm,configname=configname,buildtype=None,sources=sources)
                     benchs.append(bench)
  
                 globals['add_benchmark'] = add_benchmark
                 globals['serial'] = 'serial'
                 globals['__file__'] = buildfile
                 exec(script, module.__dict__)
+
 
 
     with outfile.open("w+") as out:
@@ -96,7 +100,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname):
 
 
 def main():
-    print("argv", sys.argv)
+    print("stage1 argv", sys.argv)
     parser = argparse.ArgumentParser(description="Generate CMakeLists.txt include file", allow_abbrev=False)
     parser.add_argument('--output', type=pathlib.Path)
     parser.add_argument('--problemsizefile', type=pathlib.Path)

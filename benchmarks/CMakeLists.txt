@@ -12,37 +12,8 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
 
   file(RELATIVE_PATH _relpath  "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
-  #set(basename "${_relpath_dots}")
   set(benchname "${basename}")
-
-  set(_benchprop_filename "${benchname}.$<CONFIG>.benchprop.cxx")
-  #configure_file("config.h.in" "${_benchprop_filename}")
-
-  set(_genconfig_target "genconfig-${benchname}")
-  if (NOT TARGET "${_genconfig_target}")
-    add_custom_command(
-      OUTPUT "${_benchprop_filename}"
-      DEPENDS "${_problemsizefile}" "${GENCONFIG_EXECUTABLE}"
-      COMMAND Python::Interpreter "${GENCONFIG_EXECUTABLE}" 
-        "--benchname=${benchname}"
-        "--problemsizefile=${_problemsizefile}"
-        "--output=${_benchprop_filename}"
-        "--resultsdir=${ROSETTA_RESULTS_DIR}"
-        "--compiler=${CMAKE_CXX_COMPILER}" # FIXME: Depends on PPM
-        "--compiler-flags=${CMAKE_CXX_FLAGS}" # FIXME: Not complete and depends on configuration and PPM
-        "--configname=${ROSETTA_CONFIGNAME}"
-        "--config=$<CONFIG>"
-      COMMENT "Generate ${benchname} $<CONFIG> properties file ..."
-    )
-    add_custom_target("${_genconfig_target}"
-      DEPENDS "${_benchprop_filename}"
-    )
-    set_target_properties("${_genconfig_target}" PROPERTIES  FOLDER "Benchmarks/Genconfig")
-  endif ()
-
-
-   
-
+  set(_benchprop_filename "${CMAKE_CURRENT_BINARY_DIR}/${benchname}.$<CONFIG>.benchprop.cxx")
 
   set(_bench_target "${basename}.${ppm_shortname}")
   set(_sources ${_arg_SOURCES} "${_benchprop_filename}")
@@ -52,9 +23,11 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
   add_executable("${_bench_target}" ${_sources})
   message("added target: ${_bench_target}")
   set_target_properties("${_bench_target}" 
-    PROPERTIES 
+    PROPERTIES
       FOLDER "Benchmarks/${ppm}"
+      ROSETTA_PPM "${ppm}"
       ROSETTA_BASENAME "${basename}"
+      ROSETTA_BENCHPROPFILE "${_benchprop_filename}"
     )
   target_link_libraries("${_bench_target}" PRIVATE "${_library}")
   if (ROSETTA_REALTYPE)
@@ -62,61 +35,13 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
     target_compile_definitions(${_bench_target} PRIVATE "ROSETTA_REALTYPE=${ROSETTA_REALTYPE}")
   endif ()
 
-
-  get_property(_reffile TARGET "${basename}.serial" PROPERTY REFERENCE_FILE)
-
-
-  set_property(TARGET ${_bench_target} PROPERTY REFERENCE_FILE "${_reffile}")
-  #set_property(TARGET ${_verify_target} PROPERTY REFERENCE_FILE "${_reffile}")
-  set_property(TARGET ${_bench_target} PROPERTY VERIFY_TARGET "${_verify_target}")
-
-  append_global_property("benchmarks_${ppm_mixed}" "${_bench_target}")
-  #append_global_property("verifications_${ppm_mixed}" "${_verify_target}")
-
-
-  #add_custom_target("${basename}.${ppm}")
-  #add_dependencies("${basename}.${ppm}" "${_bench_target}" "${_verify_target}")
-
   add_dependencies("build-${ppm}" "${_bench_target}")
-  #add_dependencies("build-${ppm}-verify" "${_verify_target}")
+
+  append_global_property(benchmarks "${_bench_target}")
 endfunction ()
 
 
 
-
-function (make_reference_output basename ppm ppm_shortname _library)
-  set(_reference_dir "${PROJECT_BINARY_DIR}/references")
-  #if (CMAKE_BUILD_TYPE)
-    set(_reference_filename "${basename}.${ROSETTA_PROBLEMSIZE}.reference_output")
-  #else ()
-  #  set(_reference_filename "${basename}.$<CONFIG>.reference")
-  #endif ()
-  set(_reffile "${_reference_dir}/${_reference_filename}")
-  set(_bench_target "${basename}.${ppm_shortname}")
-
-  # TODO: different reference file for each problemsize? Hardcode problemsize for verification?
-  #add_custom_command(
-  #  OUTPUT "${_reference_filename}"
-  #  DEPENDS "${_bench_target}" "${RUNNER_EXECUTABLE}"
-  #  COMMAND Python::Interpreter "${RUNNER_EXECUTABLE}" "--problemsizefile=${_problemsizefile}" "--gen-reference" "$<TARGET_FILE:${_bench_target}>" "${_reffile}"
-  #  COMMENT "Generate ${basename} reference output (using serial output) ..."
-  #)
-  add_custom_command(
-    OUTPUT "${_reffile}"
-    DEPENDS "${_bench_target}" 
-    COMMAND "${_bench_target}" --verify --verifyfile "${_reffile}"
-    COMMENT "Generate ${basename} reference output (using serial output)..."
-  )
-
-  add_custom_target("reference-${basename}"
-    DEPENDS "${_reffile}"
-  )
-  append_global_property(references "reference-${basename}")
-  set_property(TARGET ${_verify_target}    
-    PROPERTY REFERENCE_FILE "${_reffile}"
-  )
-  append_global_property(references_serial "${_reference}")
-endfunction()
 
 
 
@@ -166,61 +91,20 @@ endfunction ()
 
 
 
-function (add_benchmark basename)
-  #cmake_parse_arguments(ARG "" "NAME" "SERIAL;CUDA;OMP_PARALLEL;OMP_TASK;OMP_TARGET" ${ARGN})
-  message("add_benchmark(${basename})")
-
-  set(_source_serial "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.cpp")
-  if (EXISTS "${_source_serial}")
-    add_benchmark_serial("${basename}" SOURCES ${_source_serial})
-  endif ()
-
-  set(_source_cuda "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.cu")
-  if (EXISTS "${_source_cuda}")
-    add_benchmark_cuda("${basename}" SOURCES ${_source_cuda})
-  endif ()
-
-  set(_source_openmp_parallel "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.openmp_parallel.cpp")
-  if (EXISTS "${_source_cuda}")
-    add_benchmark_openmp_parallel("${basename}" SOURCES ${_source_openmp_parallel})
-  endif ()
-
-  set(_source_openmp_task "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.openmp_task.cpp")
-  if (EXISTS "${_source_openmp_task}")
-    add_benchmark_openmp_task("${basename}" SOURCES ${_source_openmp_task})
-  endif ()
-
-  set(_source_openmp_target "${CMAKE_CURRENT_SOURCE_DIR}/${basename}.openmp_target.cpp")
-  if (EXISTS "${_source_openmp_target}")
-    add_benchmark_openmp_target("${basename}" SOURCES ${_source_openmp_target})
-  endif ()
-endfunction ()
-
-
-
-
-
-#add_subdirectory(idioms)
-#add_subdirectory(features)
-#add_subdirectory(synth)
-#add_subdirectory(suites)
-#add_subdirectory(apps)
-
-
-
 
 
 
 # https://stackoverflow.com/a/52714922
-set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/refsizes.cmake")
+set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/stage1.cmake")
+set(_stage1generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage1.py" )
 # Python::Interpreter does not work?
 #message("Python_EXECUTABLE: ${Python_EXECUTABLE}")
 execute_process(
-  COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage1.py" 
+  COMMAND "${Python_EXECUTABLE}" "${_stage1generator}"
+    "--builddir=${CMAKE_CURRENT_BINARY_DIR}"
+    "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}"
     "--problemsizefile=${_problemsizefile}" 
     "--output=${_refsizeinclude}"
-    "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}"
-    "--builddir=${CMAKE_CURRENT_BINARY_DIR}"
     "--configname=${ROSETTA_CONFIGNAME}'"
   COMMAND_ERROR_IS_FATAL ANY
 )
@@ -231,7 +115,7 @@ execute_process(
 # TODO: add_property
 set_property(
   DIRECTORY APPEND PROPERTY 
-    CMAKE_CONFIGURE_DEPENDS "${_problemsizefile};${CMAKE_SOURCE_DIR}/rosetta/bin/genrefsizes.py"
+    CMAKE_CONFIGURE_DEPENDS "${_problemsizefile};${_stage1generator}"
 )
 
 # Add the generated CMake targets.
@@ -240,8 +124,83 @@ include("${_refsizeinclude}")
 
 
 
+get_property(_benchmarks GLOBAL PROPERTY benchmarks)
+message("_benchmarks: ${_benchmarks}")
+message("_build_types: ${_build_types}")
+
+foreach (_conftype IN LISTS _build_types)
+  set(_benchmarks_run)
+  string(TOUPPER "${_conftype}" _conftype_uppper)
+  foreach (_target IN LISTS _benchmarks)
+    get_property(_ppm TARGET "${_target}" PROPERTY ROSETTA_PPM)
+    get_property(_basename TARGET "${_target}" PROPERTY ROSETTA_BASENAME)
+    get_property(_benchpropfile TARGET "${_target}" PROPERTY ROSETTA_BENCHPROPFILE)
+
+    list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', buildtype='$<CONFIG>', ppm='${_ppm}', configname='${ROSETTA_CONFIGNAME}', benchpropfile='${_benchpropfile}', compiler='${CMAKE_CXX_COMPILER}', compilerflags='${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_conftype_uppper}} $<TARGET_PROPERTY:${_target},COMPILE_OPTIONS> $<TARGET_PROPERTY:${_target},COMPILE_FLAGS>')")
+  endforeach ()
+
+  message("Generating ${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py")
+  file(GENERATE
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py"
+    CONTENT "#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+if __name__ == '__main__':
+  import sys
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+from rosetta import runner_main,register_benchmark,rosetta_config
+rosetta_config(resultsdir='${ROSETTA_RESULTS_DIR}')
+
+${_benchmarks_run}
+
+if __name__ == '__main__':
+  runner_main()
+"
+  FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  )
+endforeach ()
+
+
+
+
 ## Stage 2 #######################################################################################################
 
+set(_benchpropfiles)
+foreach (_benchmark IN LISTS _benchmarks)
+  get_property(_benchpropfile TARGET "${_benchmark}" PROPERTY ROSETTA_BENCHPROPFILE)
+  list(APPEND _benchpropfiles "${_benchpropfile}")
+endforeach ( )
+message("_benchpropfiles: ${_benchpropfiles}")
+
+set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage2.py" )
+set(_stage2stampfile "stage2-stamp-$<CONFIG>")
+add_custom_command(
+    OUTPUT "${_stage2stampfile}" ${_benchpropfiles}
+    DEPENDS "${_stage2generator}"
+    COMMAND Python::Interpreter "${_stage2generator}" 
+      "--builddir=${CMAKE_CURRENT_BINARY_DIR}"
+      "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}"
+      "--resultsdir=${ROSETTA_RESULTS_DIR}"
+      "--benchfile=${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py"
+      "--config=$<CONFIG>"
+    COMMENT "Generate $<CONFIG> properties files ..."
+  )
+
+  add_custom_target(genfiles
+    DEPENDS "${_stage2stampfile}" ${_benchpropfiles}
+  )
+
+  
+
+
+
+
+
+##################################################################################################################
+
+
+
+return()
 
 get_property(_benchmarks_serial GLOBAL PROPERTY benchmarks_serial)
 get_property(_references GLOBAL PROPERTY references)

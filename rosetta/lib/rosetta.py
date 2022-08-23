@@ -11,3 +11,4 @@ from runner import runner_main,register_benchmark,load_register_file,rosetta_con
 import runner
 from orderedset import OrderedSet
 from runner import Benchmark
+import generator

@@ -1013,15 +1013,6 @@ def results_compare(resultfiles: list[Path],compare_by,group_by=None,compare_val
 
 
 
-def lerp(a: float, b: float, t: float) -> float:
-    """Linear interpolate on the scale given by a to b, using t as the point on that scale.
-    Examples
-    --------
-        50 == lerp(0, 100, 0.5)
-        4.2 == lerp(1, 5, 0.8)
-    """
-    return (1 - t) * a + t * b
-
 
 def results_boxplot(resultfiles: list[Path],compare_by=None,filterfunc=None):
         results = load_resultfiles(resultfiles,filterfunc=filterfunc)
@@ -1159,14 +1150,17 @@ def get_refpath(bench,refdir,problemsizefile):
 
 
 class Benchmark:
-    def __init__(self,basename,target,exepath,config,ppm,configname,sources=None):
+    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None):
         self.basename = basename
         self.target=target
         self.exepath =exepath 
-        self.config=config
+        self.buildtype=buildtype
         self.ppm = ppm
         self.configname = configname
-        self.sources=[mkpath(s) for s in sources]
+        self.sources= [mkpath(s) for s in sources] if sources else None
+        self.benchpropfile=benchpropfile
+        self.compiler = mkpath(compiler)
+        self.compilerflags=compilerflags
 
     @property 
     def name(self):
@@ -1455,8 +1449,8 @@ def rosetta_config(resultsdir):
 
 
 benchmarks : typing .List[Benchmark]  =[]
-def register_benchmark(basename,target,exepath,config,ppm,configname):
-    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), config=config,ppm=ppm,configname=configname)
+def register_benchmark(basename,target,exepath,buildtype,ppm,configname,benchpropfile=None,compiler=None,compilerflags=None):
+    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), buildtype=buildtype,ppm=ppm,configname=configname,benchpropfile=benchpropfile,compiler=compiler,compilerflags=compilerflags)
     benchmarks.append(bench)
 
 
@@ -1464,8 +1458,7 @@ def register_benchmark(basename,target,exepath,config,ppm,configname):
 
 def load_register_file(filename):
     import importlib
-    filename = str(filename)
-    spec = importlib.util.spec_from_file_location(filename, filename)
+    spec = importlib.util.spec_from_file_location( mkpath(filename).stem, str(filename))
     module =  importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
