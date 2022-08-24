@@ -110,6 +110,11 @@ def gen_stage2(builddir,benchdir,benchlistfile,config,resultsdir):
 
 
 
+
+
+
+
+
 def main():
     print("stage2 argv", sys.argv)
     parser = argparse.ArgumentParser(description="Generate make-time files", allow_abbrev=False)
@@ -126,6 +131,7 @@ def main():
     config = args.config
 
     gen_stage2(builddir=builddir, benchdir=benchdir, benchlistfile=benchfile,config=config,resultsdir=args.resultsdir)
+
 
 
  

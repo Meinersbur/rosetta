@@ -133,22 +133,30 @@ get_property(_benchmarks GLOBAL PROPERTY benchmarks)
 message("_benchmarks: ${_benchmarks}")
 message("_build_types: ${_build_types}")
 
+# Collect all config-specific compiler flags as generator expression
+set(_config_cxx_flags)
 foreach (_conftype IN LISTS _build_types)
-  set(_benchmarks_run)
-  string(TOUPPER "${_conftype}" _conftype_uppper)
-  foreach (_target IN LISTS _benchmarks)
-    get_property(_ppm TARGET "${_target}" PROPERTY ROSETTA_PPM)
-    get_property(_basename TARGET "${_target}" PROPERTY ROSETTA_BASENAME)
-    get_property(_benchpropfile TARGET "${_target}" PROPERTY ROSETTA_BENCHPROPFILE)
-    get_property(_pbsize TARGET "${_target}" PROPERTY ROSETTA_PBSIZE)
+  string(TOUPPER "${_conftype}" _conftype_upper)
+  message("_conftype ${_conftype} ${_conftype_upper}")
+  set(_config_cxx_flags "${_config_cxx_flags}$<$<CONFIG:${_conftype}>:${CMAKE_CXX_FLAGS_${_conftype_upper}}>")
+endforeach ()
+message("_config_cxx_flags ${_config_cxx_flags}")
 
-    list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', buildtype='$<CONFIG>', ppm='${_ppm}', configname='${ROSETTA_CONFIGNAME}', benchpropfile='${_benchpropfile}', compiler='${CMAKE_CXX_COMPILER}', compilerflags='${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_conftype_uppper}} $<TARGET_PROPERTY:${_target},COMPILE_OPTIONS> $<TARGET_PROPERTY:${_target},COMPILE_FLAGS>', pbsize=${_pbsize})")
-  endforeach ()
+set(_benchmarks_run)
+foreach (_target IN LISTS _benchmarks)
+  get_property(_ppm TARGET "${_target}" PROPERTY ROSETTA_PPM)
+  get_property(_basename TARGET "${_target}" PROPERTY ROSETTA_BASENAME)
+  get_property(_benchpropfile TARGET "${_target}" PROPERTY ROSETTA_BENCHPROPFILE)
+  get_property(_pbsize TARGET "${_target}" PROPERTY ROSETTA_PBSIZE)
 
-  message("Generating ${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py")
-  file(GENERATE
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py"
-    CONTENT "#! /usr/bin/env python3
+  list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', ppm='${_ppm}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', buildtype='$<CONFIG>', configname='${ROSETTA_CONFIGNAME}', benchpropfile='${_benchpropfile}', compiler='${CMAKE_CXX_COMPILER}', compilerflags='${CMAKE_CXX_FLAGS} ${_config_cxx_flags} $<TARGET_PROPERTY:${_target},COMPILE_OPTIONS> $<TARGET_PROPERTY:${_target},COMPILE_FLAGS>', pbsize=${_pbsize})")
+endforeach ()
+string(JOIN "\n" _benchmarks_run ${_benchmarks_run})
+
+message("Generating ${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py")
+file(GENERATE
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py"
+  CONTENT "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 if __name__ == '__main__':
@@ -162,9 +170,9 @@ ${_benchmarks_run}
 if __name__ == '__main__':
   runner_main()
 "
-  FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-  )
-endforeach ()
+FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+)
+
 
 
 

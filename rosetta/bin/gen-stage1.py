@@ -134,7 +134,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
             else:
                 die("Unhandled ppm")
             print("    PBSIZE", bench. pbsize ,file=out)
-            print("    SOURCES", *bench.sources  ,file=out)
+            print("    SOURCES", *(bs.as_posix() for bs in bench.sources)  ,file=out)
             print("  )",file=out)
 
 

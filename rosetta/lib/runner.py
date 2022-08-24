@@ -29,7 +29,6 @@ import cwcwidth
 
 # Rosetta-provided
 import invoke
-from pandas import isna
 from support import *
 from orderedset import OrderedSet
 
@@ -1317,7 +1316,7 @@ def run_bench(problemsizefile=None, srcdir=None):
         configname = e.configname
         if configname:
             thisresultdir /= configname
-        thisresultdir /= f'{e.name}.xml'
+        thisresultdir /= f'{e.name}.{e.ppm}.xml'
         results .append (run_gbench(e,problemsizefile=problemsizefile,resultfile=thisresultdir))
     return results
 
