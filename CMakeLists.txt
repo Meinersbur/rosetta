@@ -359,6 +359,61 @@ add_custom_target(update-format DEPENDS ${update_format_depends})
 ## Run #########################################################################
 
 
+file(GENERATE
+    OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
+    CONTENT "#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+if __name__ == '__main__':
+  import sys
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+import pathlib
+from rosetta import runner_main, load_register_file
+thisscriptdir = pathlib.Path(__file__).parent
+
+load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
+
+if __name__ == '__main__':
+  runner_main()
+"
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  )
+
+
+
+foreach (_conftype IN LISTS _build_types)
+  add_custom_target(run-${_conftype}
+    DEPENDS ${_benchmarks}
+    COMMAND  Python::Interpreter "run-${_conftype}.py" "--problemsizefile=${_problemsizefile}" "--bench"
+    COMMENT "Run benchmarks for ${_conftype} ..."
+    USES_TERMINAL VERBATIM
+  )
+endforeach ()
+
+
+
+
+
+if (_default_build_type)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.py" "run.py"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+  add_custom_target(run
+    COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--bench"
+    COMMENT "Run all benchmarks ..."
+    USES_TERMINAL VERBATIM
+  )
+  add_dependencies(run build)
+
+  add_custom_target(verify
+    COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
+    COMMENT "Verify all benchmarks ..."
+    USES_TERMINAL VERBATIM
+  )
+  add_dependencies(verify build ${_references})
+endif ()
+
 
 
 
