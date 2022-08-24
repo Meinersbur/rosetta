@@ -1150,7 +1150,7 @@ def get_refpath(bench,refdir,problemsizefile):
 
 
 class Benchmark:
-    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None):
+    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None):
         self.basename = basename
         self.target=target
         self.exepath =exepath 
@@ -1161,6 +1161,7 @@ class Benchmark:
         self.benchpropfile=benchpropfile
         self.compiler = mkpath(compiler)
         self.compilerflags=compilerflags
+        self.pbsize = pbsize
 
     @property 
     def name(self):
@@ -1449,8 +1450,8 @@ def rosetta_config(resultsdir):
 
 
 benchmarks : typing .List[Benchmark]  =[]
-def register_benchmark(basename,target,exepath,buildtype,ppm,configname,benchpropfile=None,compiler=None,compilerflags=None):
-    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), buildtype=buildtype,ppm=ppm,configname=configname,benchpropfile=benchpropfile,compiler=compiler,compilerflags=compilerflags)
+def register_benchmark(basename,target,exepath,buildtype,ppm,configname,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None):
+    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), buildtype=buildtype,ppm=ppm,configname=configname,benchpropfile=benchpropfile,compiler=compiler,compilerflags=compilerflags,pbsize=pbsize)
     benchmarks.append(bench)
 
 

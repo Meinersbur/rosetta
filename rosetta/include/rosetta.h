@@ -846,7 +846,8 @@ typedef ROSETTA_REALTYPE real;
 #endif
 
 
-typedef size_t idx_t; // ssize_r
+typedef size_t idx_t;  // ssize_t / ptrdiff_t
+typedef int pbsize_t; // ssize_t ?
 
 #if 0
 template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >
