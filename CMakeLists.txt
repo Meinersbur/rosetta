@@ -169,6 +169,9 @@ endif ()
 ## Configuration ###############################################################
 
 set(ROSETTA_RESULTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/results" CACHE PATH "Default path for results (.xml files)")
+set(ROSETTA_BENCH_FILTER "" CACHE STRING "Benchmark filter switches")
+
+
 
 string(RANDOM LENGTH 8 ALPHABET "0123456789" _randseed_default)
 set(ROSETTA_RANDSEED "${_randseed_default}" CACHE STRING "Seed for compile-time randomness")

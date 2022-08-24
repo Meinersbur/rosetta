@@ -8,12 +8,14 @@
 # internal
 # TODO: basename is not required
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
-  cmake_parse_arguments(_arg "" "" "SOURCES" ${ARGN})
+  cmake_parse_arguments(_arg "" "PBSIZE" "SOURCES" ${ARGN})
+  message("_arg_SOURCES=${_arg_SOURCES}")
+  message("_arg_PBSIZE=${_arg_PBSIZE}")
 
   file(RELATIVE_PATH _relpath  "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
   set(benchname "${basename}")
-  set(_benchprop_filename "${CMAKE_CURRENT_BINARY_DIR}/${benchname}.$<CONFIG>.benchprop.cxx")
+  set(_benchprop_filename "${CMAKE_CURRENT_BINARY_DIR}/${benchname}.${ppm_shortname}.$<CONFIG>.benchprop.cxx")
 
   set(_bench_target "${basename}.${ppm_shortname}")
   set(_sources ${_arg_SOURCES} "${_benchprop_filename}")
@@ -22,12 +24,14 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
 
   add_executable("${_bench_target}" ${_sources})
   message("added target: ${_bench_target}")
+  message("SOURCES: ${_sources}")
   set_target_properties("${_bench_target}" 
     PROPERTIES
       FOLDER "Benchmarks/${ppm}"
       ROSETTA_PPM "${ppm}"
       ROSETTA_BASENAME "${basename}"
       ROSETTA_BENCHPROPFILE "${_benchprop_filename}"
+      ROSETTA_PBSIZE "${_arg_PBSIZE}"
     )
   target_link_libraries("${_bench_target}" PRIVATE "${_library}")
   if (ROSETTA_REALTYPE)
@@ -58,7 +62,7 @@ function (add_benchmark_cuda basename)
   if (NOT ROSETTA_PPM_CUDA)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "cuda" "cuda" "rosetta-cuda" ${ARGN} SOURCES "${basename}.cu")
+  add_benchmark_ppm("${basename}" "cuda" "cuda" "rosetta-cuda" ${ARGN} )
 endfunction ()
 
 
@@ -66,7 +70,7 @@ function (add_benchmark_openmp_parallel basename)
   if (NOT ROSETTA_PPM_OPENMP_PARALLEL)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp-parallel" ${ARGN} SOURCES "${basename}.omp_parallel.cxx")
+  add_benchmark_ppm("${basename}" "openmp-parallel" "omp_parallel" "rosetta-openmp-parallel" ${ARGN} )
 endfunction ()
 
 
@@ -74,7 +78,7 @@ function (add_benchmark_openmp_task basename)
   if (NOT ROSETTA_PPM_OPENMP_TASK)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp-task" ${ARGN} SOURCES "${basename}.omp_task.cxx")
+  add_benchmark_ppm("${basename}" "openmp-task" "omp_task" "rosetta-openmp-task" ${ARGN} )
 endfunction ()
 
 
@@ -82,7 +86,7 @@ function (add_benchmark_openmp_target basename)
   if (NOT ROSETTA_PPM_OPENMP_TARGET)
       return ()
   endif ()
-  add_benchmark_ppm("${basename}" "openmp-target" "omp_target" "rosetta-openmp-target" ${ARGN} SOURCES "${basename}.omp_target.cxx")
+  add_benchmark_ppm("${basename}" "openmp-target" "omp_target" "rosetta-openmp-target" ${ARGN} )
 endfunction ()
 
 
@@ -106,6 +110,7 @@ execute_process(
     "--problemsizefile=${_problemsizefile}" 
     "--output=${_refsizeinclude}"
     "--configname=${ROSETTA_CONFIGNAME}'"
+    ${ROSETTA_BENCH_FILTER}
   COMMAND_ERROR_IS_FATAL ANY
 )
 
@@ -135,8 +140,9 @@ foreach (_conftype IN LISTS _build_types)
     get_property(_ppm TARGET "${_target}" PROPERTY ROSETTA_PPM)
     get_property(_basename TARGET "${_target}" PROPERTY ROSETTA_BASENAME)
     get_property(_benchpropfile TARGET "${_target}" PROPERTY ROSETTA_BENCHPROPFILE)
+    get_property(_pbsize TARGET "${_target}" PROPERTY ROSETTA_PBSIZE)
 
-    list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', buildtype='$<CONFIG>', ppm='${_ppm}', configname='${ROSETTA_CONFIGNAME}', benchpropfile='${_benchpropfile}', compiler='${CMAKE_CXX_COMPILER}', compilerflags='${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_conftype_uppper}} $<TARGET_PROPERTY:${_target},COMPILE_OPTIONS> $<TARGET_PROPERTY:${_target},COMPILE_FLAGS>')")
+    list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', buildtype='$<CONFIG>', ppm='${_ppm}', configname='${ROSETTA_CONFIGNAME}', benchpropfile='${_benchpropfile}', compiler='${CMAKE_CXX_COMPILER}', compilerflags='${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_conftype_uppper}} $<TARGET_PROPERTY:${_target},COMPILE_OPTIONS> $<TARGET_PROPERTY:${_target},COMPILE_FLAGS>', pbsize=${_pbsize})")
   endforeach ()
 
   message("Generating ${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py")

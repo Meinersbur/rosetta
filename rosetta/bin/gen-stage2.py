@@ -36,7 +36,7 @@ def cquote(s):
     return '"' + s + '"'
 
 
-def gen_config(output, benchname,problemsizefile,resultsdir,compiler,compilerflags,configname,buildtype):
+def gen_config(output, benchname,problemsizefile,resultsdir,compiler,compilerflags,configname,buildtype,pbsize):
     config = configparser.ConfigParser()
     config.read(problemsizefile)
     n = config.getint(benchname, 'n')
@@ -54,7 +54,7 @@ const char *bench_buildtype = {cquote(buildtype)};
 
 // Benchmark properties
 const char *bench_name = {cquote(benchname)};
-int64_t bench_default_problemsize = {n};
+int64_t bench_default_problemsize = {pbsize};
 """
 
     # TODO: Don't replace if identical for ninja to know there's no recompile needed
@@ -87,10 +87,12 @@ const char *bench_buildtype = {cquote(buildtype)};
 
 // Benchmark properties
 const char *bench_name = {cquote(benchname)};
-int64_t bench_default_problemsize = {n};
+int64_t bench_default_problemsize = {bench.pbsize};
 """
 
-    createfile (content, content)
+    benchpropfile= bench.benchpropfile
+    print(f"{benchpropfile=}")
+    createfile( benchpropfile,content)
 
 
 
