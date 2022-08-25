@@ -89,11 +89,15 @@ elseif (ROSETTA_PPM_CUDA)
   endif ()
 endif ()
 
+if (CMAKE_CUDA_COMPILER)
+  # only for CUDA_VERSION
+  find_package(CUDA REQUIRED)
+endif ()
 
 # For Nvidia platform
 if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit)
-else (ROSETTA_PLATFORM_NVIDIA)
+elseif (ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit REQUIRED)
 endif ()
 
@@ -358,6 +362,8 @@ add_custom_target(update-format DEPENDS ${update_format_depends})
 
 ## Run #########################################################################
 
+get_property(_benchmarks GLOBAL PROPERTY benchmarks)
+
 
 file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
@@ -368,30 +374,48 @@ if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
 import pathlib
-from rosetta import runner_main, load_register_file
+from rosetta import runner_main_run, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent
 
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
 
 if __name__ == '__main__':
-  runner_main()
+  runner_main_run(builddir=thisscriptdir)
 "
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
-
-
-
-foreach (_conftype IN LISTS _build_types)
-  add_custom_target(run-${_conftype}
-    DEPENDS ${_benchmarks}
-    COMMAND  Python::Interpreter "run-${_conftype}.py" "--problemsizefile=${_problemsizefile}" "--bench"
-    COMMENT "Run benchmarks for ${_conftype} ..."
+add_custom_target(run
+    COMMAND Python::Interpreter "run-$<CONFIG>.py" 
+    COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
+)
+add_dependencies(run ${_benchmarks})
+
+file(GENERATE
+    OUTPUT "${CMAKE_BINARY_DIR}/verify-$<CONFIG>.py"
+    CONTENT "#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+if __name__ == '__main__':
+  import sys
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+import pathlib
+from rosetta import runner_main_verify, load_register_file
+thisscriptdir = pathlib.Path(__file__).parent
+
+load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
+
+if __name__ == '__main__':
+  runner_main_verify(builddir=thisscriptdir)
+"
+    FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
-endforeach ()
-
-
-
+add_custom_target(verify
+    COMMAND Python::Interpreter "verify-$<CONFIG>.py" 
+    COMMENT "Verify benchmarks ..."
+    USES_TERMINAL VERBATIM
+)
+add_dependencies(verify ${_benchmarks})
 
 
 if (_default_build_type)
@@ -399,19 +423,23 @@ if (_default_build_type)
     COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.py" "run.py"
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
-  add_custom_target(run
-    COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--bench"
-    COMMENT "Run all benchmarks ..."
-    USES_TERMINAL VERBATIM
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "verify-${_default_build_type}.py" "verify.py"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
-  add_dependencies(run build)
+  #add_custom_target(run
+  #  COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--bench"
+  #  COMMENT "Run all benchmarks ..."
+  #  USES_TERMINAL VERBATIM
+  #)
+  #add_dependencies(run build)
 
-  add_custom_target(verify
-    COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
-    COMMENT "Verify all benchmarks ..."
-    USES_TERMINAL VERBATIM
-  )
-  add_dependencies(verify build ${_references})
+  #add_custom_target(verify
+  #  COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
+  #  COMMENT "Verify all benchmarks ..."
+  #  USES_TERMINAL VERBATIM
+  #)
+  #add_dependencies(verify build ${_references})
 endif ()
 
 
@@ -445,8 +473,11 @@ endif ()
 message("Default problem size: ${_problemsizefilename}")
 message("Enabled PPMs:")
 if (ROSETTA_PPM_SERIAL)
-  get_property(_cxx_standard TARGET rosetta-serial PROPERTY "CXX_STANDARD")
-  if (NOT _cxx_standard STREQUAL "")
+  get_property(_cxx_standard TARGET rosetta-serial PROPERTY CXX_STANDARD)
+  if (_cxx_standard STREQUAL "")
+    set (_cxx_standard "${CMAKE_CXX_STANDARD}")
+  endif ()
+  if (_cxx_standard STREQUAL "")
     set (_cxx_standard "${CMAKE_CXX_STANDARD_DEFAULT}")
   endif ()
   message("  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, C++${_cxx_standard})")
@@ -454,6 +485,13 @@ else ()
   list(APPEND _disabled_ppm "Serial")
 endif ()
 if (ROSETTA_PPM_CUDA)
+  #get_property(_cuda_standard TARGET rosetta-cuda PROPERTY CUDA_STANDARD)
+  #if (_cuda_standard STREQUAL "")
+  ##  set (_cuda_standard "x${CMAKE_CUDA_STANDARD}")
+  #endif () 
+  #if (_cuda_standard STREQUAL "x")
+  #  set (_cuda_standard "y${CMAKE_CUDA_STANDARD_DEFAULT}")
+  #endif ()
   message("  CUDA:            ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}, CUDA ${CUDA_VERSION})")
 else ()
 list(APPEND _disabled_ppm "CUDA")
@@ -487,7 +525,7 @@ list(JOIN _disabled_ppm " " _disabled_ppm_str)
 message("Disabled PPMs: ${_disabled_ppm_str}")
 message("Enabled Platforms:")
 if (ROSETTA_PLATFORM_NVIDIA)
-  message("  NVIDIA (CUDA ${CUDAToolkit_VERSION})")
+  message("  NVIDIA (CUDAToolkit ${CUDAToolkit_VERSION})")
 else ()
   list(APPEND _disabled_platform "NVIDIA")
 endif ()

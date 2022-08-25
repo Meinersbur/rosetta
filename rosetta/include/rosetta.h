@@ -628,7 +628,9 @@ public:
 
   // Implicit conversion to pointer only for flat arrays
   template <typename U = T, typename = typename std::enable_if<std::is_same<U, T>::value && DIMS == 1, T>::type>
-  operator T *() { return mydata.data(); }
+  operator T *() { return data(); }
+
+  T* data() { return mydata.data(); }
 
 private:
   dyn_array<T> mydata;
