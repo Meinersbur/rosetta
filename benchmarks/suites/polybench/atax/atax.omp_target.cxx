@@ -31,7 +31,7 @@ void run(State &state, int pbsize) {
   auto A = state.allocate_array<double>({n, m}, /*fakedata*/ true, /*verify*/ false);
   auto x = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ false);
   auto y = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ true);
-  auto tmp = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ false);
+  auto tmp = state.allocate_array<double>({m}, /*fakedata*/ false, /*verify*/ false);
 
   for (auto &&_ : state)
     kernel(n, m, A, x, y, tmp);

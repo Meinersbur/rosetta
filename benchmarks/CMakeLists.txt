@@ -130,17 +130,15 @@ include("${_refsizeinclude}")
 
 
 get_property(_benchmarks GLOBAL PROPERTY benchmarks)
-message("_benchmarks: ${_benchmarks}")
-message("_build_types: ${_build_types}")
+
 
 # Collect all config-specific compiler flags as generator expression
 set(_config_cxx_flags)
 foreach (_conftype IN LISTS _build_types)
   string(TOUPPER "${_conftype}" _conftype_upper)
-  message("_conftype ${_conftype} ${_conftype_upper}")
   set(_config_cxx_flags "${_config_cxx_flags}$<$<CONFIG:${_conftype}>:${CMAKE_CXX_FLAGS_${_conftype_upper}}>")
 endforeach ()
-message("_config_cxx_flags ${_config_cxx_flags}")
+
 
 set(_benchmarks_run)
 foreach (_target IN LISTS _benchmarks)
@@ -149,13 +147,15 @@ foreach (_target IN LISTS _benchmarks)
   get_property(_benchpropfile TARGET "${_target}" PROPERTY ROSETTA_BENCHPROPFILE)
   get_property(_pbsize TARGET "${_target}" PROPERTY ROSETTA_PBSIZE)
 
+
   list(APPEND _benchmarks_run "register_benchmark(basename='${_basename}', ppm='${_ppm}', target='${_target}', exepath='$<TARGET_FILE:${_target}>', buildtype='$<CONFIG>', configname='${ROSETTA_CONFIGNAME}', benchpropfile='${_benchpropfile}', compiler='${CMAKE_CXX_COMPILER}', compilerflags='${CMAKE_CXX_FLAGS} ${_config_cxx_flags} $<TARGET_PROPERTY:${_target},COMPILE_OPTIONS> $<TARGET_PROPERTY:${_target},COMPILE_FLAGS>', pbsize=${_pbsize})")
 endforeach ()
 string(JOIN "\n" _benchmarks_run ${_benchmarks_run})
 
-message("Generating ${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py")
+
+# TODO: Which configuration we want depends on the PPM. E.g for CUDA, $<COMPILE_LANGUAGE:CUDA> shouold be used for compiler flags
 file(GENERATE
-  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py"
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>$<IF:$<COMPILE_LANGUAGE:CXX>,,-$<COMPILE_LANGUAGE>>.py"
   CONTENT "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -170,7 +170,7 @@ ${_benchmarks_run}
 if __name__ == '__main__':
   runner_main()
 "
-FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+  FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
 
 
@@ -182,6 +182,7 @@ FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE W
 set(_benchpropfiles)
 foreach (_benchmark IN LISTS _benchmarks)
   get_property(_benchpropfile TARGET "${_benchmark}" PROPERTY ROSETTA_BENCHPROPFILE)
+  message("target ${_benchmark} penchprop ${_benchpropfile}")
   list(APPEND _benchpropfiles "${_benchpropfile}")
 endforeach ( )
 message("_benchpropfiles: ${_benchpropfiles}")
@@ -189,7 +190,7 @@ message("_benchpropfiles: ${_benchpropfiles}")
 set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage2.py" )
 set(_stage2stampfile "stage2-stamp-$<CONFIG>")
 add_custom_command(
-    OUTPUT "${_stage2stampfile}" ${_benchpropfiles}
+    OUTPUT "${_stage2stampfile}" ${_benchpropfiles} 
     DEPENDS "${_stage2generator}"
     COMMAND Python::Interpreter "${_stage2generator}" 
       "--builddir=${CMAKE_CURRENT_BINARY_DIR}"
@@ -205,9 +206,6 @@ add_custom_command(
   )
 
   
-
-
-
 
 
 ##################################################################################################################

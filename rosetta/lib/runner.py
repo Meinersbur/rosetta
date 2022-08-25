@@ -1095,7 +1095,10 @@ def results_boxplot(resultfiles: list[Path],compare_by=None,filterfunc=None):
 
 
 def run_gbench(bench,problemsizefile,resultfile):
-    return do_run(bench=bench, args=[f'--problemsizefile={problemsizefile}'],resultfile=resultfile)
+    args = []
+    if problemsizefile:
+        args.append(f'--problemsizefile={problemsizefile}')
+    return do_run(bench=bench, args=args,resultfile=resultfile)
         
 
 
@@ -1119,6 +1122,26 @@ def getPPMDisplayStr(s:str):
 
 
 
+
+class Benchmark:
+    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None):
+        self.basename = basename
+        self.target=target
+        self.exepath =exepath 
+        self.buildtype=buildtype
+        self.ppm = ppm
+        self.configname = configname
+        self.sources= [mkpath(s) for s in sources] if sources else None
+        self.benchpropfile=benchpropfile
+        self.compiler = mkpath(compiler)
+        self.compilerflags=compilerflags
+        self.pbsize = pbsize # defaul problemsize
+
+    @property 
+    def name(self):
+        return self.basename
+
+
 def get_problemsizefile(srcdir=None, problemsizefile=None):
     if problemsizefile:
         if not problemsizefile.is_file():
@@ -1126,14 +1149,14 @@ def get_problemsizefile(srcdir=None, problemsizefile=None):
             die(f"Problemsize file {problemsizefile} does not exist.",file=sys.stderr)
         return problemsizefile
     
-    # Default; 
-    # TODO: executable should know the default itself already
-    if not srcdir:
-        die("Problemsizefile must be defined")
-    return mkpath(srcdir) / 'benchmarks' / 'medium.problemsize.ini'
+    # Default, embedded into executable
+    return None
 
 
-def get_problemsize(bench, problemsizefile):
+def get_problemsize(bench: Benchmark, problemsizefile: pathlib.Path):
+    if not problemsizefile:
+        return bench.pbsize
+
     config = configparser.ConfigParser()
     config.read(problemsizefile)
     n = config.getint(bench.name, 'n')
@@ -1148,23 +1171,6 @@ def get_refpath(bench,refdir,problemsizefile):
     return refpath
 
 
-class Benchmark:
-    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None):
-        self.basename = basename
-        self.target=target
-        self.exepath =exepath 
-        self.buildtype=buildtype
-        self.ppm = ppm
-        self.configname = configname
-        self.sources= [mkpath(s) for s in sources] if sources else None
-        self.benchpropfile=benchpropfile
-        self.compiler = mkpath(compiler)
-        self.compilerflags=compilerflags
-        self.pbsize = pbsize
-
-    @property 
-    def name(self):
-        return self.basename
 
 
 def ensure_reffile(bench: Benchmark,refdir,problemsizefile):
@@ -1181,7 +1187,9 @@ def ensure_reffile(bench: Benchmark,refdir,problemsizefile):
         refpath.unlink()
 
     # Invoke reference executable and write to file
-    args = [bench.exepath, f'--verify', f'--problemsizefile={problemsizefile}', f'--verifyfile={refpath}']
+    args = [bench.exepath, f'--verify',  f'--verifyfile={refpath}']
+    if problemsizefile:
+        args.append(f'--problemsizefile={problemsizefile}')
     invoke.call(*args, print_command=True)    
     assert refpath.is_file()
     print(f"Reference output of {bench.name} written to {refpath}")
@@ -1199,24 +1207,30 @@ def ensure_reffiles(refdir,problemsizefile,filterfunc=None,srcdir=None):
 
 def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
     problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
-    if not problemsizefile:
-        die("Problemsizes required")
 
     x = tempfile.TemporaryDirectory(prefix=f'verifyout') # TODO: Delete in a non-debug run
     tmpdir = mkpath(x.name)
+
+    refdir.mkdir(exist_ok=True,parents=True)
         
     for e  in benchmarks:
         if filterfunc and not filterfunc(e):
             continue
 
+        ensure_reffile(e, refdir=refdir, problemsizefile=problemsizefile)
+
         exepath = e.exepath
         refpath = get_refpath(e,refdir=refdir,problemsizefile=problemsizefile)
-        pbsize = get_problemsize(e,problemsizefile=problemsizefile )
+        pbsize = get_problemsize(e,problemsizefile=problemsizefile)
 
     
         testoutpath = tmpdir / f'{e.name}_{e.ppm}_{pbsize}.testout' 
 
-        args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}', f'--verifyfile={testoutpath}']
+
+ 
+        args = [exepath, f'--verify', f'--verifyfile={testoutpath}']
+        if problemsizefile:
+            args.append(f'--problemsizefile={problemsizefile}') 
         p = invoke.call(*args, return_stdout=True, print_command=True)
     
 
@@ -1279,7 +1293,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                   else:
                     reld = absd/mid
                   if reld != 0:
-                    die("Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord}")
+                    die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord}")
 
         print(f"Output of {e.exepath} considered correct")       
 
@@ -1303,7 +1317,7 @@ def make_resultssubdir(within=None):
             resultssubdir.mkdir(parents=True)
             return resultssubdir
         i += 1
-        suffix = r'_{i}'
+        suffix = f'_{i}'
 
 
 def run_bench(problemsizefile=None, srcdir=None):
@@ -1403,8 +1417,24 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
 
 
 
+def  runner_main_run(builddir):
+    return runner_main()
 
-def runner_main():
+
+
+def runner_main_verify(builddir):
+    parser = argparse.ArgumentParser(description="Benchmark verification", allow_abbrev=False)
+    parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
+
+    args = parser.parse_args()
+
+    refdir = builddir /  'refout'
+    return run_verify(problemsizefile=args.problemsizefile,refdir=refdir)
+
+
+
+
+def  runner_main():
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
     parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
 

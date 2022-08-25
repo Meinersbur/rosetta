@@ -253,7 +253,7 @@ def main(argv):
        def only_REF(bench):
            return bench.configname =='REF' 
        [refconfig] = (c for c in configs if c.name == 'REF')
-       refdir = refconfig.builddir / 'references'
+       refdir = refconfig.builddir / 'refout'
        refdir.mkdir(exist_ok=True,parents=True)
        runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
 
