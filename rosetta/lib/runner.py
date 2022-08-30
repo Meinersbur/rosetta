@@ -22,6 +22,8 @@ import io
 import configparser
 import typing 
 
+ 
+
 
 # Not included batteries
 import cwcwidth
@@ -31,6 +33,7 @@ import cwcwidth
 import invoke
 from support import *
 from orderedset import OrderedSet
+from cmdtool import *
 
 
 # FIXME: Hack
@@ -977,6 +980,12 @@ def grouping(results : Iterable[BenchResult], compare_by: str,  group_by:list[st
         all_groups.append(group)
 
     # Find all fields that could be grouped by and have different values
+    show_groups = divergent_fields(group_by,results)
+
+    return grouped_results,list(all_cmpvals),show_groups
+    
+
+def divergent_fields(group_by,results):
     show_groups = []
     for col in group_by:
         common_value=None
@@ -990,10 +999,9 @@ def grouping(results : Iterable[BenchResult], compare_by: str,  group_by:list[st
             else:
                 has_different_values = True
                 break
-        if  has_different_values:
+        if has_different_values:
             show_groups.append(col)
-
-    return grouped_results,list(all_cmpvals),show_groups
+    return show_groups
 
 
 
@@ -1013,85 +1021,96 @@ def results_compare(resultfiles: list[Path],compare_by,group_by=None,compare_val
 
 
 
-def results_boxplot(resultfiles: list[Path],compare_by=None,filterfunc=None):
-        results = load_resultfiles(resultfiles,filterfunc=filterfunc)
+def results_boxplot(resultfiles: list[Path],group_by=None,compare_by=None,filterfunc=None):
+    r"""Produce a boxplot for benchmark results
 
-        group_by = None
+    :param group_by:   Summerize all results that have the same value for these properties. No summerization if None.
+    :param compare_by: Which property to compare side-by-side in a group of plots. Implicitly enables grouping.
+    """
+    results = load_resultfiles(resultfiles,filterfunc=filterfunc)
+
+    if group_by or compare_by:
         if group_by is None:
             group_by = ["program", "ppm", "buildtype", "configname"]
+        if compare_by:
             group_by.remove(compare_by)
 
         grouped_results,all_cmpvals,div_groups = grouping(results, compare_by='configname',group_by=group_by) 
         groupdata  = [[b.durations['walltime'].samples for b in group] for group in grouped_results] 
+    else:
+        # Each result in its own group
+        grouped_results = [[r] for r in results]
+        div_groups = divergent_fields(["program", "ppm", "buildtype", "configname"],results)
+        all_cmpvals = [""]
+
+    def make_label(g: tuple):
+        first = g[0] 
+        return ', '.join( get_column_data(first, k ) for k in div_groups )
+    labels = [make_label(g) for g in grouped_results]
+
+    import matplotlib.colors as mcolors
+    from cycler import cycler
+    import matplotlib.pyplot as plt
+
+    left=1
+    right=0.5
+    numgroups  = len(grouped_results)
+    benchs_per_group = len(all_cmpvals)
+    barwidth = 0.3
+    groupwidth = 0.2 + benchs_per_group * barwidth
+    width = left + right + groupwidth*numgroups
+    fig, ax = plt.subplots(figsize=(width, 10))
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = [c['color'] for j,c in zip( range(benchs_per_group),prop_cycle)] # TODO: Consider seaborn palettes
+
+    fig.subplots_adjust(left=left/width, right=1-right/width, top=0.95, bottom=0.25)
 
 
+    for i, group in enumerate(grouped_results):
+        benchs_this_group = len(group)           
+        for j, benchstat in enumerate(group): # TODO: ensure grouped_results non-jagged so colors match
+            data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
+            rel = (j-benchs_this_group/2.0+0.5)*barwidth
+            box = ax.boxplot(data, positions=[i*groupwidth + rel], 
+                            notch=True,showmeans=False, showfliers=True,sym='+',
+                            widths=barwidth,
+                                patch_artist=True,  # fill with color
+                            )
+            for b in box['boxes']:
+                    b.set_facecolor(colors[j])
+    ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',  alpha=0.5)
 
-        def make_label(g: tuple):
-            first = g[0] 
-            return ', '.join( get_column_data(first, k ) for k in div_groups )
-        labels = [make_label(g) for g in grouped_results]
-
-        import matplotlib.colors as mcolors
-        from cycler import cycler
-        import matplotlib.pyplot as plt
-
-        left=1
-        right=0.5
-        numgroups  = len(grouped_results)
-        benchs_per_group = len(all_cmpvals)
-        barwidth = 0.3
-        groupwidth = 0.2 + benchs_per_group * barwidth
-        width = left + right + groupwidth*numgroups
-        fig, ax = plt.subplots(figsize=(width, 10))
-        prop_cycle = plt.rcParams['axes.prop_cycle']
-        colors = [c['color'] for j,c in zip( range(benchs_per_group),prop_cycle)] # TODO: Consider seaborn palettes
-
-        fig.subplots_adjust(left=left/width, right=1-right/width, top=0.95, bottom=0.25)
-
-
-        for i, group in enumerate(grouped_results):
-            benchs_this_group = len(group)           
-            for j, benchstat in enumerate(group): # TODO: ensure grouped_results non-jagged so colors match
-                data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
-                rel = (j-benchs_this_group/2.0+0.5)*barwidth
-                box = ax.boxplot(data, positions=[i*groupwidth + rel], 
-                                notch=True,showmeans=False, showfliers=True,sym='+',
-                                widths=barwidth,
-                                  patch_artist=True,  # fill with color
-                                )
-                for b in box['boxes']:
-                        b.set_facecolor(colors[j])
-        ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',  alpha=0.5)
-
-        for j,(c,label) in enumerate(zip(colors,all_cmpvals)):
-            # Dummy item to add a legend handle; like seaborn does
-            rect = plt.Rectangle([0, 0], 0, 0,
-                               # linewidth=self.linewidth / 2,
-                               # edgecolor=self.gray,
-                                facecolor=c,
-                                label=label)
-            ax.add_patch(rect)
+    for j,(c,label) in enumerate(zip(colors,all_cmpvals)):
+        # Dummy item to add a legend handle; like seaborn does
+        rect = plt.Rectangle([0, 0], 0, 0,
+                            # linewidth=self.linewidth / 2,
+                            # edgecolor=self.gray,
+                            facecolor=c,
+                            label=label)
+        ax.add_patch(rect)
 
 
-        # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
-        #x.grid(linestyle='--',axis='y')
-        ax.set(
-            axisbelow=True,  # Hide the grid behind plot objects
-            xlabel='Benchmark',
-            ylabel='Walltime [s]',
-        )
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+    # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
+    #x.grid(linestyle='--',axis='y')
+    ax.set(
+        axisbelow=True,  # Hide the grid behind plot objects
+        xlabel='Benchmark',
+        ylabel='Walltime [s]',
+    )
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
 
-        ax.set_xticks([groupwidth*i for i in range(len(labels))])
-        ax.set_xticklabels(labels,rotation=20,ha="right",rotation_mode="anchor")
-        
-        plt.legend()
+    ax.set_xticks([groupwidth*i for i in range(len(labels))])
+    ax.set_xticklabels(labels,rotation=20,ha="right",rotation_mode="anchor")
+    
+    plt.legend()
 
-        #for label in ax.get_xticklabels(): # https://stackoverflow.com/a/43153984
-        #    label.set_ha("right")
-        #    label.set_rotation(45)
-        return plt.gcf()
+    #for label in ax.get_xticklabels(): # https://stackoverflow.com/a/43153984
+    #    label.set_ha("right")
+    #    label.set_rotation(45)
+    return plt.gcf()
+
+
 
 
 def run_gbench(bench,problemsizefile,resultfile):
@@ -1417,11 +1436,63 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
 
 
 
-def  runner_main_run(builddir):
-    return runner_main()
+def runner_main(builddir):
+    runner_main_run()
+
+def runner_main_run(builddir):
+    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
+    subcommand_run(parser,None,builddirs=[builddir],refbuilddir=builddir)
+    args = parser.parse_args(sys.argv[1:])
+    subcommand_run(None,args,builddirs=[builddir],refbuilddir=builddir)
 
 
 
+
+def subcommand_run(parser,args,builddirs=None,refbuilddir=None):
+    if parser:
+        parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
+
+        # Command
+        #parser.add_argument('--probe', action='store_true')
+        #parser.add_argument('--write-problemsizefile', type=pathlib.Path)
+        #parser.add_argument('--limit-walltime', type=parse_time)
+        #parser.add_argument('--limit-rss', type=parse_memsize)
+        #parser.add_argument('--limit-alloc', type=parse_memsize)
+
+        # Verify step
+        if refbuilddir:
+            add_boolean_argument(parser, 'verify', default=False, help="Enable check step")
+
+        # Run step
+        add_boolean_argument(parser, 'bench', default=True, help="Enable run step")
+
+        parser.add_argument('--boxplot', type=pathlib.Path, help="Save as boxplot to FILENAME")
+    
+
+    if args:
+        #if args.probe:
+        #    return run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+
+        if args.verify:
+            refdir = refbuilddir / 'refout'
+            return run_verify(problemsizefile=args.problemsizefile,refdir=refdir)
+
+        if args.bench:
+            resultfiles = run_bench(problemsizefile=args.problemsizefile)
+
+            if args.boxplot:
+                fig = results_boxplot(resultfiles)
+                fig.savefig(fname=args.boxplot)
+                fig.canvas.draw_idle() 
+
+            evaluate(resultfiles)
+
+
+
+
+
+
+# TODO: Integrate into subcommand_run
 def runner_main_verify(builddir):
     parser = argparse.ArgumentParser(description="Benchmark verification", allow_abbrev=False)
     parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
@@ -1433,42 +1504,12 @@ def runner_main_verify(builddir):
 
 
 
+
+
 def  runner_main_probe(builddir):
     die("Not yet implemented")
 
 
-
-
-def  runner_main():
-    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
-
-    # Command
-    parser.add_argument('--verify', action='store_true',  help="Write reference output file")
-
-    # Command 
-    parser.add_argument('--bench',  action='store_true',  help="Run benchmark")
-
-    # Command
-    parser.add_argument('--probe', action='store_true')
-    parser.add_argument('--write-problemsizefile', type=pathlib.Path)
-    parser.add_argument('--limit-walltime', type=parse_time)
-    parser.add_argument('--limit-rss', type=parse_memsize)
-    parser.add_argument('--limit-alloc', type=parse_memsize)
- 
-
-    args = parser.parse_args(sys.argv[1:])
-
-
-    if args.probe:
-        return run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
-
-    if args.verify:
-       return run_verify(problemsizefile=args.problemsizefile)
-
-    resultfiles = run_bench(problemsizefile=args.problemsizefile)
-
-    evaluate(resultfiles)
 
 
 

@@ -418,7 +418,7 @@ add_custom_target(verify
 add_dependencies(verify ${_benchmarks})
 
 file(GENERATE
-    OUTPUT "${CMAKE_BINARY_DIR}/verify-$<CONFIG>.py"
+    OUTPUT "${CMAKE_BINARY_DIR}/probe-$<CONFIG>.py"
     CONTENT "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
