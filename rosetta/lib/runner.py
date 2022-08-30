@@ -1428,8 +1428,13 @@ def runner_main_verify(builddir):
 
     args = parser.parse_args()
 
-    refdir = builddir /  'refout'
+    refdir = builddir / 'refout'
     return run_verify(problemsizefile=args.problemsizefile,refdir=refdir)
+
+
+
+def  runner_main_probe(builddir):
+    die("Not yet implemented")
 
 
 
