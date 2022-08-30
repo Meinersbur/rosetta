@@ -12,13 +12,17 @@ def _str_to_bool(s):
     return {'true': True, 'false': False, '1':True, '0':False,'y':True,'n':False, 'yes':True,'no':False, 'on':True,'of':False}[s.lower()]
 
 
-# TODO: argparse.BooleanOptionalAction
+
 def add_boolean_argument(parser, name, default=False, dest=None, help=None):
     """Add a boolean argument to an ArgumentParser instance."""
 
-    #parser.add_argument('--' + name, action='store_true', default=default, help=help)
-    #return
+    try:
+      parser.add_argument('--' + name, action=argparse.BooleanOptionalAction,default=default,help = help)
+      return 
+    except: 
+      pass
 
+    # Fallback for Python < 3.9
     destname = dest or name.replace('-','_')
 
     onhelptext = None

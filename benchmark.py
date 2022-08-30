@@ -147,12 +147,12 @@ def main(argv):
     global verbose
     parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
 
+    subcommand_run(parser,None)
+
     # Pipeline actions
     add_boolean_argument(parser, 'clean', default=False, help="Start from scratch")
     add_boolean_argument(parser, 'configure', default=True, help="Enable configure (CMake) step")
     add_boolean_argument(parser, 'build', default=True, help="Enable build step")
-    add_boolean_argument(parser, 'verify', default=True, help="Enable check step")
-    add_boolean_argument(parser, 'run', default=True, help="Enable run step")
     add_boolean_argument(parser, 'evaluate', default=True, help="Print results table")
 
     # TODO: Warn/error on unused arguments because action is disable
