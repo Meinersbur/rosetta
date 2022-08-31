@@ -322,9 +322,9 @@ def readfile(filepath):
 def createfile(filename,contents):
     if isinstance(filename,Path):
       with filename.open(mode='w+') as f:
-        f.write(contents)
+        print(contents,file=f)
     with open(filename, 'w+')as f:
-        f.write(contents)
+        print(contents,file=f)
 
 
 
