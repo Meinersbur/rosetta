@@ -169,127 +169,129 @@ def main(argv):
     args = parser.parse_args(argv[1:])
     verbose = args.verbose
 
-    # TODO: If not specified, just reuse existing configs 
-    configs = parse_build_configs(args,implicit_reference=args.verify)
+    with runner.globalctxmgr :
 
-    srcdir = script.parent
-    builddir = srcdir / 'build'
-    resultdir = builddir / 'results'
+        # TODO: If not specified, just reuse existing configs 
+        configs = parse_build_configs(args,implicit_reference=args.verify)
 
-    #if builddir.exists():
-    #    if args.clean:
-    #        # TODO: Do this automatically when necessary (hash the CMakeLists.txt)
-    #        print_verbose("Cleaning previous builds")
-    #        for c in builddir.iterdir():
-    #            if c.name == 'results':
-    #                continue
-    #            shutil.rmtree(c)
-    #    else:
-    #        print_verbose("Reusing existing build")
-    resultdir.mkdir(parents=True,exist_ok=True)
+        srcdir = script.parent
+        builddir = srcdir / 'build'
+        resultdir = builddir / 'results'
 
-    
-    for config in configs:
-        if not config.name:
-              config.builddir  = builddir / 'defaultbuild'
-        elif config.name == "REF":
-            # TODO: same as defaultbuild?
-            config.builddir  = builddir / 'refbuild'
-        else:
-            config.builddir = builddir / f'build-{config.name}'
+        #if builddir.exists():
+        #    if args.clean:
+        #        # TODO: Do this automatically when necessary (hash the CMakeLists.txt)
+        #        print_verbose("Cleaning previous builds")
+        #        for c in builddir.iterdir():
+        #            if c.name == 'results':
+        #                continue
+        #            shutil.rmtree(c)
+        #    else:
+        #        print_verbose("Reusing existing build")
+        resultdir.mkdir(parents=True,exist_ok=True)
 
-
-    # TODO: Recognize "module" system
-    # TODO: Recognize famous environments (JLSE, Theta, Summit, Frontier, Aurora, ...)
+        
+        for config in configs:
+            if not config.name:
+                config.builddir  = builddir / 'defaultbuild'
+            elif config.name == "REF":
+                # TODO: same as defaultbuild?
+                config.builddir  = builddir / 'refbuild'
+            else:
+                config.builddir = builddir / f'build-{config.name}'
 
 
-    for config in configs:
-        builddir = config.builddir 
-        configdescfile  = builddir/'RosettaCache.txt'
+        # TODO: Recognize "module" system
+        # TODO: Recognize famous environments (JLSE, Theta, Summit, Frontier, Aurora, ...)
 
-        # TODO: Support other generators as well
-        opts = ['cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
-        opts += config.gen_cmake_args()
-        expectedopts = shjoin(opts)
 
-        reusebuilddir = False
-        if not args.clean and configdescfile.is_file() and (builddir / 'build.ninja').exists():
-            existingopts = readfile(configdescfile)            
-            if existingopts == expectedopts:
-                reusebuilddir=True
+        for config in configs:
+            builddir = config.builddir 
+            configdescfile  = builddir/'RosettaCache.txt'
 
-        if not reusebuilddir:
-            if builddir.exists():
-                shutil.rmtree(builddir)
-            builddir.mkdir(exist_ok=True,parents=True)
-            invoke_verbose(*opts, cwd=config.builddir)
-            createfile(configdescfile, expectedopts)
+            # TODO: Support other generators as well
+            opts = ['cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
+            opts += config.gen_cmake_args()
+            expectedopts = shjoin(opts)
+
+            reusebuilddir = False
+            if not args.clean and configdescfile.is_file() and (builddir / 'build.ninja').exists():
+                existingopts = readfile(configdescfile)            
+                if existingopts == expectedopts:
+                    reusebuilddir=True
+
+            if not reusebuilddir:
+                if builddir.exists():
+                    shutil.rmtree(builddir)
+                builddir.mkdir(exist_ok=True,parents=True)
+                invoke_verbose(*opts, cwd=config.builddir)
+                createfile(configdescfile, expectedopts)
+            
+
+            
+                
+                
+        for config in configs:
+            if args.build:
+                # TODO: Select subset to be build 
+                invoke_verbose('ninja', cwd=config.builddir)
+
+
+
+
+
+        # Load all available benchmarks
+        if args.verify or args.bench or args.probe:
+            for config in configs:
+                load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
+        
+            
+            
+            
+        def only_REF(bench):
+            return bench.configname == 'REF' 
+        def no_ref(bench):
+            return bench.configname != 'REF' 
+
+        
+        try:
+            [refconfig] = (c for c in configs if c.name == 'REF')
+        except:
+            refconfig = None
+        runner.subcommand_run(None,args,srcdir=thisscriptdir,buildondemand=not args.build,refbuilddir= refconfig.builddir if refconfig else None,filterfunc=no_ref,resultdir =resultdir)
+
+
+        #if args.verify:
+        #   def only_REF(bench):
+        #       return bench.configname =='REF' 
+        #   [refconfig] = (c for c in configs if c.name == 'REF')
+        #   refdir = refconfig.builddir / 'refout'
+        #   refdir.mkdir(exist_ok=True,parents=True)
+        #   runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+        #   runner.run_verify(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+
+
+        #resultfiles = None
+        #if args.run:
+        #    # TODO: Filter way 'REF' config
+        #    resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
+        #    #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
         
 
-          
-            
-            
-    for config in configs:
-        if args.build:
-            # TODO: Select subset to be build 
-            invoke_verbose('ninja', cwd=config.builddir)
+        #if args.evaluate:
+        #    if not resultfiles:
+        #        assert False, "TODO: Lookup last (successful) results dir"
+        #    if len(configs) == 1:
+        #        runner.evaluate(resultfiles)
+        #    else:
+        #        runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
 
-
-
-
-
-    # Load all available benchmarks
-    if args.verify or args.bench or args.probe:
-        for config in configs:
-            load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
-    
-         
-           
-           
-    def only_REF(bench):
-           return bench.configname == 'REF' 
-    def no_ref(bench):
-           return bench.configname != 'REF' 
-
-    
-    try:
-        [refconfig] = (c for c in configs if c.name == 'REF')
-    except:
-        refconfig = None
-    runner.subcommand_run(None,args,srcdir=thisscriptdir,buildondemand=not args.build,refbuilddir= refconfig.builddir if refconfig else None,filterfunc=no_ref,resultdir =resultdir)
-
-
-    #if args.verify:
-    #   def only_REF(bench):
-    #       return bench.configname =='REF' 
-    #   [refconfig] = (c for c in configs if c.name == 'REF')
-    #   refdir = refconfig.builddir / 'refout'
-    #   refdir.mkdir(exist_ok=True,parents=True)
-    #   runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
-    #   runner.run_verify(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
-
-
-    #resultfiles = None
-    #if args.run:
-    #    # TODO: Filter way 'REF' config
-    #    resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
-    #    #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
-    
-
-    #if args.evaluate:
-    #    if not resultfiles:
-    #        assert False, "TODO: Lookup last (successful) results dir"
-    #    if len(configs) == 1:
-    #        runner.evaluate(resultfiles)
-    #    else:
-    #        runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
-
-    #if args.boxplot:
-    #    def no_ref(bench):
-    #       return bench.configname !='REF' 
-    #    fig = runner.results_boxplot(resultfiles, compare_by="configname", filterfunc=no_ref)
-    #    fig.savefig(fname=args.boxplot)
-    #    fig.canvas.draw_idle() 
+        #if args.boxplot:
+        #    def no_ref(bench):
+        #       return bench.configname !='REF' 
+        #    fig = runner.results_boxplot(resultfiles, compare_by="configname", filterfunc=no_ref)
+        #    fig.savefig(fname=args.boxplot)
+        #    fig.canvas.draw_idle() 
 
 
 

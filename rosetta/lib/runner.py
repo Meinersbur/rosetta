@@ -21,7 +21,7 @@ from collections import defaultdict
 import io
 import configparser
 import typing 
-
+import contextlib
  
 
 
@@ -826,7 +826,8 @@ def load_resultfiles(resultfiles,filterfunc=None):
             name = benchmark.attrib['name']
             n = benchmark.attrib['n']
             cold_count = benchmark.attrib.get('cold_iterations') 
-            peak_alloc = benchmark.attrib.get('peak_alloc')
+            peak_alloc = int( benchmark.attrib.get('peak_alloc'))
+            maxrss =int( benchmark.attrib.get('maxrss'))
             ppm  = benchmark.attrib.get('ppm')
             buildtype  = benchmark.attrib.get('buildtype')
             configname = benchmark.attrib.get('configname')
@@ -841,7 +842,7 @@ def load_resultfiles(resultfiles,filterfunc=None):
             for k,data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            item = BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc,configname=configname) 
+            item = BenchResult( name=name, ppm=ppm, buildtype=buildtype, count=count,durations=stat_per_key, cold_count=cold_count,peak_alloc=peak_alloc,configname=configname,maxrss=maxrss) 
             if filterfunc and not filterfunc(item):
                     continue
             results.append( item)
@@ -1229,7 +1230,7 @@ def ensure_reffiles(refdir,problemsizefile,filterfunc=None,srcdir=None):
 def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
     problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
 
-    x = tempfile.TemporaryDirectory(prefix=f'verifyout') # TODO: Delete in a non-debug run
+    x = request_tempdir(prefix=f'verify') 
     tmpdir = mkpath(x.name)
 
     refdir.mkdir(exist_ok=True,parents=True)
@@ -1353,7 +1354,7 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
         if configname:
             thisresultdir /= configname
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
-        results .append (run_gbench(e,problemsizefile=problemsizefile,resultfile=thisresultdir))
+        results .append(run_gbench(e,problemsizefile=problemsizefile,resultfile=thisresultdir))
     return results
 
 
@@ -1382,6 +1383,26 @@ def custom_bisect_left(lb, ub, func):
         return mid
 
 
+mytempdir =None
+globalctxmgr  = contextlib. ExitStack()
+def request_tempdir(subdir=None): 
+    global     mytempdir
+    if mytempdir :
+        return mytempdir
+    x = tempfile.TemporaryDirectory(prefix=f'rosetta-') # TODO: Option to not delete / keep in current directory
+    mytempdir =  mkpath(globalctxmgr.enter_context(x))
+    return  mytempdir
+
+def request_tempfilename(prefix=None,suffix=None,subdir=None): 
+    tmpdir = request_tempdir(subdir=subdir)
+    candidate =  tmpdir/  f'{prefix}{suffix}'
+    i = 0
+    while candidate.exists():
+        candidate = tmpdir /  f'{prefix}-{i}{suffix}'
+        i+=1
+
+    return candidate
+
 # TODO: merge with run_gbench
 # TODO: repeats for stability
 def probe_bench(bench:Benchmark, limit_walltime, limit_rss, limit_alloc):
@@ -1390,29 +1411,32 @@ def probe_bench(bench:Benchmark, limit_walltime, limit_rss, limit_alloc):
     def is_too_large(result):
         if limit_walltime is not None and result.durations['walltime'].mean >= limit_walltime:
             return True
-        if limit_rss is not None and  result.maxrss >= limit_rss:
+        if limit_rss is not None and result.maxrss >= limit_rss:
              return True
         if limit_alloc is not None and result.peakalloc >= limit_alloc:
             return True
         return False
 
+
     # Find a rough ballpark
     lower_n = 1
     n = 1
-    while True:
-        [result] = do_run(bench,args=[f'-n{n}', '--repeats=1'] )
-        if is_too_large(result):
-            break
 
-        lower_n = n
-        n *= 2
 
     # Bisect between lower_n and n
     def func(n):
-        [result] = do_run(bench,args=[f'-n{n}', '--repeats=1'] )
+        resultfile = request_tempfilename(subdir='probe', prefix=f'{bench.target}-pbsize{n}',suffix='.xml')
+        do_run(bench,args=[f'--pbsize={n}', '--repeats=1'], resultfile=resultfile )
+        [result ]= load_resultfiles([resultfile])
         if is_too_large(result):
             return -1
         return 1
+
+
+    while func(n) != -1:
+        lower_n = n
+        n *= 2
+
     return custom_bisect_left(lower_n, n-1, func)
         
   
@@ -1432,8 +1456,7 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
                 ""
                 ]
         )
-
-    with problemsizefile.open('w+') as f:
+    with problemsizefile.open(mode='w+') as f:
         for line in problemsizecontent:
             print(line,file=f)
 
@@ -1443,19 +1466,14 @@ def runner_main(builddir):
     runner_main_run()
 
 def runner_main_run(srcdir,builddir):
-    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-data")
-    resultdir= builddir/ 'results'
-    subcommand_run(parser,None,srcdir,builddirs=[builddir],refbuilddir=builddir,resultdir=resultdir)
-    args = parser.parse_args(sys.argv[1:])
-    subcommand_run(None,args,srcdir,builddirs=[builddir],buildondemand=args.buildondemand,refbuilddir=builddir,resultdir=resultdir)
+    with  globalctxmgr :
+        parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
+        add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-data")
+        resultdir= builddir/ 'results'
+        subcommand_run(parser,None,srcdir,builddirs=[builddir],refbuilddir=builddir,resultdir=resultdir)
+        args = parser.parse_args(sys.argv[1:])
 
-
-
-#class BenchEnvironment:
-#    def __init__(self):
-#        self.benchlists = []
-#        self.refbuilddir = None
+        subcommand_run(None,args,srcdir,builddirs=[builddir],buildondemand=args.buildondemand,refbuilddir=builddir,resultdir=resultdir)
 
 
 
@@ -1467,10 +1485,9 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
 
         # Command
         add_boolean_argument(parser, 'probe', default=False, help="Enable probling")
-        #parser.add_argument('--write-problemsizefile', type=pathlib.Path)
-        #parser.add_argument('--limit-walltime', type=parse_time)
-        #parser.add_argument('--limit-rss', type=parse_memsize)
-        #parser.add_argument('--limit-alloc', type=parse_memsize)
+        parser.add_argument('--limit-walltime', type=parse_time)
+        parser.add_argument('--limit-rss', type=parse_memsize)
+        parser.add_argument('--limit-alloc', type=parse_memsize)
 
         # Verify step
         add_boolean_argument(parser, 'verify', default=False, help="Enable check step")
@@ -1482,16 +1499,20 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
     
 
     if args:
-        #if args.probe:
-        #    return run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
-
-
-        # If neither bench/verify is specified, enable bench implicitly 
+        # If neither no action is specified, enable --bench implicitly unless --no-bench
         probe = args.probe
         verify = args.verify 
         bench =  args.bench
         if bench is None and not verify and not probe:
             bench = True
+
+
+        if probe:
+            assert args.problemsizefile , "Requires to set a problemsizefile to set"
+            run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+
+
+
 
    
 

@@ -21,6 +21,7 @@
 #endif
 
 #ifdef BENCHMARK_OS_WINDOWS
+
 #define NOMINMAX 1
 #ifndef WIN32_LEAN_AND_MEAN // Already set by cupti
 #define WIN32_LEAN_AND_MEAN 1
@@ -29,6 +30,46 @@
 #undef StrCat // Don't let StrCat in string_util.h be renamed to lstrcatA
 #include <versionhelpers.h>
 #include <windows.h>
+#include <Psapi.h>  
+#include <signal.h>
+#include <bcrypt.h>   // NTSTATUS
+#include <ntstatus.h>
+#include <windows.h>
+#include <Psapi.h>  // memory_info(), memory_maps()
+#include <signal.h>
+#include <tlhelp32.h>  
+
+// #include <ntdef.h>
+// #include <ntifs.h>
+// (requires driver SDK)
+#define NtCurrentProcess() ( (HANDLE)(LONG_PTR) -1 )  
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+NTSTATUS (NTAPI *_NtQueryVirtualMemory) (
+    HANDLE ProcessHandle,
+    PVOID BaseAddress,
+    int MemoryInformationClass,
+    PVOID MemoryInformation,
+    SIZE_T MemoryInformationLength,
+    PSIZE_T ReturnLength
+    );
+#define NtQueryVirtualMemory _NtQueryVirtualMemory
+#define MemoryWorkingSetInformation 0x1
+typedef struct _MEMORY_WORKING_SET_BLOCK {
+    ULONG_PTR Protection : 5;
+    ULONG_PTR ShareCount : 3;
+    ULONG_PTR Shared : 1;
+    ULONG_PTR Node : 3;
+#ifdef _WIN64
+    ULONG_PTR VirtualPage : 52;
+#else
+    ULONG VirtualPage : 20;
+#endif
+} MEMORY_WORKING_SET_BLOCK, *PMEMORY_WORKING_SET_BLOCK;
+typedef struct _MEMORY_WORKING_SET_INFORMATION {
+    ULONG_PTR NumberOfEntries;
+    MEMORY_WORKING_SET_BLOCK WorkingSetInfo[1];
+} MEMORY_WORKING_SET_INFORMATION, *PMEMORY_WORKING_SET_INFORMATION;
+
 #else
 #include <fcntl.h>
 #ifndef BENCHMARK_OS_FUCHSIA
@@ -46,6 +87,7 @@
 #include <mach/mach_port.h>
 #include <mach/thread_act.h>
 #endif
+
 #endif
 
 #ifdef BENCHMARK_OS_EMSCRIPTEN
@@ -105,6 +147,12 @@ using duration_t = std::variant<std::monostate, common_duration_t // lowest comm
                                 std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
 #endif
                                 >;
+
+
+// size in bytes
+using memory_t = ssize_t;
+
+
 
 
 
@@ -183,6 +231,88 @@ std::pair<usage_duration_t, usage_duration_t> ProcessCPUUsage() {
   if (getrusage(RUSAGE_SELF, &ru) == 0)
     return MakeTime(ru);
   DiagnoseAndExit("getrusage(RUSAGE_SELF, ...) failed");
+#endif
+}
+
+
+memory_t getMaxRSS() {
+#if defined(BENCHMARK_OS_WINDOWS)
+
+    // https://docs.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters
+    PROCESS_MEMORY_COUNTERS meminfo = {0};
+    GetProcessMemoryInfo ( GetCurrentProcess(),  &meminfo, sizeof(meminfo ) );
+    return meminfo.PeakWorkingSetSize;
+
+#if 0
+    // https://github.com/giampaolo/psutil/blob/master/psutil/_psutil_windows.c
+
+    NTSTATUS status;
+    PVOID buffer;
+    SIZE_T bufferSize;
+
+    bufferSize = 0x8000;
+    buffer = malloc(bufferSize);
+    assert(buffer);
+
+    auto hProcess =NtCurrentProcess ();
+    while ((status = NtQueryVirtualMemory(
+        hProcess,
+        NULL,
+        MemoryWorkingSetInformation,
+        buffer,
+        bufferSize,
+        NULL)) == STATUS_INFO_LENGTH_MISMATCH)
+    {
+        bufferSize *= 2;
+        // Fail if we're resizing the buffer to something very large.
+        if (bufferSize > 256 * 1024 * 1024) {
+            assert(!                "NtQueryVirtualMemory bufsize is too large");
+            return 1;
+        }
+        buffer = realloc(buffer, bufferSize);
+            assert(buffer);
+    }
+
+    assert(NT_SUCCESS(status));
+   
+
+    auto wSetInfo = (PMEMORY_WORKING_SET_INFORMATION)buffer;
+
+
+    memory_t pages = 0 ;
+    for (int i = 0; i < wSetInfo->NumberOfEntries; i++) {
+        // This is what ProcessHacker does.
+        /*
+        wsCounters.NumberOfPages++;
+        if (wsInfo->WorkingSetInfo[i].ShareCount > 1)
+        wsCounters.NumberOfSharedPages++;
+        if (wsInfo->WorkingSetInfo[i].ShareCount == 0)
+        wsCounters.NumberOfPrivatePages++;
+        if (wsInfo->WorkingSetInfo[i].Shared)
+        wsCounters.NumberOfShareablePages++;
+        */
+
+        // This is what psutil does: count shared pages that only one process is using as private (USS).
+        /*
+        if (!wsInfo->WorkingSetInfo[i].Shared ||
+            wsInfo->WorkingSetInfo[i].ShareCount <= 1) {
+            wsCounters.NumberOfPrivatePages++;
+        }*/
+
+        auto &wsInfo =wSetInfo->WorkingSetInfo[i];
+        if (wsInfo.Shared ||  wsInfo.ShareCount <= 1)
+            pages += 1;
+    }
+
+    HeapFree(GetProcessHeap(), 0, wSetInfo);
+    free(buffer);
+    return 0;
+#endif
+
+#else 
+    struct rusage ru = {0}; // TODO: Just one call with ProcessCPUUsage
+    getrusage(RUSAGE_SELF, & ru);
+    return ru.ru_maxrss * 1024;
 #endif
 }
 
@@ -689,7 +819,7 @@ public:
   bool isBenchRun() const { return !verify; }
 
 public:
-  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {}
+  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {  }
  // ~BenchmarkRun() {
  //   if (verifyout) 
 //        verifyout.close();
@@ -743,10 +873,12 @@ public:
         CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
         startTimestamp = cuptiStart;
 #endif
-
+        preinitRSS = getMaxRSS();
 
         // TODO: make flexible, this is just on way to find a run function
         ::run(state, n);
+
+        lastRSS = getMaxRSS();
     }
 
     if (verifyout.is_open()) 
@@ -795,8 +927,13 @@ public:
 #endif
 
 
-  size_t curAllocatedBytes = 0;
-  size_t peakAllocatedBytes = 0;
+  memory_t curAllocatedBytes = 0;
+  memory_t peakAllocatedBytes = 0;
+
+  memory_t preinitRSS = 0;
+  memory_t postinitRSS = 0;
+  memory_t firstRSS = 0;
+  memory_t lastRSS = 0;
 
   void start() {
     // printf("start\n");
@@ -901,12 +1038,26 @@ public:
     if (cuptiStartDtoH <= cuptiStopDtoH)
       m.values[CuptiTransferToHost] = std::chrono::duration<uint64_t, std::chrono::nanoseconds::period>(cuptiStopDtoH - cuptiStartDtoH);
 #endif
+
+
+
     measurements.push_back(std::move(m));
   }
 
   int refresh() {
+      switch (measurements.size()) {
+      case 0:
+          postinitRSS = getMaxRSS();
+          break;
+      case 1:
+          firstRSS = getMaxRSS();
+          break;
+      }
+
+
+
     if (verify) {
-      // When verifying, always do exectly one iteration
+      // When verifying, always do exactly one iteration
       return 1 - measurements.size();
     } else {
       auto now = std::chrono::steady_clock::now();
@@ -914,6 +1065,8 @@ public:
 
       if (exactRepeats >= 1) {
         measurements.reserve(exactRepeats);
+        if (measurements.size() ==0)
+            return std::min( (size_t)1, exactRepeats - measurements.size() ); // Ensure that refresh() is called again after the first iterations to measure firstRSS.
         return exactRepeats - measurements.size();
       }
 
@@ -1338,6 +1491,7 @@ struct Rosetta {
           cxml << " configname=\"" << escape(rosetta_configname) << '\"';
         if (strlen(bench_buildtype) >= 1)
           cxml << " buildtype=\"" << escape(bench_buildtype) << '\"';
+        cxml << " maxrss=\"" <<   executor.lastRSS - executor.preinitRSS << "\""; // Discount RSS for process overhead to avoid a OS-specific constant baseline (not entirely accurate; those parts like the loader may be removed from the working set during exeuction because of memory pressure) 
         cxml << ">" << std::endl;
         for (int i = startMeasures; i < numMeasures; i += 1) {
           auto &m = executor.measurements[i];
@@ -1542,7 +1696,7 @@ int main(int argc, char *argv[]) {
   while (i < argc) {
     auto [name, val] = nextArg(argc, argv, i);
 
-    if (name == "n" || name=="problemsize") {
+    if (name == "n" || name=="problemsize" || name=="pbsize")  {
       if (!val.has_value() && i <= argc) {
         val = argv[i];
         i += 1;
