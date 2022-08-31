@@ -173,7 +173,12 @@ if __name__ == '__main__':
   FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
 
-
+if (_default_build_type)
+  execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "benchlist-${_default_build_type}.py" "benchlist.py" 
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  )
+endif ()
 
 
 

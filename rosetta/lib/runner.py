@@ -1143,7 +1143,7 @@ def getPPMDisplayStr(s:str):
 
 
 class Benchmark:
-    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None):
+    def __init__(self,basename,target,exepath,buildtype,ppm,configname,sources=None,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None,benchlistfile=None,is_ref=None):
         self.basename = basename
         self.target=target
         self.exepath =exepath 
@@ -1154,7 +1154,9 @@ class Benchmark:
         self.benchpropfile=benchpropfile
         self.compiler = mkpath(compiler)
         self.compilerflags=compilerflags
-        self.pbsize = pbsize # defaul problemsize
+        self.pbsize = pbsize # default problemsize
+        self.benchlistfile = benchlistfile 
+        self.is_ref = is_ref 
 
     @property 
     def name(self):
@@ -1321,7 +1323,6 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
 
 
 
-    
 
 def make_resultssubdir(within=None):
     global resultsdir
@@ -1339,11 +1340,13 @@ def make_resultssubdir(within=None):
         suffix = f'_{i}'
 
 
-def run_bench(problemsizefile=None, srcdir=None):
+
+
+def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
     problemsizefile = get_problemsizefile(srcdir, problemsizefile)
 
     results = []
-    resultssubdir = make_resultssubdir()
+    resultssubdir = make_resultssubdir(within=resultdir)
     for e in benchmarks:
         thisresultdir = resultssubdir
         configname = e.configname
@@ -1439,32 +1442,41 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
 def runner_main(builddir):
     runner_main_run()
 
-def runner_main_run(builddir):
+def runner_main_run(srcdir,builddir):
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    subcommand_run(parser,None,builddirs=[builddir],refbuilddir=builddir)
+    add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-data")
+    resultdir= builddir/ 'results'
+    subcommand_run(parser,None,srcdir,builddirs=[builddir],refbuilddir=builddir,resultdir=resultdir)
     args = parser.parse_args(sys.argv[1:])
-    subcommand_run(None,args,builddirs=[builddir],refbuilddir=builddir)
+    subcommand_run(None,args,srcdir,builddirs=[builddir],buildondemand=args.buildondemand,refbuilddir=builddir,resultdir=resultdir)
+
+
+
+#class BenchEnvironment:
+#    def __init__(self):
+#        self.benchlists = []
+#        self.refbuilddir = None
 
 
 
 
-def subcommand_run(parser,args,builddirs=None,refbuilddir=None):
+def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuilddir=None,filterfunc=None,resultdir=None):
     if parser:
         parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
+        parser.add_argument('--verbose', '-v', action='count')
 
         # Command
-        #parser.add_argument('--probe', action='store_true')
+        add_boolean_argument(parser, 'probe', default=False, help="Enable probling")
         #parser.add_argument('--write-problemsizefile', type=pathlib.Path)
         #parser.add_argument('--limit-walltime', type=parse_time)
         #parser.add_argument('--limit-rss', type=parse_memsize)
         #parser.add_argument('--limit-alloc', type=parse_memsize)
 
         # Verify step
-        if refbuilddir:
-            add_boolean_argument(parser, 'verify', default=False, help="Enable check step")
+        add_boolean_argument(parser, 'verify', default=False, help="Enable check step")
 
         # Run step
-        add_boolean_argument(parser, 'bench', default=True, help="Enable run step")
+        add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
 
         parser.add_argument('--boxplot', type=pathlib.Path, help="Save as boxplot to FILENAME")
     
@@ -1473,12 +1485,22 @@ def subcommand_run(parser,args,builddirs=None,refbuilddir=None):
         #if args.probe:
         #    return run_probe(problemsizefile=args.write_problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-        if args.verify:
-            refdir = refbuilddir / 'refout'
-            return run_verify(problemsizefile=args.problemsizefile,refdir=refdir)
 
-        if args.bench:
-            resultfiles = run_bench(problemsizefile=args.problemsizefile)
+        # If neither bench/verify is specified, enable bench implicitly 
+        probe = args.probe
+        verify = args.verify 
+        bench =  args.bench
+        if bench is None and not verify and not probe:
+            bench = True
+
+   
+
+        if verify:
+            refdir = refbuilddir / 'refout'
+            run_verify(problemsizefile=args.problemsizefile,refdir=refdir)
+
+        if bench:
+            resultfiles = run_bench(srcdir=srcdir,problemsizefile=args.problemsizefile,resultdir=resultdir)
 
             if args.boxplot:
                 fig = results_boxplot(resultfiles)
@@ -1523,21 +1545,29 @@ def rosetta_config(resultsdir):
     set_global(resultsdir)
 
 
-
+benchlistfile = None
+import_is_ref = None
 benchmarks : typing .List[Benchmark]  =[]
 def register_benchmark(basename,target,exepath,buildtype,ppm,configname,benchpropfile=None,compiler=None,compilerflags=None,pbsize=None):
-    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), buildtype=buildtype,ppm=ppm,configname=configname,benchpropfile=benchpropfile,compiler=compiler,compilerflags=compilerflags,pbsize=pbsize)
+    bench = Benchmark(basename=basename,target=target,exepath=mkpath(exepath), buildtype=buildtype,ppm=ppm,configname=configname,benchpropfile=benchpropfile,compiler=compiler,compilerflags=compilerflags,pbsize=pbsize,benchlistfile=benchlistfile,is_ref=import_is_ref )
     benchmarks.append(bench)
 
 
 
-
-def load_register_file(filename):
+def load_register_file(filename,is_ref=False):
+    global benchlistfile ,import_is_ref
     import importlib
-    spec = importlib.util.spec_from_file_location( mkpath(filename).stem, str(filename))
-    module =  importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
 
+    filename = mkpath(filename)
+    benchlistfile = filename
+    import_is_ref = is_ref 
+    try:
+        spec = importlib.util.spec_from_file_location(filename.stem, str(filename))
+        module =  importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    finally:
+        benchlistfile = None
+        import_is_ref = None
 
 
 
