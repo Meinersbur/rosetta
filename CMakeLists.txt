@@ -380,7 +380,7 @@ thisscriptdir = pathlib.Path(__file__).parent
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
 
 if __name__ == '__main__':
-  runner_main_run(builddir=thisscriptdir)
+  runner_main_run(srcdir='${CMAKE_SOURCE_DIR}',builddir=thisscriptdir)
 "
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
@@ -406,12 +406,12 @@ thisscriptdir = pathlib.Path(__file__).parent
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
 
 if __name__ == '__main__':
-  runner_main_verify(builddir=thisscriptdir)
+  runner_main_verify(srcdir='${CMAKE_SOURCE_DIR}',builddir=thisscriptdir)
 "
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 add_custom_target(verify
-    COMMAND Python::Interpreter "verify-$<CONFIG>.py" 
+    COMMAND Python::Interpreter "verify-$<CONFIG>.py"  --no-buildondemand
     COMMENT "Verify benchmarks ..."
     USES_TERMINAL VERBATIM
 )
@@ -432,12 +432,12 @@ thisscriptdir = pathlib.Path(__file__).parent
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
 
 if __name__ == '__main__':
-  runner_main_probe(builddir=thisscriptdir)
+  runner_main_probe(srcdir='${CMAKE_SOURCE_DIR}',builddir=thisscriptdir)
 "
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 add_custom_target(probe
-    COMMAND Python::Interpreter "probe-$<CONFIG>.py" 
+    COMMAND Python::Interpreter "probe-$<CONFIG>.py"  --no-buildondemand
     COMMENT "Probe problemsize ..."
     USES_TERMINAL VERBATIM
 )
@@ -446,7 +446,7 @@ add_dependencies(probe ${_benchmarks})
 
 if (_default_build_type)
   execute_process(
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.py" "run.py"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.py" "run.py" 
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
   execute_process(

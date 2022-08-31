@@ -52,7 +52,7 @@ class BuildConfig:
 
         # TODO: Combine with (-D, -DCMAKE_<lang>_FLAGS) from compiler/cmake_arg
         cmake_opts = self.cmake_arg[:]
-        for k,d in self.cmake_def:
+        for k,d in self.cmake_def.items():
             cmake_opts .append(f"-D{k}={d}")
         if compiler_args:
             # TODO: Only set the ones relevant for enable PPMs
@@ -147,19 +147,11 @@ def main(argv):
     global verbose
     parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
 
-    subcommand_run(parser,None)
-
-    # Pipeline actions
+    # Clean step
     add_boolean_argument(parser, 'clean', default=False, help="Start from scratch")
+
+    # Configure step
     add_boolean_argument(parser, 'configure', default=True, help="Enable configure (CMake) step")
-    add_boolean_argument(parser, 'build', default=True, help="Enable build step")
-    add_boolean_argument(parser, 'evaluate', default=True, help="Print results table")
-
-    # TODO: Warn/error on unused arguments because action is disable
-    parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
-    parser.add_argument('--verbose', '-v', action='count')
-    
-
     #TODO: Add switches that parse multiple arguments using shsplit
     parser.add_argument('--cmake-arg', metavar="CONFIG:ARG", action='append')
     parser.add_argument('--cmake-def', metavar="CONFIG:DEF[=VAL]", action='append')
@@ -167,9 +159,12 @@ def main(argv):
     parser.add_argument('--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
     parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
 
-    parser.add_argument('--boxplot', type=pathlib.Path)
+    # Build step
+    add_boolean_argument(parser, 'build', default=True, help="Enable build step")
 
-    
+    # Run/verify/evaluate steps
+    runner.subcommand_run(parser,None,srcdir=thisscriptdir)
+
 
     args = parser.parse_args(argv[1:])
     verbose = args.verbose
@@ -205,7 +200,7 @@ def main(argv):
 
 
     # TODO: Recognize "module" system
-    # TODO: Recognize famous machines (JLSE, Summit, Aurora, Frontier, ...)
+    # TODO: Recognize famous environments (JLSE, Theta, Summit, Frontier, Aurora, ...)
 
 
     for config in configs:
@@ -234,53 +229,67 @@ def main(argv):
           
             
             
-
+    for config in configs:
         if args.build:
             # TODO: Select subset to be build 
             invoke_verbose('ninja', cwd=config.builddir)
 
 
+
+
+
     # Load all available benchmarks
-    if args.verify or args.run:
+    if args.verify or args.bench or args.probe:
         for config in configs:
-            runconfigfile = config.builddir / 'run-Release.py' # TODO: Always Release?
-            spec = importlib.util.spec_from_file_location(str(runconfigfile), str(runconfigfile))
-            module =  importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
+            load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
+    
+         
+           
+           
+    def only_REF(bench):
+           return bench.configname == 'REF' 
+    def no_ref(bench):
+           return bench.configname != 'REF' 
+
+    
+    try:
+        [refconfig] = (c for c in configs if c.name == 'REF')
+    except:
+        refconfig = None
+    runner.subcommand_run(None,args,srcdir=thisscriptdir,buildondemand=not args.build,refbuilddir= refconfig.builddir if refconfig else None,filterfunc=no_ref,resultdir =resultdir)
 
 
-    if args.verify:
-       def only_REF(bench):
-           return bench.configname =='REF' 
-       [refconfig] = (c for c in configs if c.name == 'REF')
-       refdir = refconfig.builddir / 'refout'
-       refdir.mkdir(exist_ok=True,parents=True)
-       runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+    #if args.verify:
+    #   def only_REF(bench):
+    #       return bench.configname =='REF' 
+    #   [refconfig] = (c for c in configs if c.name == 'REF')
+    #   refdir = refconfig.builddir / 'refout'
+    #   refdir.mkdir(exist_ok=True,parents=True)
+    #   runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+    #   runner.run_verify(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
 
-       runner.run_verify(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
 
-
-    resultfiles = None
-    if args.run:
-        # TODO: Filter way 'REF' config
-        resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
-        #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
+    #resultfiles = None
+    #if args.run:
+    #    # TODO: Filter way 'REF' config
+    #    resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
+    #    #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
     
 
-    if args.evaluate:
-        if not resultfiles:
-            assert False, "TODO: Lookup last (successful) results dir"
-        if len(configs) == 1:
-            runner.evaluate(resultfiles)
-        else:
-            runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
+    #if args.evaluate:
+    #    if not resultfiles:
+    #        assert False, "TODO: Lookup last (successful) results dir"
+    #    if len(configs) == 1:
+    #        runner.evaluate(resultfiles)
+    #    else:
+    #        runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
 
-    if args.boxplot:
-        def no_ref(bench):
-           return bench.configname !='REF' 
-        fig = runner.results_boxplot(resultfiles, compare_by="configname", filterfunc=no_ref)
-        fig.savefig(fname=args.boxplot)
-        fig.canvas.draw_idle() 
+    #if args.boxplot:
+    #    def no_ref(bench):
+    #       return bench.configname !='REF' 
+    #    fig = runner.results_boxplot(resultfiles, compare_by="configname", filterfunc=no_ref)
+    #    fig.savefig(fname=args.boxplot)
+    #    fig.canvas.draw_idle() 
 
 
 
