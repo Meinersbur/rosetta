@@ -1511,9 +1511,6 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
             assert args.problemsizefile , "Requires to set a problemsizefile to set"
             run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-
-
-
    
 
         if verify:
@@ -1528,7 +1525,10 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
                 fig.savefig(fname=args.boxplot)
                 fig.canvas.draw_idle() 
 
-            evaluate(resultfiles)
+            if len(builddirs)> 1:
+                results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
+            else:
+                evaluate(resultfiles)
 
 
 

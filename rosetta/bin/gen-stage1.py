@@ -12,7 +12,7 @@ import importlib.util
 
 
 
-print(pathlib.Path(__file__).parent.absolute() / 'lib')
+#print(pathlib.Path(__file__).parent.absolute() / 'lib')
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.absolute() / 'lib'))
 from support import *
 import rosetta

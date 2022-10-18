@@ -241,7 +241,7 @@ def main(argv):
 
 
         # Load all available benchmarks
-        if args.verify or args.bench or args.probe:
+        if args.verify or args.bench or args.probe or  (not args.verify and args.bench is None and not args.probe):
             for config in configs:
                 load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
         
@@ -258,7 +258,7 @@ def main(argv):
             [refconfig] = (c for c in configs if c.name == 'REF')
         except:
             refconfig = None
-        runner.subcommand_run(None,args,srcdir=thisscriptdir,buildondemand=not args.build,refbuilddir= refconfig.builddir if refconfig else None,filterfunc=no_ref,resultdir =resultdir)
+        runner.subcommand_run(None,args,srcdir=thisscriptdir,buildondemand=not args.build,builddirs=[config.builddir for config in configs], refbuilddir= refconfig.builddir if refconfig else None,filterfunc=no_ref,resultdir =resultdir)
 
 
         #if args.verify:
@@ -279,7 +279,7 @@ def main(argv):
         
 
         #if args.evaluate:
-        #    if not resultfiles:
+        #   if not resultfiles:
         #        assert False, "TODO: Lookup last (successful) results dir"
         #    if len(configs) == 1:
         #        runner.evaluate(resultfiles)
