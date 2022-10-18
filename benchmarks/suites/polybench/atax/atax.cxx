@@ -1,4 +1,5 @@
 // BUILD: add_benchmark(ppm=serial)
+
 #include "rosetta.h"
 
 static void kernel(int m, int n, multarray<real, 2> A, real *x, real *y, real *tmp) {

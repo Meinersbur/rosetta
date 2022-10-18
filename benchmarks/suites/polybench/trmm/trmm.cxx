@@ -1,6 +1,6 @@
+// BUILD: add_benchmark(ppm=serial)
+
 #include "rosetta.h"
-
-
 
 static void kernel(int n, int m,
                    real alpha,

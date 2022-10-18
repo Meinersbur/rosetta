@@ -1,3 +1,6 @@
+// BUILD: add_benchmark(ppm=serial)
+
+
 #include "rosetta.h"
 
 
