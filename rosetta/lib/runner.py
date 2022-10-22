@@ -1230,10 +1230,9 @@ def ensure_reffiles(refdir,problemsizefile,filterfunc=None,srcdir=None):
 def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
     problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
 
-    x = request_tempdir(prefix=f'verify') 
-    tmpdir = mkpath(x.name)
-
-    refdir.mkdir(exist_ok=True,parents=True)
+    #x = request_tempdir(prefix=f'verify') 
+    #tmpdir = mkpath(x.name)
+    #refdir.mkdir(exist_ok=True,parents=True)
         
     for e  in benchmarks:
         if filterfunc and not filterfunc(e):
@@ -1246,7 +1245,8 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
         pbsize = get_problemsize(e,problemsizefile=problemsizefile)
 
     
-        testoutpath = tmpdir / f'{e.name}_{e.ppm}_{pbsize}.testout' 
+        testoutpath = request_tempfilename(subdir='verify', prefix=f'{e.name}_{e.ppm}_{pbsize}', suffix='.testout')
+        # tmpdir / f'{e.name}_{e.ppm}_{pbsize}.testout' 
 
 
  
@@ -1386,7 +1386,7 @@ def custom_bisect_left(lb, ub, func):
 mytempdir =None
 globalctxmgr  = contextlib. ExitStack()
 def request_tempdir(subdir=None): 
-    global     mytempdir
+    global mytempdir
     if mytempdir :
         return mytempdir
     x = tempfile.TemporaryDirectory(prefix=f'rosetta-') # TODO: Option to not delete / keep in current directory
@@ -1536,9 +1536,10 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
 
 
 # TODO: Integrate into subcommand_run
-def runner_main_verify(builddir):
+def runner_main_verify(builddir,srcdir):
     parser = argparse.ArgumentParser(description="Benchmark verification", allow_abbrev=False)
     parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
+    add_boolean_argument(parser, 'buildondemand', default=True) # TODO: implement
 
     args = parser.parse_args()
 
