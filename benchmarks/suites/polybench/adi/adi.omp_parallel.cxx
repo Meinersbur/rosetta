@@ -8,7 +8,7 @@ static void kernel(
     multarray<real, 2> v,
     multarray<real, 2> p,
     multarray<real, 2> q) {
-#pragma scop
+
   real DX = 1 / (real)n;
   real DY = 1 / (real)n;
   real DT = 1 / (real)tsteps;
@@ -28,7 +28,7 @@ static void kernel(
 {
   for (int t = 1; t <= tsteps; t++) {
     // Column Sweep
-    #pragma omp for
+    #pragma omp for schedule(static)
     for (int i = 1; i < n - 1; i++) {
       v[0][i] = 1;
       p[i][0] = 0;
@@ -43,7 +43,7 @@ static void kernel(
         v[j][i] = p[i][j] * v[j + 1][i] + q[i][j];
     }
     // Row Sweep
-    #pragma omp for
+    #pragma omp for schedule(static)
     for (int i = 1; i < n - 1; i++) {
       u[i][0] = 1;
       p[i][0] = 0;
@@ -58,7 +58,6 @@ static void kernel(
     }
   }
 }
-#pragma endscop
 }
 
 
