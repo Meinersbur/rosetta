@@ -5,7 +5,8 @@
 
 static void kernel(int n,
                    multarray<real, 2> A) {
-#pragma scop
+#pragma omp parallel for schedule(static)
+
   for (int i = 0; i < n; i++) {
     // j<i
     for (int j = 0; j < i; j++) {
@@ -21,7 +22,6 @@ static void kernel(int n,
 
     A[i][i] = std::sqrt( A[i][i]);
   }
-#pragma endscop
 }
 
 // https://math.stackexchange.com/a/358092
