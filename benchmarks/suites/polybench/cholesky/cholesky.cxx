@@ -3,29 +3,68 @@
 
 
 
+static real sqr(real v) {
+    return v*v;
+}
+
 static void kernel(int n,
                    multarray<real, 2> A) {
 #pragma scop
   for (int i = 0; i < n; i++) {
-    // j<i
+
+    // j<i case
     for (int j = 0; j < i; j++) {
       for (int k = 0; k < j; k++) 
-        A[i][j] -= A[i][k] * A[j][k];
-      A[i][j] /= A[j][j]; 
+S:        A[i][j] -= A[i][k] * A[j][k];
+T:      A[i][j] /= A[j][j]; 
     }
+
     // i==j case
     for (int k = 0; k < i; k++) 
-      A[i][i] -= A[i][k] * A[i][k];
-    
-
-
-    A[i][i] = std::sqrt( A[i][i]);
+U:      A[i][i] -= sqr(A[i][k]);
+V:    A[i][i] = std::sqrt(A[i][i]);
   }
 #pragma endscop
 }
 
+// T(4,0):   A[4][0] /= A[0][0]; 
+// 
+// S(4,1,0): A[4][1] -= A[4][0] * A[1][0];
+// T(4,1):   A[4][1] /= A[1][1]; 
+// 
+// S(4,2,0): A[4][2] -= A[4][0] * A[2][0];
+// S(4,2,1): A[4][2] -= A[4][1] * A[2][1];
+// T(4,2):   A[4][2] /= A[2][2]; 
+// 
+// S(4,3,0): A[4][3] -= A[4][0] * A[3][0];
+// S(4,3,1): A[4][3] -= A[4][1] * A[3][1];
+// S(4,3,2): A[4][3] -= A[4][2] * A[3][2];
+// T(4,3):   A[4][3] /= A[3][3]; 
+
+// U(4,0):   A[4][4] -= sqr(A[4][0]);
+// U(4,1):   A[4][4] -= sqr(A[4][1]);
+// U(4,2):   A[4][4] -= sqr(A[4][2]);
+// U(4,3):   A[4][4] -= sqr(A[4][3]);
+// V(4):     A[4][4] = std::sqrt(A[4][4]);
+
+
+
 // https://math.stackexchange.com/a/358092
+// https://math.stackexchange.com/q/357980
 static void ensure_posdefinite(int n, multarray<real, 2> A) {
+if (n==3) {
+  A[0][0] =  4;
+A[0][1] = 12;
+A[0][2] = -16;
+  A[1][0] =  12;
+A[1][1] = 37;
+A[1][2] = -43;
+  A[2][0] =  -16;
+A[2][1] = -43;
+A[2][2] = 98;
+return ;
+}
+
     // make symmetric (not really necessary, the kernel doesn't read the upper triangular elements anyway)
     for (int i = 0; i < n; i++)
         for (int j = 0; j < i; j++) {

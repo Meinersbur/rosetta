@@ -1213,7 +1213,10 @@ def ensure_reffile(bench: Benchmark,refdir,problemsizefile):
     if problemsizefile:
         args.append(f'--problemsizefile={problemsizefile}')
     invoke.call(*args, print_command=True)    
-    assert refpath.is_file()
+    if not refpath.is_file():
+        print(f"{refpath} not been written?")
+        assert refpath.is_file()
+
     print(f"Reference output of {bench.name} written to {refpath}")
  
 
@@ -1314,8 +1317,9 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                     reld = 0 if absd==0 else math.inf 
                   else:
                     reld = absd/mid
-                  if reld != 0:
-                    die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord}")
+                  if reld > 0: # TODO: Don't hardcode difference; this default is also quite high
+                    print(f"While comparing {refpath} and {testoutpath}:")
+                    die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
 
         print(f"Output of {e.exepath} considered correct")       
 

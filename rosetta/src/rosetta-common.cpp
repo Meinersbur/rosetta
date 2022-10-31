@@ -1215,11 +1215,11 @@ void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size
       // std::to_chars returns a string representation that allows recovering the original float binary representation, and locale-independent.
       // FIXME: Does the python part actually do? Could also use std::chars_format::hex or use binary directly.
       // https://eel.is/c++draft/charconv.to.chars#2
-      auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val,std::chars_format::general );
+      auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val,std::chars_format::general);
       assert(ec == std::errc());
    
       std::string_view strv(str.data(),  ptr - str.data()); 
-      verifyout << ' ' << strv  ;
+      verifyout << '\t' << strv;
   }
   verifyout << '\n';
 }
@@ -1573,7 +1573,7 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *
 std::tuple<std::string_view, std::optional<std::string_view>> nextArg(int argc, char *argv[], int &i) {
   std::string_view arg{argv[i]};
   i += 1;
-  if (arg.length() > 3 && arg.substr(0, 2) == "--" && isalpha(arg[2])) {
+  if (arg.length() >= 3 && arg.substr(0, 2) == "--" && isalpha(arg[2])) {
     std::string_view sw = arg.substr(2);
     auto eqpos = sw.find('=');
     if (eqpos != std::string_view::npos) {
@@ -1583,7 +1583,7 @@ std::tuple<std::string_view, std::optional<std::string_view>> nextArg(int argc, 
     }
     return {sw, {}};
   }
-  if (arg.length() > 2 && arg[0] == '-' && isalpha(arg[1])) {
+  if (arg.length() >= 2 && arg[0] == '-' && isalpha(arg[1])) {
     auto swname = arg.substr(1, 1);
     if (arg.length() > 2) {
       auto swarg = arg.substr(2);
@@ -1810,7 +1810,8 @@ int main(int argc, char *argv[]) {
       auto q = std::ctime(&now_time);
       char buf[200];
       std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M", std::localtime(&now_time));
-      auto filename = std::string(buf) + "_" + benchname + suffix + ".xml";
+      std::string  filename = std::string(buf) + "_" + benchname + suffix + ".xml";
+
       // auto filename = std::vformat("{0:%F_%R}_{1}{2}.xml",now,benchname, suffix  );
       resultsfilename /= filename;
       if (!std::filesystem::exists(resultsfilename))

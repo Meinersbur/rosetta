@@ -5,18 +5,19 @@
 static void kernel(int m, int n, multarray<real, 2> A, real *x, real *y, real *tmp) {
 #pragma omp parallel
     {
-#pragma omp  for schedule(static) nowait 
+#pragma omp for schedule(static) nowait
         for (int i = 0; i < n; i++)
             y[i] = 0;
-#pragma omp   for schedule(static) 
+#pragma omp for schedule(static)
         for (int i = 0; i < m; i++){
             tmp[i] = 0;
             for (int j = 0; j < n; j++)
                 tmp[i] += A[i][j] * x[j];
         }
-#pragma omp   for schedule(static)
+
+#pragma omp for schedule(static)
         for (int j = 0; j < n; j++)
-         for (int i = 0; i < m; i++)
+            for (int i = 0; i < m; i++)
                 y[j] += A[i][j] * tmp[i];
     }
 }
