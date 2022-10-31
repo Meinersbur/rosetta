@@ -408,6 +408,7 @@ public:
 
 
 
+// TODO: Make extensible depending on PPM.
 enum Measure {
   WallTime,
   UserTime,
