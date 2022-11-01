@@ -141,10 +141,13 @@ static void cholesky_gemm(idx_t base_ai, idx_t base_aj,
     for (idx_t i = 0; i < ni; ++i) {
         for (idx_t j = 0; j < nj; ++j) {
             for (idx_t k = 0; k < nk; ++k) {
-                auto Aik  =  A[base_ai + i][base_aj + k];
-                auto Akj = A[base_bi + k][base_bj + j];
+                    assert(base_ai + i >= base_aj + k);
+                auto Aik = A[base_ai + i][base_aj + k];  // Li21
+                    assert(base_bi + j >= base_bj + k);
+                auto Akj = A[base_bi + j][base_bj + k];  // Lj21T
                 auto mul  =Aik * Akj;
-                A[base_ci + i][base_cj + j] -= mul;
+                    assert(base_ci + i >= base_cj + j);
+                A[base_ci + i][base_cj + j] -= mul; // Aij22
             }
         }
     }
@@ -175,17 +178,29 @@ static void cholesky_syrk(
 
 
 
+
+
 static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
     auto *Ap =& A[0][0];
     typedef real ArrTy[3][3];
     ArrTy *Aa = (ArrTy*)( Ap);
 
+    auto suggest_blocksize = []  (idx_t i) -> pbsize_t {
+        if (i==0) return 1;
+        return 2;
+    };
+
+
+
+
  // #pragma omp parallel firstprivate(n)
   {
-        auto blocksize =  2;
+      
 
-      for (int ii = 0; ii < n;  ii+=blocksize) {
-        auto ni = std::min(blocksize, n-ii);
+      for (int ii = 0; ii < n;  ) {
+          auto blocksize =  suggest_blocksize(ii);
+ 
+        auto ni = std::min( blocksize, n-ii);
 
 
 
@@ -194,26 +209,28 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
           
 
         // Step 2.
-      for (int jj = ii+blocksize; jj < n;  jj+=blocksize) {
-          auto nj = std::min(blocksize, n-jj);
+      for (int jj = ii+ni; jj < n;  jj+=blocksize) {
+          auto nj =   std::min( blocksize, n-jj);
           my_dtrsm(ii, ii, jj, ii, nj, ni, A, X);
       }
 
         // Step 3.
-        for (int jj = ii+blocksize; jj < n;  jj+=blocksize) {
-            auto nj = std::min(blocksize, n-jj);
+        for (int jj = ii+ni; jj < n;  jj+=blocksize) {
+            auto nj =  std::min( blocksize, n-jj);
             cholesky_syrk(jj, ii,
                           jj, ii,
                           jj, jj, 
                           nj, ni, A );
-                  for (int kk = jj+blocksize; kk < jj;  kk+=blocksize) {
-                      auto nk = std::min(blocksize, n-kk);
-                        cholesky_gemm(jj,ii,
-                                      kk,jj,
-                                      jj,kk,
+                  for (int kk = jj+nj; kk < n;  kk+=blocksize) {
+                      auto nk =  std::min(blocksize, n-kk);
+                        cholesky_gemm(jj,ii, // Li21
+                                      kk,ii, // Lj21T
+                                      kk,jj, // Aij22
                                       ni,nj,nk,A);
                   }
           }
+
+        ii+=blocksize;
       }
   }
 }
