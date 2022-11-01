@@ -60,7 +60,7 @@ static void sst(idx_t base_ai,idx_t base_aj,
             for (idx_t j = 0; j < k; ++j){
               //  sum += a[i*m + j] * x[j*n + k];
                 auto Aij = A[base_ai + k][base_aj + j];
-                auto Xjk = X[j][i];
+                auto Xjk = X[i][j];
                 sum += Aij * Xjk;
             }
 
@@ -182,12 +182,12 @@ static void cholesky_syrk(
 
 static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
     auto *Ap =& A[0][0];
-    typedef real ArrTy[3][3];
+    typedef real ArrTy[4][4];
     ArrTy *Aa = (ArrTy*)( Ap);
 
     auto suggest_blocksize = []  (idx_t i) -> pbsize_t {
         if (i==0) return 1;
-        return 2;
+        return 3;
     };
 
 
@@ -238,7 +238,7 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
 
 // https://math.stackexchange.com/a/358092
-static void ensure_posdefinite(int n, multarray<real, 2> A) {
+static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
     if (n==3) {
         A[0][0] =  4;
         A[0][1] = 12;
@@ -249,6 +249,28 @@ static void ensure_posdefinite(int n, multarray<real, 2> A) {
         A[2][0] =  -16;
         A[2][1] = -43;
         A[2][2] = 98;
+        return ;
+    } else if (n==4) {
+        real B[4][4] = {0};
+        B[0][0] =  1;
+        B[1][0] =   2;
+        B[2][0] =   3;
+        B[3][0] =  4;
+        B[1][1] =    5;
+        B[2][1] =    6;
+        B[3][1] =    7;
+        B[2][2] =      8;
+        B[3][2] =     9;
+        B[3][3] =      10;
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
+ 
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
         return ;
     }
 
