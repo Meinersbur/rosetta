@@ -59,15 +59,15 @@ static void sst(idx_t base_ai,idx_t base_aj,
 
             for (idx_t j = 0; j < k; ++j){
               //  sum += a[i*m + j] * x[j*n + k];
-                auto Aij = A[base_ai + k][base_aj + j];
+                auto Aij = A[base_ai + k][base_aj + j]; assert(base_ai + k >=base_aj + j); 
                 auto Xjk = X[i][j];
                 sum += Aij * Xjk;
             }
 
-           // x[i*n + k] = (b[i*n + k] - sum) / a[i*m + i];
-            auto Aik =  A[base_bi + i][base_bj+k]  ;
+            // x[i*n + k] = (b[i*n + k] - sum) / a[i*m + i];
+            auto Aik =  A[base_bi + i][base_bj+k]; assert(base_bi + i >= base_bj+k);
             auto sumAik =Aik  - sum;
-            auto Aii = A[base_ai+k][base_aj+k];
+            auto Aii = A[base_ai+k][base_aj+k]; assert(base_ai+k >= base_bj+k);
             auto Xik = sumAik / Aii;
             X[i][k] =Xik;
         }
@@ -99,7 +99,7 @@ static void my_dtrsm(
     for (idx_t i = 0; i < m; ++i){
         for (idx_t j = 0; j < n; ++j){
             //B[i*N + j] = x[i*N + j];
-            auto Xij = X[i][j];
+            auto Xij = X[i][j]; assert(base_bi + i >= base_bj + j);
             A[base_bi + i][base_bj + j] = Xij;
         }
     }
@@ -138,14 +138,18 @@ static void cholesky_gemm(idx_t base_ai, idx_t base_aj,
     idx_t base_bi, idx_t base_bj,
     idx_t base_ci, idx_t base_cj,
     pbsize_t ni, pbsize_t nj ,pbsize_t nk, multarray<real, 2> A) {
+    auto *Ap =& A[0][0];
+    typedef real ArrTy[6][6];
+    ArrTy *Aa = (ArrTy*)( Ap);
+
     for (idx_t i = 0; i < ni; ++i) {
         for (idx_t j = 0; j < nj; ++j) {
             for (idx_t k = 0; k < nk; ++k) {
                     assert(base_ai + i >= base_aj + k);
-                auto Aik = A[base_ai + i][base_aj + k];  // Li21
+                auto Aik = A[base_ai + i][base_aj + k];  // A = Li21
                     assert(base_bi + j >= base_bj + k);
-                auto Akj = A[base_bi + j][base_bj + k];  // Lj21T
-                auto mul  =Aik * Akj;
+                auto Akj = A[base_bi + j][base_bj + k];  // B = Lj21T
+                auto mul = Aik * Akj;
                     assert(base_ci + i >= base_cj + j);
                 A[base_ci + i][base_cj + j] -= mul; // Aij22
             }
@@ -161,6 +165,10 @@ static void cholesky_syrk(
     idx_t base_ci, idx_t base_cj,
     pbsize_t ni, pbsize_t nk ,
     multarray<real, 2> A) {
+    auto *Ap =& A[0][0];
+    typedef real ArrTy[6][6];
+    ArrTy *Aa = (ArrTy*)( Ap);
+
   for (idx_t i = 0; i < ni; i++) {
     for (idx_t k = 0; k < nk; k++) {
         for (idx_t j = 0; j <= i; j++) {
@@ -182,10 +190,11 @@ static void cholesky_syrk(
 
 static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
     auto *Ap =& A[0][0];
-    typedef real ArrTy[4][4];
+    typedef real ArrTy[6][6];
     ArrTy *Aa = (ArrTy*)( Ap);
 
     auto suggest_blocksize = []  (idx_t i) -> pbsize_t {
+        return 2;
         if (i==0) return 1;
         return 3;
     };
@@ -205,14 +214,16 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
 
         // Step 1.
-         cholesky_base(ii, ni, A);
+         cholesky_base(ii, ni, A); // A[ii..ii+n][ii..ii+n] <- cholesky(A[ii..ii+n][ii..ii+n])
           
 
         // Step 2.
       for (int jj = ii+ni; jj < n;  jj+=blocksize) {
           auto nj =   std::min( blocksize, n-jj);
-          my_dtrsm(ii, ii, jj, ii, nj, ni, A, X);
-      }
+          my_dtrsm(ii, ii, jj, ii, nj, ni, A, X); // A[jj..jj+n][ii..ii+n] <- A[jj..jj+n][ii..ii+n] * A[ii..ii+n][ii..ii+n]^-1
+                                                  //          B            <-        B                        A^-1
+                                                  //        L21_i          <-       A21_i           *        L11_T^1 
+       }
 
         // Step 3.
         for (int jj = ii+ni; jj < n;  jj+=blocksize) {
@@ -223,10 +234,16 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
                           nj, ni, A );
                   for (int kk = jj+nj; kk < n;  kk+=blocksize) {
                       auto nk =  std::min(blocksize, n-kk);
-                        cholesky_gemm(jj,ii, // Li21
-                                      kk,ii, // Lj21T
-                                      kk,jj, // Aij22
-                                      ni,nj,nk,A);
+
+                      // A[kk..kk+nk][jj..jj+nj] <- A[kk..kk+nk][jj..jj+nj] - A[jj..jj+nj][ii..ii+ni] * A[kk..kk+nj][ii..ii+ni]^T (UR space)
+                      // A[jj..jj+nj][kk..kk+nk] <- A[jj..jj+nj][kk..kk+nk] - A[ii..ii+ni][jj..jj+nj] * A[ii..ii+ni][kk..kk+nj]^T (LL space)
+                      //          C              <-         C               -   A   *   B
+                      //       A22_j,k           <-      A22_j,k            - L21_j * L21_k^T
+                      //       A22_i,j           <-      A22_i,j            - L21_i * L21_j^T
+                      cholesky_gemm(kk,ii, // A = A[ii..ii+ni][jj..jj+nj]   = L21_i
+                                    jj,ii, // B = A[ii..ii+ni][kk..kk+nj]^T = L21_j^T
+                                    kk,jj, // C = A[jj..jj+nj][kk..kk+nk]   = A22_i,j
+                                    ni,nj,nk,A);
                   }
           }
 
@@ -267,6 +284,48 @@ static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
             for (idx_t j = 0;j < n; ++j )
                 A[i][j] = 0;
  
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
+        return ;
+    } else if (n==5) {
+        real B[5][5] = {0};
+        int k = 1;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0; j <=i; ++j ) {
+                B[i][j] = k;
+                k+=1;
+            }
+
+
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
+        return ;
+    } else if (n==6) {
+        real B[6][6] = {0};
+        int k = 1;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0; j < n; ++j ) 
+                if (j >= i) {
+                    B[j][i] = k;
+                    k += 1;
+                }
+            
+
+
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
+
         for (idx_t i = 0;i < n; ++i )
             for (idx_t j = 0;j < n; ++j )
                 for (idx_t k = 0;k < n; ++k )
