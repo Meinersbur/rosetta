@@ -52,7 +52,8 @@ V:    A[i][i] = std::sqrt(A[i][i]);
 // https://math.stackexchange.com/a/358092
 // https://math.stackexchange.com/q/357980
 static void ensure_posdefinite(int n, multarray<real, 2> A) {
-if (n==3) {
+#if 0
+if (n==1) {
   A[0][0] =  4;
 A[0][1] = 12;
 A[0][2] = -16;
@@ -63,7 +64,7 @@ A[1][2] = -43;
 A[2][1] = -43;
 A[2][2] = 98;
 return ;
-} else if (n==4) {
+} else if (n==1) {
     real B[4][4] = {0};
     B[0][0] =  1;
     B[1][0] =   2;
@@ -85,7 +86,7 @@ return ;
             for (idx_t k = 0;k < n; ++k )
                 A[i][j] += B[i][k] * B[j][k];
     return ;
-} else if (n==5) {
+} else if (n==1) {
     real B[5][5] = {0};
     int k = 1;
     for (idx_t i = 0;i < n; ++i )
@@ -105,7 +106,7 @@ return ;
             for (idx_t k = 0;k < n; ++k )
                 A[i][j] += B[i][k] * B[j][k];
     return ;
-}  else if (n==6) {
+}  else if (n==1) {
     real B[6][6] = {0};
     int k = 1;
     for (idx_t i = 0;i < n; ++i )
@@ -126,7 +127,30 @@ return ;
             for (idx_t k = 0;k < n; ++k )
                 A[i][j] += B[i][k] * B[j][k];
     return ;
+} else if (n==1) {
+    real B[7][7] = {0};
+    int k = 2;
+    for (idx_t i = 0;i < n; ++i )
+        for (idx_t j = 0; j < n; ++j ) 
+            if (j >= i) {
+                B[j][i] = k;
+                k += 1;
+            }
+
+
+
+
+    for (idx_t i = 0;i < n; ++i )
+        for (idx_t j = 0;j < n; ++j )
+            A[i][j] = 0;
+
+    for (idx_t i = 0;i < n; ++i )
+        for (idx_t j = 0;j < n; ++j )
+            for (idx_t k = 0;k < n; ++k )
+                A[i][j] += B[i][k] * B[j][k];
+    return ;
 }
+#endif 
 
     // make symmetric (not really necessary, the kernel doesn't read the upper triangular elements anyway)
     for (int i = 0; i < n; i++)

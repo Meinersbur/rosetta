@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_task)
 #include "rosetta.h"
 #include <omp.h>
 
@@ -173,48 +173,58 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
   #pragma omp parallel firstprivate(n) 
   {
-          for (int ii = 0; ii < n; ) {
-              auto blocksize = suggest_blocksize( ii);
-              auto ni = std::min(blocksize, n - ii);
+        for (int ii = 0; ii < n; ) {
+            auto blocksize = suggest_blocksize(ii);
+            auto ni = std::min(blocksize, n - ii);
 
-#pragma omp single 
-              {
-                  // Step 1.
-                  cholesky_base(ii, ni, A); // A[ii..ii+n][ii..ii+n] <- cholesky(A[ii..ii+n][ii..ii+n])
-              }
 
+
+            // Step 1.
+#pragma omp single
+            {
+               // printf("Inside task ii=%d tid=%d\n", ii, omp_get_thread_num());
+#pragma omp task depend(inout:*&A[ii][ii]) firstprivate(ii)          
+                cholesky_base(ii, ni, A); // A[ii..ii+n][ii..ii+n] <- cholesky(A[ii..ii+n][ii..ii+n])
+
+
+     
+        
 
               // Step 2.
-#pragma omp for schedule(static)
-              for (int jj = ii + ni; jj < n; jj += blocksize) {
-                  auto nj = std::min(blocksize, n - jj);
+                for (int jj = ii + ni; jj < n; jj += blocksize) {
+                    auto nj = std::min(blocksize, n - jj);
 
-                  // A[jj..jj+n][ii..ii+n] <- A[jj..jj+n][ii..ii+n] * A[ii..ii+n][ii..ii+n]^-1
-                  //          B            <-        B                        A^-1
-                  //        L21_i          <-       A21_i           *        L11_T^1 
-                  my_dtrsm(ii, ii, jj, ii, nj, ni, A, X); 
-              }
+
+                    // A[jj..jj+n][ii..ii+n] <- A[jj..jj+n][ii..ii+n] * A[ii..ii+n][ii..ii+n]^-1
+                    //          B            <-        B                        A^-1
+                    //        L21_i          <-       A21_i           *        L11_T^1 
+#pragma omp task depend(in:*&A[ii][ii])  depend(inout:*&A[jj][ii])
+                    my_dtrsm(ii, ii, 
+                             jj, ii, 
+                             nj, ni, A, X);
+                }
 
 
 
               // Step 3. Case jj == kk
-#pragma omp for schedule(static) 
-                  for (int jj = ii + ni; jj < n; jj += blocksize) {
-                      auto nj = std::min(blocksize, n - jj);
-                      cholesky_syrk(jj, ii,
-                                    jj, ii,
-                                    jj, jj,
-                                    nj, ni, A);
-                  }
+              for (int jj = ii + ni; jj < n; jj += blocksize) {
+                  auto nj = std::min(blocksize, n - jj);
+
+#pragma omp task depend(in:*&A[ii][ii]) depend(inout:*&A[jj][ii])
+                  cholesky_syrk(
+                      jj, ii,
+                      jj, ii,
+                      jj, jj,
+                      nj, ni, A);
+
+          //    }
 
 
 
-
-                     // Step 3. Case jj != kk
-#pragma omp for  collapse(2) // schedule(static)
-                  for (int jj = ii + ni; jj < n; jj += blocksize) {                    
+                     // Step 3. Case jj != kk    
+             // for (int jj = ii + ni; jj < n; jj += blocksize) {
+               //   auto nj = std::min(blocksize, n - jj);
                   for (int kk = jj + blocksize; kk < n; kk += blocksize) {
-                      auto nj = std::min(blocksize, n - jj);
                       auto nk = std::min(blocksize, n - kk);
 
                       // A[kk..kk+nk][jj..jj+nj] <- A[kk..kk+nk][jj..jj+nj] - A[jj..jj+nj][ii..ii+ni] * A[kk..kk+nj][ii..ii+ni]^T (UR space)
@@ -222,16 +232,22 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
                       //          C              <-         C               -   A   *   B
                       //       A22_j,k           <-      A22_j,k            - L21_j * L21_k^T
                       //       A22_i,j           <-      A22_i,j            - L21_i * L21_j^T
-                      cholesky_gemm(kk, ii, // A = A[ii..ii+ni][jj..jj+nj]   = L21_i
-                          jj, ii, // B = A[ii..ii+ni][kk..kk+nj]^T = L21_j^T
-                          kk, jj, // C = A[jj..jj+nj][kk..kk+nk]   = A22_i,j
+#pragma omp task depend(in:*&A[ii][ii]) depend(in:*&A[jj][ii]) depend(inout:*&A[kk][jj])
+                      cholesky_gemm(
+                          kk, ii,
+                          jj, ii, 
+                          kk, jj, 
                           nk, nj, ni, A);
                   }
               }
               
 
+            }
+
+
               ii += blocksize;
       }
+
 
   }
 }
@@ -240,106 +256,6 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
 // https://math.stackexchange.com/a/358092
 static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
-#if 0
-    if (n==1) {
-        A[0][0] =  4;
-        A[0][1] = 12;
-        A[0][2] = -16;
-        A[1][0] =  12;
-        A[1][1] = 37;
-        A[1][2] = -43;
-        A[2][0] =  -16;
-        A[2][1] = -43;
-        A[2][2] = 98;
-        return ;
-    } else if (n==1) {
-        real B[4][4] = {0};
-        B[0][0] =  1;
-        B[1][0] =   2;
-        B[2][0] =   3;
-        B[3][0] =  4;
-        B[1][1] =    5;
-        B[2][1] =    6;
-        B[3][1] =    7;
-        B[2][2] =      8;
-        B[3][2] =     9;
-        B[3][3] =      10;
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                A[i][j] = 0;
- 
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                for (idx_t k = 0;k < n; ++k )
-                    A[i][j] += B[i][k] * B[j][k];
-        return ;
-    } else if (n==1) {
-        real B[5][5] = {0};
-        int k = 1;
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0; j <=i; ++j ) {
-                B[i][j] = k;
-                k+=1;
-            }
-
-
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                A[i][j] = 0;
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                for (idx_t k = 0;k < n; ++k )
-                    A[i][j] += B[i][k] * B[j][k];
-        return ;
-    } else if (n==1) {
-        real B[6][6] = {0};
-        int k = 1;
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0; j < n; ++j ) 
-                if (j >= i) {
-                    B[j][i] = k;
-                    k += 1;
-                }
-            
-
-
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                A[i][j] = 0;
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                for (idx_t k = 0;k < n; ++k )
-                    A[i][j] += B[i][k] * B[j][k];
-        return ;
-    } else if (n==1) {
-        real B[7][7] = {0};
-        int k = 2;
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0; j < n; ++j ) 
-                if (j >= i) {
-                    B[j][i] = k;
-                    k += 1;
-                }
-
-
-
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                A[i][j] = 0;
-
-        for (idx_t i = 0;i < n; ++i )
-            for (idx_t j = 0;j < n; ++j )
-                for (idx_t k = 0;k < n; ++k )
-                    A[i][j] += B[i][k] * B[j][k];
-        return ;
-    }
-#endif
 
     // make symmetric (not really necessary, the kernel doesn't read the upper triangular elements anyway)
     for (int i = 0; i < n; i++)
