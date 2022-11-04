@@ -38,7 +38,7 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
       /* Center and reduce the column vectors. */
-#pragma omp for collapse(2) /* schedule(static) */
+#pragma omp for collapse(2)  schedule(static) 
       for (idx_t i = 0; i < n; i++)
           for (idx_t j = 0; j < m; j++) {
               data[i][j] -= mean[j];
@@ -47,7 +47,7 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
       /* Calculate the m * m correlation matrix. */
-#pragma omp for schedule(static)
+#pragma omp for 
       for (idx_t i = 0; i < m - 1; i++) {
           corr[i][i] = 1.0;
           for (int j = i + 1; j < m; j++) {
