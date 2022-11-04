@@ -830,6 +830,9 @@ public:
 
     if (!verifyoutpath.empty()) {
         verifyout.open(verifyoutpath, std::ios::trunc);
+    //    assert(verifyout);
+         assert(verifyout.good());
+        assert(verifyout.is_open());
     }
 
     {
@@ -881,8 +884,10 @@ public:
         lastRSS = getMaxRSS();
     }
 
-    if (verifyout.is_open()) 
+    if (verifyout.is_open()) {
+        std::cerr << "Closing verifyfile: " << verifyoutpath << std::endl;
         verifyout.close();
+    }
 
 
 #if ROSETTA_PLATFORM_NVIDIA
