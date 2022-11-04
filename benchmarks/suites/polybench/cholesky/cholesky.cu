@@ -1,10 +1,12 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=cuda)
 #include "rosetta.h"
-#include <omp.h>
 
 
-// https://tcevents.chem.uzh.ch/event/3/contributions/16/attachments/14/66/04_Threading_Lab.pdf
-// https://www.researchgate.net/figure/OpenMP-based-Cholesky-implementation-in-PLASMA-Handling-of-corner-cases-removed-for_fig12_303980919
+
+// https://dl.acm.org/doi/pdf/10.1145/3038228.3038237
+// https://people.ast.cam.ac.uk/~stg20/cuda/cholesky/
+
+
 
 static real sqr(real v) {
     return v*v;
@@ -158,17 +160,37 @@ static void cholesky_syrk(
 
 
 
+__global__ void dev_triangle_kernel(int m, int n, real * A, real *x, real *y, real *tmp) {
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    int j = blockDim.y * blockIdx.y + threadIdx.y;
 
-static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
-    auto *Ap =& A[0][0];
-    typedef real ArrTy[6][6];
-    ArrTy *Aa = (ArrTy*)( Ap);
+    if ( i >= m || j >= n) return; 
+    tmp[i] += A[i * m + j] * x[j];
+}
 
-    auto suggest_blocksize = [n]  ( idx_t i) -> pbsize_t {
-        return std::max( n / omp_get_num_threads(),2);
-    };
 
-    
+
+
+
+
+static void kernel(pbsize_t n, real *A,  real *X) {
+    int threadsPerBlock = 256;
+    dim3 block (threadsPerBlock/32, 32, 1);
+    dim3 grid (num_blocks(m,block.x), num_blocks(n,block.y), 1); 
+
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j <= i; j++) {
+            for (int k = 0; k < j; k++) 
+                A[i][j] -= A[i][k] * A[j][k];
+            if (i == j) {
+                A[i][j] = std::sqrt(A[j][j]);
+            } else {
+                A[i][j] /= A[j][j]; 
+            }
+        }
+    }
+
 
 
   #pragma omp parallel firstprivate(n) 
@@ -237,52 +259,11 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 }
 
 
-/* Polly parallelizes this as follows:
-#pragma minimal dependence distance: 1
-for (int c0 = 0; c0 < n; c0 += 1) {
-  Stmt_if_then(c0, c0);
-  #pragma simd
-  #pragma known-parallel
-  for (int c1 = c0 + 1; c1 < n; c1 += 1)
-    Stmt_if_else(c1, c0);
-  #pragma omp parallel for
-  for (int c1 = c0 + 1; c1 < n; c1 += 1)
-    #pragma simd
-    for (int c2 = c0 + 1; c2 <= c1; c2 += 1)
-      Stmt_for_body8(c1, c2, c0);
-
-}
-*/
-static void kernel_polly(pbsize_t n, multarray<real, 2> A) {
-    auto *Ap =& A[0][0];
-    typedef real ArrTy[3][3];
-    ArrTy *Aa = (ArrTy*)( Ap);
-
-
-#pragma omp parallel firstprivate(n)
-    {
-        for (idx_t j = 0; j < n; j++) { //c0
-#pragma omp single
-            A[j][j] = std::sqrt(A[j][j]); // Stmt_if_then
-
-#pragma omp for schedule(static) 
-            for (idx_t i = j + 1; i < n; i++)
-                A[i][j] /= A[j][j]; // Stmt_if_else
-
-#pragma omp for collapse(2) // schedule(static)
-            for (idx_t i = j + 1; i < n; i++)
-                for (idx_t k = j + 1; k <= i; k++) // c2
-                    A[i][k] -= A[i][j] * A[k][j]; // Stmt_for_body8
-        }
-    }
-}
-
-
 
 // https://math.stackexchange.com/a/358092
 static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
-#if 1
-    if (n==3) {
+#if 0
+    if (n==1) {
         A[0][0] =  4;
         A[0][1] = 12;
         A[0][2] = -16;
@@ -293,7 +274,7 @@ static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
         A[2][1] = -43;
         A[2][2] = 98;
         return ;
-    } else if (n==4) {
+    } else if (n==1) {
         real B[4][4] = {0};
         B[0][0] =  1;
         B[1][0] =   2;
@@ -315,7 +296,7 @@ static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
                 for (idx_t k = 0;k < n; ++k )
                     A[i][j] += B[i][k] * B[j][k];
         return ;
-    } else if (n==5) {
+    } else if (n==1) {
         real B[5][5] = {0};
         int k = 1;
         for (idx_t i = 0;i < n; ++i )
@@ -335,7 +316,7 @@ static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
                 for (idx_t k = 0;k < n; ++k )
                     A[i][j] += B[i][k] * B[j][k];
         return ;
-    } else if (n==6) {
+    } else if (n==1) {
         real B[6][6] = {0};
         int k = 1;
         for (idx_t i = 0;i < n; ++i )
@@ -357,7 +338,7 @@ static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
                 for (idx_t k = 0;k < n; ++k )
                     A[i][j] += B[i][k] * B[j][k];
         return ;
-    } else if (n==7) {
+    } else if (n==1) {
         real B[7][7] = {0};
         int k = 2;
         for (idx_t i = 0;i < n; ++i )
@@ -409,21 +390,34 @@ static void ensure_posdefinite(pbsize_t n, multarray<real, 2> A) {
 }
 
 
-
 void run(State &state, int pbsize) {
     pbsize_t n = pbsize; // 2000
 
     auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "A");
-    //auto tmp = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ false, "tmp"); // TODO: blocksize/allocate locally
+    auto tmp = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ false, "tmp"); // TODO: blocksize/allocate locally
+
+
+    real *dev_A,  *dev_tmp;
+    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * n * sizeof(real)));
+    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_tmp, n * n * sizeof(real)));
+
 
 
     for (auto&& _ : state.manual()) {
         ensure_posdefinite(n, A);
         {
             auto &&scope = _.scope();
-            // FIXME: cholesky of pos-definite matrix is not necessarily itself pos-definite
-         //   kernel(n, A, tmp);
-            kernel_polly(n,A);
+
+            cudaMemcpy(dev_A, A.data(), n * n * sizeof(real), cudaMemcpyHostToDevice);
+       
+            kernel(n, dev_A, dev_tmp);
+
+            cudaMemcpy( dev_A, A.data() , n *  n * sizeof(double), cudaMemcpyDeviceToHost); 
         }
+
+        cudaDeviceSynchronize();
     }
+
+    BENCH_CUDA_TRY(   cudaFree(dev_A));
+    BENCH_CUDA_TRY(   cudaFree(dev_tmp));
 }
