@@ -53,7 +53,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
     buildfiles = []
     for path in benchdir.rglob('*'):
         #if path.name =='pointwise.cxx':
-        if not path.suffix.lower() in    {'.cxx', '.cpp', '.cu', '.build'}:
+        if not path.suffix.lower() in    {'.cxx', '.cu', '.build'}:
             continue
         if filter and not filter in path.name:
             continue
@@ -77,11 +77,17 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
                 spec = importlib.util.spec_from_loader('rosetta.build', loader=None, origin=buildfile)
                 module =  importlib.util.module_from_spec(spec)
                 globals = module.__dict__
+                scriptdir = buildfile.parent
+                relbuildfile = buildfile.relative_to(scriptdir)
                 def add_benchmark(sources=None,basename=None,ppm=None):
-                    # Guess sources (same file)
-                    if not sources:
-                        sources = [buildfile]
-                    firstsource = mkpath(sources[0])
+                    if  sources is not None:
+                        mysources = []
+                        for s in sources:
+                            mysources.append(scriptdir / mkpath(s))
+                    else:
+                        # Guess sources (same file)
+                        mysources = [buildfile]
+                    firstsource = mkpath(mysources[0])
 
                     # Generate a target name
                     rel = firstsource.parent.parent.relative_to(benchdir)
@@ -97,7 +103,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
                     target =  basename  + '.' + ppm   
                     pbsize = config.getint(basename, 'n')
 
-                    bench = runner.Benchmark(basename=basename,target=target,exepath=None,ppm=ppm,configname=configname,buildtype=None,sources=sources,pbsize=pbsize)
+                    bench = runner.Benchmark(basename=basename,target=target,exepath=None,ppm=ppm,configname=configname,buildtype=None,sources=mysources,pbsize=pbsize)
                     benchs.append(bench)
  
 
@@ -107,7 +113,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
                 globals['omp_parallel'] = 'omp_parallel'
                 globals['omp_task'] = 'omp_task'
                 globals['omp_target'] = 'omp_target'
-                globals['__file__'] = buildfile
+                globals['__file__'] = relbuildfile
                 print("Executing:")
                 print(script)
                 exec(script, module.__dict__)

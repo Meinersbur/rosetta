@@ -851,6 +851,7 @@ inline Iterator<AutoIteration> State::end() { return Iterator<AutoIteration>(*th
  
 #ifdef ROSETTA_REALTYPE
 typedef ROSETTA_REALTYPE real;
+typedef real real_t;
 #endif
 
 
