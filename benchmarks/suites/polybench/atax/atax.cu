@@ -25,7 +25,7 @@ __global__ void kernel4(int m, int n, real * A, real *x, real *y, real *tmp) {
             y[j] +=   A[i*m +j] * tmp[i];
 }
 
-
+static
 int num_blocks(int num, int factor) {
     return (num + factor -1)/factor ;
 }
