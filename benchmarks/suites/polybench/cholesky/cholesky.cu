@@ -8,13 +8,16 @@
 
 
 
+
+__global__ void kernel0(pbsize_t n, idx_t j, real * A) {
+    A[j*n +j] = std::sqrt( A[j*n +j] );
+}
+
 __global__ void kernel1(pbsize_t n, idx_t j, real * A) {
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
-    if (i==j)
-        A[j*n +j] = std::sqrt( A[j*n +j] );
-    else if (i > j && i < n) 
-        A[i*n +j] /=  A[j*n +j];
+    if (i > j && i < n) 
+        A[i*n +j] /= A[j*n +j];
 }
 
 
@@ -42,6 +45,7 @@ static void kernel_polly(pbsize_t n, real *dev_A) {
 
     
         for (idx_t j = 0; j < n; j++) { //c0
+            kernel0<<<1,1>>>(n,j,dev_A);
             kernel1<<<num_blocks(n,threadsPerBlock),threadsPerBlock>>>(n,j,dev_A);
             kernel2<<<grid,block>>>(n,j,dev_A);
         }

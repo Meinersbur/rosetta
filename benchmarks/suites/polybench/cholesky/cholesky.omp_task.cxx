@@ -6,6 +6,9 @@
 // https://tcevents.chem.uzh.ch/event/3/contributions/16/attachments/14/66/04_Threading_Lab.pdf
 // https://www.researchgate.net/figure/OpenMP-based-Cholesky-implementation-in-PLASMA-Handling-of-corner-cases-removed-for_fig12_303980919
 
+
+
+
 static real sqr(real v) {
     return v*v;
 }
@@ -160,9 +163,9 @@ static void cholesky_syrk(
 
 
 static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
-    auto *Ap =& A[0][0];
-    typedef real ArrTy[6][6];
-    ArrTy *Aa = (ArrTy*)( Ap);
+  //  auto *Ap =& A[0][0];
+   // typedef real ArrTy[6][6];
+   // ArrTy *Aa = (ArrTy*)( Ap);
 
     auto suggest_blocksize = [n]  ( idx_t i) -> pbsize_t {
         return std::max( n / omp_get_num_threads(),2);
@@ -171,11 +174,11 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
     
 
 
-  #pragma omp parallel firstprivate(n) 
+  #pragma omp parallel default(none)  shared(suggest_blocksize) firstprivate(n,A,X)
   {
-        for (int ii = 0; ii < n; ) {
+        for (idx_t ii = 0; ii < n; ) {
             auto blocksize = suggest_blocksize(ii);
-            auto ni = std::min(blocksize, n - ii);
+            idx_t ni = std::min<idx_t>(blocksize, n - ii);
 
 
 
@@ -183,20 +186,20 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 #pragma omp single
             {
                // printf("Inside task ii=%d tid=%d\n", ii, omp_get_thread_num());
-#pragma omp task depend(inout:*&A[ii][ii]) firstprivate(ii)          
+#pragma omp task depend(inout:*&A[ii][ii]) default(none) firstprivate(ii,ni,A)          
                 cholesky_base(ii, ni, A); // A[ii..ii+n][ii..ii+n] <- cholesky(A[ii..ii+n][ii..ii+n])
 
 
 
               // Step 2.
-                for (int jj = ii + ni; jj < n; jj += blocksize) {
-                    auto nj = std::min(blocksize, n - jj);
+                for (idx_t jj = ii + ni; jj < n; jj += blocksize) {
+                    idx_t nj = std::min<idx_t>(blocksize, n - jj);
 
 
                     // A[jj..jj+n][ii..ii+n] <- A[jj..jj+n][ii..ii+n] * A[ii..ii+n][ii..ii+n]^-1
                     //          B            <-        B                        A^-1
                     //        L21_i          <-       A21_i           *        L11_T^1 
-#pragma omp task depend(in:*&A[ii][ii])  depend(inout:*&A[jj][ii])
+#pragma omp task depend(inout:*&A[jj][ii]) depend(in:*&A[ii][ii]) default(none)  firstprivate(ii,jj,nj,ni,A,X)   
                     my_dtrsm(ii, ii, 
                              jj, ii, 
                              nj, ni, A, X);
@@ -205,10 +208,10 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
 
               // Step 3. Case jj == kk
-              for (int jj = ii + ni; jj < n; jj += blocksize) {
-                  auto nj = std::min(blocksize, n - jj);
+              for (idx_t jj = ii + ni; jj < n; jj += blocksize) {
+                  idx_t nj = std::min<idx_t>(blocksize, n - jj);
 
-#pragma omp task depend(in:*&A[ii][ii]) depend(inout:*&A[jj][ii])
+#pragma omp task  depend(inout:*&A[jj][ii]) depend(in:*&A[ii][ii])  default(none)  firstprivate(ii,jj,nj,ni,A) 
                   cholesky_syrk(
                       jj, ii,
                       jj, ii,
@@ -218,19 +221,18 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
           //    }
 
 
-
                      // Step 3. Case jj != kk    
              // for (int jj = ii + ni; jj < n; jj += blocksize) {
                //   auto nj = std::min(blocksize, n - jj);
-                  for (int kk = jj + blocksize; kk < n; kk += blocksize) {
-                      auto nk = std::min(blocksize, n - kk);
+                  for (idx_t kk = jj + blocksize; kk < n; kk += blocksize) {
+                      idx_t nk = std::min<idx_t>(blocksize, n - kk);
 
                       // A[kk..kk+nk][jj..jj+nj] <- A[kk..kk+nk][jj..jj+nj] - A[jj..jj+nj][ii..ii+ni] * A[kk..kk+nj][ii..ii+ni]^T (UR space)
                       // A[jj..jj+nj][kk..kk+nk] <- A[jj..jj+nj][kk..kk+nk] - A[ii..ii+ni][jj..jj+nj] * A[ii..ii+ni][kk..kk+nj]^T (LL space)
                       //          C              <-         C               -   A   *   B
                       //       A22_j,k           <-      A22_j,k            - L21_j * L21_k^T
                       //       A22_i,j           <-      A22_i,j            - L21_i * L21_j^T
-#pragma omp task depend(in:*&A[ii][ii]) depend(in:*&A[jj][ii]) depend(inout:*&A[kk][jj])
+#pragma omp task depend(inout:*&A[kk][jj]) depend(in:*&A[kk][ii]) depend(in:*&A[jj][ii])  default(none)  firstprivate(ii,jj,kk,nk,nj,ni,A) 
                       cholesky_gemm(
                           kk, ii,
                           jj, ii, 
@@ -238,15 +240,10 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
                           nk, nj, ni, A);
                   }
               }
-              
-
             }
-
 
               ii += blocksize;
       }
-
-
   }
 }
 

@@ -1235,7 +1235,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
 
     #x = request_tempdir(prefix=f'verify') 
     #tmpdir = mkpath(x.name)
-    #refdir.mkdir(exist_ok=True,parents=True)
+    refdir.mkdir(exist_ok=True,parents=True)
         
     for e  in benchmarks:
         if filterfunc and not filterfunc(e):
@@ -1394,7 +1394,7 @@ def request_tempdir(subdir=None):
     if mytempdir :
         return mytempdir
     x = tempfile.TemporaryDirectory(prefix=f'rosetta-') # TODO: Option to not delete / keep in current directory
-    mytempdir =  mkpath(globalctxmgr.enter_context(x))
+    mytempdir = mkpath(globalctxmgr.enter_context(x))
     return  mytempdir
 
 def request_tempfilename(prefix=None,suffix=None,subdir=None): 

@@ -264,7 +264,7 @@ static void kernel_polly(pbsize_t n, multarray<real, 2> A) {
 #pragma omp parallel firstprivate(n)
     {
         for (idx_t j = 0; j < n; j++) { //c0
-#pragma omp single nowait
+#pragma omp single 
             A[j][j] = std::sqrt(A[j][j]); // Stmt_if_then
 
 #pragma omp for schedule(static) 

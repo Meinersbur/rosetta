@@ -41,6 +41,24 @@ void kernel2(int n, double A[128][128]) {
 #pragma endscop
 }
 
+void kernel3(int n, double A[128][128]) {
+#pragma scop
+    for (int i = 0; i < n; i++) { // c1
+        for (int j = 0; j <= i; j++) { //c0
+            if (i == j) {
+                for (int k = 0; k < j; k++) // c2
+                        A[j][j] -= A[j][k] * A[j][k]; // Stmt_for_body8(c1, c2, c0)
+                A[j][j] = std::sqrt(A[j][j]); // Stmt_if_then(c0, c0)
+            } else {
+                for (int k = 0; k < j; k++) // c2
+                    A[i][j] -= A[i][k] * A[j][k]; // Stmt_for_body8(c1, c2, c0)
+                A[i][j] /= A[j][j]; // Stmt_if_else(c1, c0)
+            }
+        } 
+    } 
+#pragma endscop
+}
+
 
 
 
