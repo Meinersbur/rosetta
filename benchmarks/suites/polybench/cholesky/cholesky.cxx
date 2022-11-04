@@ -7,7 +7,44 @@ static real sqr(real v) {
     return v*v;
 }
 
-static void kernel(int n,
+
+
+/* Polly parallelizes this as follows:
+#pragma minimal dependence distance: 1
+for (int c0 = 0; c0 < n; c0 += 1) {
+  Stmt_if_then(c0, c0);
+  #pragma simd
+  #pragma known-parallel
+  for (int c1 = c0 + 1; c1 < n; c1 += 1)
+    Stmt_if_else(c1, c0);
+  #pragma omp parallel for
+  for (int c1 = c0 + 1; c1 < n; c1 += 1)
+    #pragma simd
+  for (int c2 = c0 + 1; c2 <= c1; c2 += 1)
+    Stmt_for_body8(c1, c2, c0);
+}
+*/
+extern
+void kernel2(int n, double A[128][128]) {
+#pragma scop
+    for (int i = 0; i < n; i++) { // c1
+        for (int j = 0; j <= i; j++) { //c0
+            for (int k = 0; k < j; k++) // c2
+                A[i][j] -= A[i][k] * A[j][k]; // Stmt_for_body8(c1, c2, c0)
+            if (i == j) {
+                A[i][j] = std::sqrt(A[j][j]); // Stmt_if_then(c0, c0)
+            } else {
+                A[i][j] /= A[j][j]; // Stmt_if_else(c1, c0)
+            }
+        } 
+    } 
+#pragma endscop
+}
+
+
+
+
+ void kernel(int n,
                    multarray<real, 2> A) {
 #pragma scop
   for (int i = 0; i < n; i++) {
@@ -52,105 +89,107 @@ V:    A[i][i] = std::sqrt(A[i][i]);
 // https://math.stackexchange.com/a/358092
 // https://math.stackexchange.com/q/357980
 static void ensure_posdefinite(int n, multarray<real, 2> A) {
-#if 0
-if (n==1) {
-  A[0][0] =  4;
-A[0][1] = 12;
-A[0][2] = -16;
-  A[1][0] =  12;
-A[1][1] = 37;
-A[1][2] = -43;
-  A[2][0] =  -16;
-A[2][1] = -43;
-A[2][2] = 98;
-return ;
-} else if (n==1) {
-    real B[4][4] = {0};
-    B[0][0] =  1;
-    B[1][0] =   2;
-    B[2][0] =   3;
-    B[3][0] =  4;
-    B[1][1] =    5;
-    B[2][1] =    6;
-    B[3][1] =    7;
-    B[2][2] =      8;
-    B[3][2] =     9;
-    B[3][3] =      10;
+#if 1
+    if (n==3) {
+        A[0][0] =  4;
+        A[0][1] = 12;
+        A[0][2] = -16;
+        A[1][0] =  12;
+        A[1][1] = 37;
+        A[1][2] = -43;
+        A[2][0] =  -16;
+        A[2][1] = -43;
+        A[2][2] = 98;
+        return ;
+    } else if (n==4) {
+        real B[4][4] = {0};
+        B[0][0] =  1;
+        B[1][0] =   2;
+        B[2][0] =   3;
+        B[3][0] =  4;
+        B[1][1] =    5;
+        B[2][1] =    6;
+        B[3][1] =    7;
+        B[2][2] =      8;
+        B[3][2] =     9;
+        B[3][3] =      10;
 
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            A[i][j] = 0;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
 
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            for (idx_t k = 0;k < n; ++k )
-                A[i][j] += B[i][k] * B[j][k];
-    return ;
-} else if (n==1) {
-    real B[5][5] = {0};
-    int k = 1;
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0; j <=i; ++j ) {
-            B[i][j] = k;
-            k+=1;
-        }
-
-
-
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            A[i][j] = 0;
-
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            for (idx_t k = 0;k < n; ++k )
-                A[i][j] += B[i][k] * B[j][k];
-    return ;
-}  else if (n==1) {
-    real B[6][6] = {0};
-    int k = 1;
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0; j < n; ++j ) 
-            if (j >= i) {
-                B[j][i] = k;
-                k += 1;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
+        return ;
+    } else if (n==5) {
+        real B[5][5] = {0};
+        int k = 1;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0; j <=i; ++j ) {
+                B[i][j] = k;
+                k+=1;
             }
 
 
 
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            A[i][j] = 0;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
 
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            for (idx_t k = 0;k < n; ++k )
-                A[i][j] += B[i][k] * B[j][k];
-    return ;
-} else if (n==1) {
-    real B[7][7] = {0};
-    int k = 2;
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0; j < n; ++j ) 
-            if (j >= i) {
-                B[j][i] = k;
-                k += 1;
-            }
-
-
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
+        return ;
+    } else if (n==6) {
+        real B[6][6] = {0};
+        int k = 1;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0; j < n; ++j ) 
+                if (j >= i) {
+                    B[j][i] = k;
+                    k += 1;
+                }
 
 
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            A[i][j] = 0;
 
-    for (idx_t i = 0;i < n; ++i )
-        for (idx_t j = 0;j < n; ++j )
-            for (idx_t k = 0;k < n; ++k )
-                A[i][j] += B[i][k] * B[j][k];
-    return ;
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
+        return ;
+    } else if (n==7) {
+        real B[7][7] = {0};
+        int k = 2;
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0; j < n; ++j ) 
+                if (j >= i) {
+                    B[j][i] = k;
+                    k += 1;
+                }
+
+
+
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                A[i][j] = 0;
+
+        for (idx_t i = 0;i < n; ++i )
+            for (idx_t j = 0;j < n; ++j )
+                for (idx_t k = 0;k < n; ++k )
+                    A[i][j] += B[i][k] * B[j][k];
+        return ;
 }
-#endif 
+#endif
+
 
     // make symmetric (not really necessary, the kernel doesn't read the upper triangular elements anyway)
     for (int i = 0; i < n; i++)

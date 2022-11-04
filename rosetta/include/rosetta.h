@@ -633,6 +633,11 @@ public:
 
   T* data() { return mydata.data(); }
 
+
+#if ROSETTA_CUDA
+
+#endif
+
 private:
   dyn_array<T> mydata;
   typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes;

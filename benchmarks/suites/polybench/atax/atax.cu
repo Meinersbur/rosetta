@@ -43,7 +43,7 @@ void run(State& state, int pbsize) {
 
 
     real *dev_A, *dev_x, *dev_y, *dev_tmp;
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * m * sizeof(real)));
+    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * m * sizeof(real))); // TODO: Runtime should do this
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_x, n *  sizeof(real)));
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_y, n *  sizeof(real)));
     BENCH_CUDA_TRY(cudaMalloc((void**)&dev_tmp, n *  sizeof(real)));
@@ -65,7 +65,7 @@ void run(State& state, int pbsize) {
 
             cudaMemcpy(dev_A, A.data(), n * m * sizeof(real), cudaMemcpyHostToDevice);
             cudaMemset(dev_y, 0, n * sizeof(real) );
-            cudaMemset(dev_tmp, 0, m * sizeof(real) );
+            cudaMemset(dev_tmp, 0, m * sizeof(real));
 
             kernel3<<<grid, block>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
             kernel4<<<grid, block>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
