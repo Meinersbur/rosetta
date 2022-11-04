@@ -3,11 +3,11 @@
 #include "rosetta.h"
 
 
-static void kernel(int n, multarray<real, 2> path) {
+static void kernel(pbsize_t  n, multarray<real, 2> path) {
 #pragma scop
-  for (int k = 0; k < n; k++) {
-    for (int i = 0; i < n; i++)
-      for (int j = 0; j < n; j++)
+  for (idx_t k = 0; k < n; k++) {
+    for (idx_t i = 0; i < n; i++)
+      for (idx_t j = 0; j < n; j++)
         path[i][j] = path[i][j] < path[i][k] + path[k][j] ? path[i][j] : path[i][k] + path[k][j];
   }
 #pragma endscop
@@ -15,8 +15,8 @@ static void kernel(int n, multarray<real, 2> path) {
 
 
 
-void run(State &state, int pbsize) {
-  size_t n = pbsize; // 2800
+void run(State &state, pbsize_t pbsize) {
+    pbsize_t n = pbsize; // 2800
 
 
 
