@@ -2,39 +2,56 @@
 
 #include "rosetta.h"
 
+static real sqr(real v) { return v*v;}
 
-
-static void kernel(int m, int n,
+static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A, multarray<real, 2> R, multarray<real, 2> Q) {
 #pragma scop
-  for (int k = 0; k < n; k++) {
-    real nrm = 0;
-    for (int i = 0; i < m; i++)
-      nrm += A[i][k] * A[i][k];
-    R[k][k] = std::sqrt(nrm);
-    for (int i = 0; i < m; i++)
+  for (idx_t k = 0; k < n; k++) {
+      R[k][k] = 0;
+    for (idx_t i = 0; i < m; i++)
+        R[k][k] += sqr(A[i][k] );
+    R[k][k] = std::sqrt( R[k][k]);
+    for (idx_t i = 0; i < m; i++)
       Q[i][k] = A[i][k] / R[k][k];
-    for (int j = k + 1; j < n; j++) {
+    for (idx_t j = k + 1; j < n; j++) {
       R[k][j] = 0;
-      for (int i = 0; i < m; i++)
+      for (idx_t i = 0; i < m; i++)
         R[k][j] += Q[i][k] * A[i][j];
-      for (int i = 0; i < m; i++)
-        A[i][j] = A[i][j] - Q[i][k] * R[k][j];
+      for (idx_t i = 0; i < m; i++)
+        A[i][j] -=  Q[i][k] * R[k][j];
     }
   }
 #pragma endscop
 }
 
 
-void run(State &state, int pbsize) {
-  size_t m = pbsize - pbsize / 6; // 1000
-  size_t n = pbsize;              // 1200
+static void condition( pbsize_t m,  pbsize_t n,multarray<real, 2> A) {
+    for (idx_t i = 0; i < m; i++) {
+        for (idx_t j = 0; j < n; j++) {
+            if ( std::abs(i-j) > 1 ) continue;
+
+            A[i][j] = 0.25;
+        }
+    }
+}
 
 
-  auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true);
-  auto R = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true);
-  auto Q = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true);
 
-  for (auto &&_ : state)
-    kernel(m, n, A, R, Q);
+void run(State &state, pbsize_t pbsize) {
+    pbsize_t m = pbsize - pbsize / 6; // 1000
+    pbsize_t n = pbsize;              // 1200
+
+
+    auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
+    auto R = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ true, "R");
+    auto Q = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true, "Q");
+
+    for (auto&& _ : state.manual()) {
+        condition(m,n,A);
+        {
+            auto &&scope = _.scope();
+            kernel(m, n, A, R, Q);
+        }
+    }
 }

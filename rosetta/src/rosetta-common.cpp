@@ -1169,6 +1169,7 @@ void DataHandler<double>::fake(double *data, ssize_t count) {
   // 5. Unlikely to cancel-out (v[0] - v[1])
   // 6. Easily representable in binary floating-point (no 0.1, 0.3)
   // TODO: don't generate same data in every call
+  // 7. Avoid cancellation in gramschmidt
   for (ssize_t i = 0; i < count; i += 1)
     data[i] = 0.5 + i * 0.125;
 }
