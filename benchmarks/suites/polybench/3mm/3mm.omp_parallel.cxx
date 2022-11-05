@@ -12,26 +12,28 @@ static void kernel(int ni, int nj, int nk, int nl, int nm,
                    multarray<real, 2> D,
                    multarray<real, 2> G) {
 
-#pragma omp parallel
+#pragma omp parallel default(none) firstprivate(ni,nj,nk,nl,nm,E,A,B,F,C,D,G)
 {
   /* E := A*B */
-  #pragma omp parallel for collapse(2) schedule(static)
+  #pragma omp  for collapse(2) schedule(static)
   for (int i = 0; i < ni; i++)
     for (int j = 0; j < nj; j++) {
       E[i][j] = 0;
       for (int k = 0; k < nk; ++k)
         E[i][j] += A[i][k] * B[k][j];
     }
+
   /* F := C*D */
-  #pragma omp parallel for collapse(2) schedule(static)
+  #pragma omp  for collapse(2) schedule(static)
   for (int i = 0; i < nj; i++)
     for (int j = 0; j < nl; j++) {
       F[i][j] = 0;
       for (int k = 0; k < nm; ++k)
         F[i][j] += C[i][k] * D[k][j];
     }
+
   /* G := E*F */
-  #pragma omp parallel for collapse(2) schedule(static)
+  #pragma omp  for collapse(2) schedule(static)
   for (int i = 0; i < ni; i++)
     for (int j = 0; j < nl; j++) {
       G[i][j] = 0;

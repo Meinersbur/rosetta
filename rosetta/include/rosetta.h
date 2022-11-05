@@ -855,7 +855,7 @@ typedef real real_t;
 #endif
 
 
-typedef size_t idx_t;  // ssize_t / ptrdiff_t
+typedef int idx_t;  // ssize_t / ptrdiff_t
 typedef int pbsize_t; // ssize_t ?
 
 #if 0
