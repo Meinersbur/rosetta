@@ -4,22 +4,22 @@
 
 
 
-static void kernel(int tsteps, int n,
+static void kernel(pbsize_t tsteps, pbsize_t n,
                    real A[], real B[]) {
 #pragma scop
-  for (int t = 0; t < tsteps; t++) {
-    for (int i = 1; i < n - 1; i++)
-      B[i] = (real)0.33333 * (A[i - 1] + A[i] + A[i + 1]);
-    for (int i = 1; i < n - 1; i++)
-      A[i] = (real)0.33333 * (B[i - 1] + B[i] + B[i + 1]);
+  for (idx_t t = 0; t < tsteps; t++) {
+    for (idx_t i = 1; i < n - 1; i++)
+      B[i] =  (A[i - 1] + A[i] + A[i + 1])/3;
+    for (idx_t i = 1; i < n - 1; i++)
+      A[i] =  (B[i - 1] + B[i] + B[i + 1])/3;
   }
 #pragma endscop
 }
 
 
-void run(State &state, int pbsize) {
-  size_t tsteps = 1; // 500
-  size_t n = pbsize; // 2000
+void run(State &state, pbsize_t pbsize) {
+    pbsize_t tsteps = 1; // 500
+    pbsize_t n = pbsize; // 2000
 
 
 
