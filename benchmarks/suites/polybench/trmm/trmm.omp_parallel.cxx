@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=serial)
+// BUILD: add_benchmark(ppm=omp_parallel)
 
 #include "rosetta.h"
 
@@ -16,34 +16,25 @@
         for (int c1 = 0; c1 < n; c1 += 1)
           Stmt_for_end(c0, c1);
 */
-#if 0
-extern "C" void kernel_polly(pbsize_t n, pbsize_t m,
-    real alpha,
-    real B[][n], real A[][m] ) {
-#pragma scop
-    for (idx_t i = 0; i < m; i++)
-        for (idx_t j = 0; j < n; j++) {
-            for (idx_t k = i + 1; k < m; k++)
-                B[i][j] += A[k][i] * B[k][j];
-            B[i][j] *= alpha ;
-        }
-#pragma endscop
-}
-#endif
-
 
 
 static void kernel(pbsize_t n, pbsize_t m,
                    real alpha,
                    multarray<real, 2> B, multarray<real, 2> A) {
-#pragma scop
-  for (idx_t i = 0; i < m; i++)
-    for (idx_t j = 0; j < n; j++) {
-      for (idx_t k = i + 1; k < m; k++)
-        B[i][j] += A[k][i] * B[k][j];
-      B[i][j] *= alpha ;
-    }
-#pragma endscop
+#pragma omp parallel default(none) firstprivate(n,m,alpha,B,A)
+                       {
+#pragma omp for 
+                           for (idx_t j = 0; j < n; j++) 
+                                for (idx_t i = 0; i < m; i++)                             
+                                   for (idx_t k = i + 1; k < m; k++)
+                                       B[i][j] += A[k][i] * B[k][j];
+
+#pragma omp for collapse(2) schedule(static)
+                                   for (idx_t i = 0; i < m; i++)
+                                       for (idx_t j = 0; j < n; j++)
+                                   B[i][j] *= alpha;
+                               
+                       }
 }
 
 
