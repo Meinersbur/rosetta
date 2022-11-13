@@ -8,8 +8,8 @@
 
 
 __global__ void kernel3(int m, int n, real * A, real *x, real *y, real *tmp) {
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    int j = blockDim.y * blockIdx.y + threadIdx.y;
+    idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
+    idx_t j = blockDim.y * blockIdx.y + threadIdx.y;
 
     if ( i >= m || j >= n) return; 
             tmp[i] += A[i * m + j] * x[j];
@@ -42,14 +42,10 @@ void run(State& state, int pbsize) {
     auto tmp = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ false);
 
 
-    real *dev_A, *dev_x, *dev_y, *dev_tmp;
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * m * sizeof(real))); // TODO: Runtime should do this
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_x, n *  sizeof(real)));
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_y, n *  sizeof(real)));
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_tmp, n *  sizeof(real)));
-
-   
-
+   real *dev_A = state.allocate_dev<real>(n * m );
+   real *dev_x = state.allocate_dev<real>(n  );
+   real *dev_y = state.allocate_dev<real>(n  );
+   real *dev_tmp = state.allocate_dev<real>(n  );
 
     int threadsPerBlock = 256;
     dim3 block (threadsPerBlock/32, 32, 1);
@@ -57,12 +53,7 @@ void run(State& state, int pbsize) {
    
 
 
-    for (auto &&_ : state.manual()) {
-        
-
-        {
-            auto &&scope = _.scope();
-
+    for (auto &&_ : state) {
             cudaMemcpy(dev_A, A.data(), n * m * sizeof(real), cudaMemcpyHostToDevice);
             cudaMemset(dev_y, 0, n * sizeof(real) );
             cudaMemset(dev_tmp, 0, m * sizeof(real));
@@ -70,18 +61,18 @@ void run(State& state, int pbsize) {
             kernel3<<<grid, block>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
             kernel4<<<grid, block>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
 
-            cudaMemcpy( dev_y, y.data() , n * sizeof(double), cudaMemcpyDeviceToHost ); 
-        }
-
-        // TODO: Is the invocation already blocking?
+            cudaMemcpy( dev_y, y.data() , n * sizeof(real), cudaMemcpyDeviceToHost ); 
+        
        cudaDeviceSynchronize();
-
     }
 
-    BENCH_CUDA_TRY(   cudaFree(dev_A));
-    BENCH_CUDA_TRY(   cudaFree(dev_x));
-    BENCH_CUDA_TRY(   cudaFree(dev_y));
-    BENCH_CUDA_TRY(   cudaFree(dev_tmp));
+
+    state.free_dev(dev_A);
+    state.free_dev(dev_x);
+    state.free_dev(dev_y);
+    state.free_dev(dev_tmp);
 }
+
+
 
 
