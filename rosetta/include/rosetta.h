@@ -31,6 +31,7 @@ typedef SSIZE_T ssize_t;
 #endif
 
 
+#ifdef ROSETTA_PPM_CUDA
 #define BENCH_CUDA_TRY(call)                                 \
   do {                                                       \
     auto const status = (call);                              \
@@ -39,7 +40,7 @@ typedef SSIZE_T ssize_t;
       abort();                                               \
     }                                                        \
   } while (0);
-
+#endif
 
 using benchmark::ClobberMemory;
 
@@ -50,6 +51,11 @@ template <typename I>
 class Iterator;
 class Range;
 class State;
+
+
+typedef int idx_t;    // ssize_t / ptrdiff_t
+typedef int pbsize_t; // ssize_t ?
+
 
 
 
@@ -82,6 +88,7 @@ struct _make_dimlengths<0, DIMLENGTHS...> {
 };
 
 
+#if 0
 #pragma region _make_index_sequence
 // Based on http://stackoverflow.com/a/6454211
 // template<int...> struct index_tuple{};
@@ -122,6 +129,7 @@ template <typename... Types>
 using _make_index_sequence = _index_sequence<0, _indices<>, Types...>;
 // TODO: Also a version that converts constants parameter packs (instead of type parameter pack)
 #pragma endregion
+#endif
 
 
 
@@ -183,10 +191,73 @@ public:
 };
 
 
+#if 0
 template <typename TUPLE, size_t... Is>
 static auto extract_subtuple(TUPLE tuple, std::index_sequence<Is...>) {
   return std::make_tuple(std::get<Is>(tuple)...);
 }
+
+
+template <typename TUPLE, size_t... Is>
+static auto extract_subtuple(TUPLE tuple, std::index_sequence<Is...>) {
+    return std::make_tuple(std::get<Is>(tuple)...);
+}
+#endif
+
+
+// from https://en.cppreference.com/w/cpp/utility/integer_sequence
+template<typename Array, std::size_t... I>
+auto a2t_impl( Array a, std::index_sequence<I...>){
+    return std::make_tuple(a[I]...);
+}
+
+template<typename T, std::size_t N, typename Indices = std::make_index_sequence<N>>
+auto a2t( std::array<T, N> a){
+    return a2t_impl(a, Indices{});
+}
+
+
+
+
+template<typename T, std::size_t N>
+auto a2v( std::array<T, N> a){
+    std::vector<T> v;
+    v.reserve(N);
+    for (auto val : a)
+        v.push_back(val);
+    return v;
+}
+
+
+template<typename T, std::size_t N , typename Is=typename std::make_index_sequence<N>>
+struct t2v_helper ;
+
+template<typename T, std::size_t N >
+struct t2v_helper<T,N,std::index_sequence<> > {
+    static  void add_elements(std::vector<T>& v,  typename _make_tuple<typename _make_dimlengths<N>::type>::type t  ) {    }
+};
+
+
+template<typename T, std::size_t N , size_t I, size_t... IRest>
+struct t2v_helper<T,N,std::index_sequence<I,IRest...> > {
+   static  void add_elements(std::vector<T>& v,  typename _make_tuple<typename _make_dimlengths<N>::type>::type t  ) {
+       v.push_back(std::get<I>(t));
+       t2v_helper <T,N,std::index_sequence<IRest...>>::   add_elements(v, t);
+    }
+};
+
+template<typename T, std::size_t N>
+auto t2v( typename _make_tuple<typename _make_dimlengths<N>::type>::type t){
+    std::vector<T> v;
+    v.reserve(N);
+    t2v_helper<T,N>::add_elements(v, t);
+    return v;
+}
+
+
+
+
+
 
 
 template <typename TUPLE>
@@ -586,9 +657,6 @@ public:
 
   void fakedata() { DataHandler<T>(impl).fake(mydata, size / sizeof(T)); }
   void verifydata() {
-    
-      //dims.reserve(DIMS);
-
     DataHandler<T>(impl).verify(mydata, size / sizeof(T), dims, name );
   }
 
@@ -604,11 +672,13 @@ private:
 
 
 
+
+
 template <typename T, size_t DIMS>
 class owning_array {
 public:
-  owning_array(BenchmarkRun *impl, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes, bool verify, std::vector<size_t> dims , std::string_view name) 
-   : mydata(impl, get_stride(sizes), verify, std::move( dims), name), sizes(sizes) {}
+  owning_array(BenchmarkRun *impl,  bool verify,      typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type  dims , std::string_view name) 
+   : mydata(impl, get_stride(dims), verify, t2v<size_t,DIMS> ( dims), name), sizes(dims) {}
  //   owning_array(dyn_array<T>& mydata) : mydata(impl, get_stride(sizes), verify, std::move(dims), name), sizes(sizes) {}
 
   multarray<T, DIMS> get() {
@@ -691,68 +761,45 @@ public:
 
 
 
-#if 0
-  template <typename T>
-  dyn_array<T> fakedata_array(size_t count, bool verify = false) {
-    auto result = dyn_array<T>(impl, count, verify);
-    result.fakedata();
-    return result;
-  }
-#endif 
 
 
-#if 0
     template<typename T, size_t DIMS> 
-    owning_array< T,DIMS > 
-        allocate_array(  std::array<size_t,DIMS> sizes, bool fakedata, bool verify   ) {
-        auto  result =  dyn_array<T>( impl, get_stride(sizes) ,verify );
+    owning_array< T,DIMS> 
+        allocate_array( 
+            typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type  sizes, 
+            bool fakedata, 
+            bool verify, 
+            std::string_view name = std::string_view()) {
+        owning_array<T, DIMS> result(impl,  verify, sizes,name);
         if (fakedata)
             result.fakedata();
         else 
             result.zerodata();
-        return    owning_array< T,DIMS> (  impl, sizes,verify );
+        return    result; // NRVO 
+    }
+
+    // FIXME: Template deduction doesn't work on number of elements in @p sizes.
+    template <typename T>
+    owning_array<T, 1>
+        allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type  sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+        return allocate_array<T, 1>(sizes, fakedata, verify, name);
     }
 
 
-#else
-  // TODO: Generalize for arbitrary array sizes
+    template <typename T>
+    owning_array<T, 2>
+        allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+        return allocate_array<T,2>(sizes, fakedata,verify,name);
+    }
 
-  template <typename T>
-  owning_array<T, 1u>
-  allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
-      std::vector<size_t> dims{(size_t)std::get<0>(sizes)};
-      owning_array<T, 1u> result(impl, sizes, verify, dims,name);
-      if (fakedata)
-          result. fakedata();
-      else
-          result.zerodata();
-      return result;
-  }
+    template <typename T>
+    owning_array<T, 3>
+        allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+        return allocate_array<T,3>(sizes, fakedata,verify,name);
+    }
 
-  template <typename T>
-  owning_array<T, 2u>
-  allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
-      std::vector<size_t>dims{(size_t)std::get<0>(sizes),(size_t)std:: get<1>(sizes)};
-     owning_array<T, 2u> result(impl, sizes, verify, dims,name);
-     if (fakedata)
-         result. fakedata();
-     else
-         result.zerodata();
-     return result;
-  }
 
-  template <typename T>
-  owning_array<T, 3u>
-  allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
-      std::vector<size_t> dims{(size_t)std::get<0>(sizes), (size_t)std::get<1>(sizes), (size_t)std::get<2>(sizes)};
-      owning_array<T, 3u> result(impl, sizes, verify, dims,name);
-      if (fakedata)
-          result. fakedata();
-      else
-          result.zerodata();
-      return result;
-  }
-#endif
+
 
 
 
@@ -778,6 +825,29 @@ public:
     subAllocatedBytes(internaldata->size);
     ::free(internaldata);
   }
+
+
+
+
+
+
+
+#ifdef ROSETTA_PPM_CUDA
+  template<typename T>
+  T * allocate_dev( size_t n) {
+      T* devptr=nullptr;
+      // TODO: Count device memory allocation
+      BENCH_CUDA_TRY(cudaMalloc((void**)&devptr, n *  sizeof(real)));
+      return devptr;
+  }
+
+  template<typename T>
+  void free_dev(T* dev_ptr) {
+      BENCH_CUDA_TRY(   cudaFree(dev_ptr));
+  }
+
+#endif
+
 
 private:
   State(BenchmarkRun *impl) : impl(impl) {}
@@ -855,8 +925,6 @@ typedef real real_t;
 #endif
 
 
-typedef int idx_t;  // ssize_t / ptrdiff_t
-typedef int pbsize_t; // ssize_t ?
 
 #if 0
 template<typename T/*Elt type*/, typename Stored/*coordinates already known*/, typename Togo/*coordinates to go*/ >
