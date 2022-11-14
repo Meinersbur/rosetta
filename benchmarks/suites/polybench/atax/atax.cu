@@ -9,21 +9,26 @@
 
 __global__ void kernel3(int m, int n, real * A, real *x, real *y, real *tmp) {
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
-    idx_t j = blockDim.y * blockIdx.y + threadIdx.y;
 
-    if ( i >= m || j >= n) return; 
-            tmp[i] += A[i * m + j] * x[j];
+if (i< m) {
+            for (idx_t j = 0; j < n; j++)
+                tmp[i] += A[i*n+j] * x[j];
+             //   tmp[i] = 42;  
+}
 }
 
 
 __global__ void kernel4(int m, int n, real * A, real *x, real *y, real *tmp) {
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
-    int j = blockDim.y * blockIdx.y + threadIdx.y;
+    idx_t j = blockDim.x * blockIdx.x + threadIdx.x;
 
-    if ( i >= m || j >= n) return; 
 
-            y[j] +=   A[i*m +j] * tmp[i];
+if (j < n) {
+          for (idx_t i = 0; i < m; i++)
+                y[j] += A[i*n+j] * tmp[i];
 }
+}
+
+
 
 static
 int num_blocks(int num, int factor) {
@@ -36,33 +41,34 @@ void run(State& state, int pbsize) {
     pbsize_t n = pbsize;
     pbsize_t m = pbsize - pbsize / 10;
 
-    auto A = state.allocate_array<real>({n, m}, /*fakedata*/ true, /*verify*/ false);
-    auto x = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false);
-    auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true);
-    auto tmp = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ false);
 
+  auto A = state.allocate_array<real>({m,n}, /*fakedata*/ true, /*verify*/ false, "A");
+  auto x = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "x");
+  auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");
+  
 
    real *dev_A = state.allocate_dev<real>(n * m );
    real *dev_x = state.allocate_dev<real>(n  );
    real *dev_y = state.allocate_dev<real>(n  );
-   real *dev_tmp = state.allocate_dev<real>(n  );
+   real *dev_tmp = state.allocate_dev<real>(m  );
 
-    int threadsPerBlock = 256;
-    dim3 block (threadsPerBlock/32, 32, 1);
-    dim3 grid (num_blocks(m,block.x), num_blocks(n,block.y), 1); 
+
    
 
 
     for (auto &&_ : state) {
             cudaMemcpy(dev_A, A.data(), n * m * sizeof(real), cudaMemcpyHostToDevice);
-            cudaMemset(dev_y, 0, n * sizeof(real) );
-            cudaMemset(dev_tmp, 0, m * sizeof(real));
+                        cudaMemcpy(dev_x, A.data(), n * sizeof(real), cudaMemcpyHostToDevice);
+            cudaMemset(dev_y, '\0', n * sizeof(real) );
+            cudaMemset(dev_tmp, '\0', m * sizeof(real));
+       
 
-            kernel3<<<grid, block>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
-            kernel4<<<grid, block>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
+const int threadsPerBlock = 256;
+            kernel3<<<threadsPerBlock, num_blocks(m,threadsPerBlock)>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
+           kernel4<<<threadsPerBlock, num_blocks(n,threadsPerBlock)>>>(m,n,dev_A,dev_x, dev_y, dev_tmp);
 
-            cudaMemcpy( dev_y, y.data() , n * sizeof(real), cudaMemcpyDeviceToHost ); 
-        
+            cudaMemcpy( y.data() , dev_y,  n * sizeof(real), cudaMemcpyDeviceToHost ); 
+
        cudaDeviceSynchronize();
     }
 

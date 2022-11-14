@@ -56,6 +56,15 @@ class State;
 typedef int idx_t;    // ssize_t / ptrdiff_t
 typedef int pbsize_t; // ssize_t ?
 
+#ifdef ROSETTA_REALTYPE
+typedef ROSETTA_REALTYPE real_t;
+#else
+typedef double real_t;
+#endif
+typedef real_t real;
+
+
+
 
 
 
@@ -919,11 +928,6 @@ inline Iterator<AutoIteration> State::begin() { return Iterator<AutoIteration>(*
 inline Iterator<AutoIteration> State::end() { return Iterator<AutoIteration>(*this, true); }
 
  
-#ifdef ROSETTA_REALTYPE
-typedef ROSETTA_REALTYPE real;
-typedef real real_t;
-#endif
-
 
 
 #if 0
