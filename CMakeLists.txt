@@ -254,15 +254,13 @@ add_custom_target(references)
 
 set(_reference_dir "${PROJECT_BINARY_DIR}/references")
 function(rosetta_add_reference basename pbsize)
-  #message("rosetta_add_reference(${basename} ${pbsize})")
-  
   set(_reffile "${_reference_dir}/${basename}.${pbsize}.reference_output")
   set(_bench_target "${basename}.serial") # TODO: Allow non-serial
 
 
   add_custom_command(
     OUTPUT "${_reffile}"
-    DEPENDS "${_bench_target}" 
+    DEPENDS "${_bench_target}"
     COMMAND "${_bench_target}" --verify --verifyfile "${_reffile}"
     COMMENT "Generate ${basename} reference output (using serial output) at ${_reffile}..."
   )
@@ -270,7 +268,7 @@ function(rosetta_add_reference basename pbsize)
     DEPENDS "${_reffile}"
   )
   set_target_properties("reference-${basename}"
-  PROPERTIES 
+  PROPERTIES
     FOLDER "Reference outputs"
   )
   add_dependencies(references "reference-${basename}")
@@ -321,6 +319,7 @@ add_subdirectory(benchmarks)
 ## Maintanance #################################################################
 
 # TODO: Introspect availability of clang-format
+# TODO: Also format CMake files: https://pypi.org/project/cmake-format/
 add_custom_target(check-format)
 set_target_properties("check-format" PROPERTIES FOLDER "Check format")
 
@@ -334,7 +333,7 @@ foreach (file IN LISTS format_files)
     COMMENT "Checking format of ${file}..."
   )
   set_target_properties("check-format${i}"
-  PROPERTIES 
+  PROPERTIES
     FOLDER "Check format"
   )
   add_dependencies(check-format "check-format${i}")
@@ -364,7 +363,6 @@ add_custom_target(update-format DEPENDS ${update_format_depends})
 
 get_property(_benchmarks GLOBAL PROPERTY benchmarks)
 
-
 file(GENERATE
     OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
     CONTENT "#! /usr/bin/env python3
@@ -385,7 +383,7 @@ if __name__ == '__main__':
     FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
   )
 add_custom_target(run
-    COMMAND Python::Interpreter "run-$<CONFIG>.py" 
+    COMMAND Python::Interpreter "run-$<CONFIG>.py"
     COMMENT "Run benchmarks ..."
     USES_TERMINAL VERBATIM
 )
@@ -511,13 +509,6 @@ else ()
   list(APPEND _disabled_ppm "Serial")
 endif ()
 if (ROSETTA_PPM_CUDA)
-  #get_property(_cuda_standard TARGET rosetta-cuda PROPERTY CUDA_STANDARD)
-  #if (_cuda_standard STREQUAL "")
-  ##  set (_cuda_standard "x${CMAKE_CUDA_STANDARD}")
-  #endif ()
-  #if (_cuda_standard STREQUAL "x")
-  #  set (_cuda_standard "y${CMAKE_CUDA_STANDARD_DEFAULT}")
-  #endif ()
   message("  CUDA:            ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}, CUDA ${CUDA_VERSION})")
 else ()
 list(APPEND _disabled_ppm "CUDA")
