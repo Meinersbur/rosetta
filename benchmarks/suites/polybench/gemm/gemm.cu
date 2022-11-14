@@ -15,7 +15,7 @@ __global__ void kernel_dev(pbsize_t ni, pbsize_t nj, pbsize_t nk,
 if (i < ni && j < nj) {
     C[i*nj+j] *= beta;
 
-//idx_t k = 0;
+
     for (idx_t k = 0; k < nk; k++)     
         C[i*nj+j] += alpha * A[i*nk+k] * B[k*nj+j];
 }
@@ -26,7 +26,7 @@ if (i < ni && j < nj) {
 
 
 static
-int num_blocks(int num, int factor) {
+unsigned num_blocks(int num, int factor) {
     return (num + factor -1)/factor ;
 }
 
@@ -38,7 +38,7 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk,
     real beta,
     real* C, real* A, real* B) {
         
-    int threadsPerBlock = 256;
+    unsigned threadsPerBlock = 256;
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(ni, block.x), num_blocks(nj, block.y), 1};
     kernel_dev <<<block ,grid >>> (ni,nj,nk,alpha,beta,C,A,B);
