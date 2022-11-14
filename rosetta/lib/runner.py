@@ -1229,6 +1229,13 @@ def ensure_reffiles(refdir,problemsizefile,filterfunc=None,srcdir=None):
         ensure_reffile(bench,refdir=refdir,problemsizefile=problemsizefile)
 
 
+# math.prod only available in Python 3.8
+def prod(iter):
+    result = 1
+    for v in iter:
+        result *=v
+    return result
+
 
 def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
     problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
@@ -1275,7 +1282,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                refdim = int(refspec[2])
                refshape =  [int(i) for i in refspec[3:3+refdim]]
                refname = refspec[3+refdim] if len(refspec ) > 3+refdim else None
-               refcount = math.prod(refshape)
+               refcount = prod(refshape)
 
                refdata = [float(v) for v in refdata.split()]
                if refcount != len(refdata):
@@ -1289,7 +1296,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                testdim = int(testspec[2])
                testshape =  [int (i) for i in testspec[3:3+testdim]]
                testname = testspec[3+testdim] if len(testspec ) > 3+testdim  else None
-               testcount = math.prod(testshape) 
+               testcount = prod(testshape) 
                
                testdata = [float(v) for v in testdata.split()]
                if testcount != len(testdata):
@@ -1299,7 +1306,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                   die(f"Array names {refname} and {testname} disagree")
 
                for i,(refv,testv) in enumerate(zip(refdata,testdata)):
-                  coord = [str((i // math.prod(refshape[0:j])) % refshape[j]) for j in range(0,refdim)]
+                  coord = [str((i // prod(refshape[0:j])) % refshape[j]) for j in range(0,refdim)]
                   coord = '[' + ']['.join(coord) + ']'
 
                   if math.isnan(refv) and  math.isnan(testv):

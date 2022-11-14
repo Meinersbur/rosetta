@@ -175,7 +175,7 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
   #pragma omp parallel firstprivate(n) 
   {
-          for (int ii = 0; ii < n; ) {
+          for (idx_t ii = 0; ii < n; ) {
               auto blocksize = suggest_blocksize( ii);
               auto ni = std::min(blocksize, n - ii);
 
@@ -188,7 +188,7 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
               // Step 2.
 #pragma omp for schedule(static)
-              for (int jj = ii + ni; jj < n; jj += blocksize) {
+              for (idx_t jj = ii + ni; jj < n; jj += blocksize) {
                   auto nj = std::min(blocksize, n - jj);
 
                   // A[jj..jj+n][ii..ii+n] <- A[jj..jj+n][ii..ii+n] * A[ii..ii+n][ii..ii+n]^-1
@@ -201,7 +201,7 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
               // Step 3. Case jj == kk
 #pragma omp for schedule(static) 
-                  for (int jj = ii + ni; jj < n; jj += blocksize) {
+                  for (idx_t jj = ii + ni; jj < n; jj += blocksize) {
                       auto nj = std::min(blocksize, n - jj);
                       cholesky_syrk(jj, ii,
                                     jj, ii,
@@ -214,8 +214,8 @@ static void kernel(pbsize_t n, multarray<real, 2> A,  multarray<real, 2> X) {
 
                      // Step 3. Case jj != kk
 #pragma omp for  collapse(2) // schedule(static)
-                  for (int jj = ii + ni; jj < n; jj += blocksize) {                    
-                  for (int kk = jj + blocksize; kk < n; kk += blocksize) {
+                  for (idx_t jj = ii + ni; jj < n; jj += blocksize) {                    
+                  for (idx_t kk = jj + blocksize; kk < n; kk += blocksize) {
                       auto nj = std::min(blocksize, n - jj);
                       auto nk = std::min(blocksize, n - kk);
 
@@ -284,7 +284,7 @@ static void kernel_polly(pbsize_t n, multarray<real, 2> A) {
 
 
 
-void run(State &state, int pbsize) {
+void run(State &state, pbsize_t pbsize) {
     pbsize_t n = pbsize; // 2000
 
     auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "A");
