@@ -114,7 +114,7 @@ void run(State &state, pbsize_t pbsize) {
           cudaDeviceSynchronize();
   }
 
-   //   state.free_dev(dev_E);
+      state.free_dev(dev_E);
         state.free_dev(dev_A);
           state.free_dev(dev_B);
             state.free_dev(dev_F);
