@@ -11,7 +11,6 @@ import pathlib
 import os
 import datetime
 import json
-from tkinter import LEFT
 from typing import Iterable
 import xml.etree.ElementTree as et
 import colorama  
@@ -22,7 +21,8 @@ import io
 import configparser
 import typing 
 import contextlib
- 
+import importlib
+import importlib.util
 
 
 # Not included batteries
@@ -954,7 +954,7 @@ def compareby(results : Iterable[BenchResult], compare_by: str):
 
 
 
-def grouping(results : Iterable[BenchResult], compare_by: str,  group_by:list[str]=None): 
+def grouping(results : Iterable[BenchResult], compare_by: str,  group_by=None): 
     # TODO: allow compare_by multiple columns
     # TODO: allow each benchmark to be its own group; find description for each such "group"
     results_by_group = defaultdict(lambda :  defaultdict(lambda :  []))
@@ -1006,7 +1006,7 @@ def divergent_fields(group_by,results):
 
 
 
-def results_compare(resultfiles: list[Path],compare_by,group_by=None,compare_val=None,show_groups=None):
+def results_compare(resultfiles: list,compare_by,group_by=None,compare_val=None,show_groups=None):
     results = load_resultfiles(resultfiles)
 
     # Categorical groupings
@@ -1022,7 +1022,7 @@ def results_compare(resultfiles: list[Path],compare_by,group_by=None,compare_val
 
 
 
-def results_boxplot(resultfiles: list[Path],group_by=None,compare_by=None,filterfunc=None):
+def results_boxplot(resultfiles: list,group_by=None,compare_by=None,filterfunc=None):
     r"""Produce a boxplot for benchmark results
 
     :param group_by:   Summerize all results that have the same value for these properties. No summerization if None.

@@ -380,3 +380,12 @@ def pystr(s):
   return f'"{pyescape(s)}"'
 
   
+
+def removesuffix(s:str,suffix:str):
+  if s.endswith(suffix):
+    return s[:-len(suffix)]
+  return s
+
+
+assert removesuffix("mysuffix","suffix") == "my"
+assert removesuffix("mynofix","suffix") == "mynofix"

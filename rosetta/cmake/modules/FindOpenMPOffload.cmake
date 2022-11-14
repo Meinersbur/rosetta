@@ -31,7 +31,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(OPENMP_OFFLOADING_CFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
     CACHE STRING "Compiler arguments for OpenMP offloading")
-  set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget"
+  set(OPENMP_OFFLOADING_LDFLAGS "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget;-v"
     CACHE STRING "Linker arguments for OpenMP offloading")
 endif ()
 
@@ -42,8 +42,13 @@ set(CMAKE_REQUIRED_LINK_OPTIONS ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_LDFLAGS}
 set(CMAKE_REQUIRED_LIBRARIES ${OpenMP_CXX_LIBRARIES})
 check_cxx_source_compiles("
         int main(void) {
-          #pragma omp target 
-          {}
+        // int a ;
+          #pragma omp target // teams distribute parallel for map(from:a)
+          {
+             //     for (int i = 0; i < 128; ++i) {
+              //          a = 0;
+               //   }
+          }
           return 0;
         }
     "

@@ -3,9 +3,10 @@
 
 
 static void kernel(int m, int n, multarray<real, 2> A, real *x, real *y, real *tmp) {
-#pragma omp parallel master
+#pragma omp parallel 
     {
-
+#pragma omp single 
+{
 #pragma omp taskloop
         for (int i = 0; i < n; i++)
             y[i] = 0;
@@ -21,6 +22,7 @@ static void kernel(int m, int n, multarray<real, 2> A, real *x, real *y, real *t
             for (int i = 0; i < m; i++)
                 y[j] += A[i][j] * tmp[i];
     }
+}
 }
 
 
