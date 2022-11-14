@@ -13,7 +13,7 @@ import importlib
 
 
 
-print(pathlib.Path(__file__).parent.absolute() / 'lib')
+#print(pathlib.Path(__file__).parent.absolute() / 'lib')
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.absolute() / 'lib'))
 from support import *
 import rosetta
@@ -67,7 +67,7 @@ int64_t bench_default_problemsize = {pbsize};
 def gen_benchpropfile(bench: runner.Benchmark,config:str,resultsdir:pathlib.Path):
     benchproptempl = bench.benchpropfile
     benchpropfile = mkpath(benchproptempl.replace('$<CONFIG>', config))
-    print(benchpropfile)
+    #print(benchpropfile)
 
     configname=bench.configname
     compiler=bench.compiler
@@ -91,14 +91,14 @@ int64_t bench_default_problemsize = {bench.pbsize};
 """
 
     benchpropfile= bench.benchpropfile
-    print(f"{benchpropfile=}")
+    #print(f"{benchpropfile=}")
     createfile( benchpropfile,content)
 
 
 
 
 def gen_stage2(builddir,benchdir,benchlistfile,config,resultsdir):
-    print("gen_stage2")
+    #print("gen_stage2")
 
     # Load all available benchmarks
     runner.load_register_file(benchlistfile)
@@ -116,7 +116,7 @@ def gen_stage2(builddir,benchdir,benchlistfile,config,resultsdir):
 
 
 def main():
-    print("stage2 argv", sys.argv)
+    #print("stage2 argv", sys.argv)
     parser = argparse.ArgumentParser(description="Generate make-time files", allow_abbrev=False)
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--benchdir', type=pathlib.Path)

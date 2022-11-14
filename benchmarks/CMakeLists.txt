@@ -9,8 +9,8 @@
 # TODO: basename is not required
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
   cmake_parse_arguments(_arg "" "PBSIZE" "SOURCES" ${ARGN})
-  message("_arg_SOURCES=${_arg_SOURCES}")
-  message("_arg_PBSIZE=${_arg_PBSIZE}")
+  #message("_arg_SOURCES=${_arg_SOURCES}")
+  #message("_arg_PBSIZE=${_arg_PBSIZE}")
 
   file(RELATIVE_PATH _relpath  "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
@@ -23,8 +23,8 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
   string(REPLACE "-" "_" ppm_mixed "${ppm}")
 
   add_executable("${_bench_target}" ${_sources})
-  message("added target: ${_bench_target}")
-  message("SOURCES: ${_sources}")
+  #message("added target: ${_bench_target}")
+  #message("SOURCES: ${_sources}")
   set_target_properties("${_bench_target}" 
     PROPERTIES
       FOLDER "Benchmarks/${ppm}"
@@ -50,7 +50,7 @@ endfunction ()
 
 
 function (add_benchmark_serial basename)
-  message("add_benchmark_serial(${basename})")
+  #message("add_benchmark_serial(${basename})")
   if (NOT ROSETTA_PPM_SERIAL)
     return ()
   endif ()
@@ -187,10 +187,10 @@ endif ()
 set(_benchpropfiles)
 foreach (_benchmark IN LISTS _benchmarks)
   get_property(_benchpropfile TARGET "${_benchmark}" PROPERTY ROSETTA_BENCHPROPFILE)
-  message("target ${_benchmark} penchprop ${_benchpropfile}")
+  #message("target ${_benchmark} penchprop ${_benchpropfile}")
   list(APPEND _benchpropfiles "${_benchpropfile}")
 endforeach ( )
-message("_benchpropfiles: ${_benchpropfiles}")
+#message("_benchpropfiles: ${_benchpropfiles}")
 
 set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage2.py" )
 set(_stage2stampfile "stage2-stamp-$<CONFIG>")

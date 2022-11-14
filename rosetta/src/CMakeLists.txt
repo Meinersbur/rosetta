@@ -9,7 +9,7 @@ function(enable_platform_nvidia target)
   target_sources("${target}" PRIVATE rosetta-nvidia.cpp)
   target_compile_definitions("${target}" PUBLIC ROSETTA_PLATFORM_NVIDIA=1)
   target_link_libraries("${target}" PUBLIC CUDA::cudart CUDA::cupti CUDA::cuda_driver)
-  message("CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
+  #message("CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
   target_include_directories("${target}" PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
   target_include_directories("${target}" PUBLIC "${CUDAToolkit_LIBRARY_ROOT}/extras/CUPTI/include") # For unknown reasons on JLSE
 endfunction()
@@ -24,6 +24,9 @@ if (ROSETTA_PPM_SERIAL)
   target_compile_features(rosetta-serial PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-serial PUBLIC ROSETTA_PPM_SERIAL=1)
   target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
+  if (HAS_INCLUDE_CHARCONV_FLOAT)
+    target_compile_definitions(rosetta-serial PUBLIC HAS_INCLUDE_CHARCONV_FLOAT=1)
+  endif ()
 
   if (ROSETTA_NO_EXCEPTIONS)
     # TODO: Introspection

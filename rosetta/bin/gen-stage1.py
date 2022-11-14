@@ -65,12 +65,16 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
     for buildfile in buildfiles:
         with buildfile.open() as f:
             script = []
-            while line:= f.readline():
-                if m := buildre.match(line):
+            while True:
+                line= f.readline()
+                if not line:
+                    break
+                m = buildre.match(line)
+                if m:
                     s = m.group('script')
                     script.append(s)
             if script:
-                print("Processing:", buildfile)
+                #print("Processing:", buildfile)
                 configdepfiles.append(buildfile)
                 script = global_unintent(script)
                 script  = '\n'.join(script)
@@ -95,9 +99,9 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
                     # Guess basename
                     if not basename:
                         basename = firstsource.stem
-                        basename = basename.removesuffix('.omp_parallel')
-                        basename = basename.removesuffix('.omp_task')
-                        basename = basename.removesuffix('.omp_target')
+                        basename = removesuffix(basename,'.omp_parallel')
+                        basename = removesuffix(basename,'.omp_task')
+                        basename = removesuffix(basename,'.omp_target')
                         basename = '.'.join(list(rel.parts) + [basename])  
                     
                     target =  basename  + '.' + ppm   
@@ -114,8 +118,8 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
                 globals['omp_task'] = 'omp_task'
                 globals['omp_target'] = 'omp_target'
                 globals['__file__'] = relbuildfile
-                print("Executing:")
-                print(script)
+                #print("Executing:")
+                #print(script)
                 exec(script, module.__dict__)
 
 
@@ -149,7 +153,7 @@ def gen_benchtargets(outfile,problemsizefile,benchdir,builddir,configname,filter
 
 
 def main():
-    print("stage1 argv", sys.argv)
+    #print("stage1 argv", sys.argv)
     parser = argparse.ArgumentParser(description="Generate CMakeLists.txt include file", allow_abbrev=False)
     parser.add_argument('--output', type=pathlib.Path)
     parser.add_argument('--problemsizefile', type=pathlib.Path)

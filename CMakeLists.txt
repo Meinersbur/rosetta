@@ -10,6 +10,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 include(CheckLanguage)
 include(CheckCXXSourceCompiles)
+include(CheckIncludeFileCXX)
 
 
 # Use Folders in Visual Studio IDE
@@ -61,7 +62,7 @@ set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
 #set(CMAKE_CXX_STANDARD 17)
 
 # Python
-find_package(Python 3.6.13 REQUIRED)
+find_package(Python 3.6 REQUIRED)
 
 
 # Google Benchmark
@@ -168,6 +169,40 @@ else ()
   set (KEYWORD_RESTRICT "")
 endif ()
 
+
+check_include_file_cxx(filesystem HAS_INCLUDE_FILESYSTEM)
+
+# g++ >= 8: charconv with integral types
+check_include_file_cxx(charconv HAS_INCLUDE_CHARCONV) 
+
+
+# g++ >= 11: charconv with float types (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html)
+check_cxx_source_compiles("
+#include <charconv>
+
+template <typename T>
+void test_from_chars() {
+  char *p;
+  T v;
+  std::from_chars(p, p, &v);
+}
+
+template <typename T>
+void test_to_chars() {
+  char *p;
+  T val;
+  std::to_chars(p, p, val,std::chars_format::general);
+}
+
+void foo() {
+  test_from_chars<float>();
+  test_to_chars<float>();
+  test_from_chars<double>();
+  test_to_chars<double>();
+}
+" 
+HAS_INCLUDE_CHARCONV_FLOAT
+)
 
 
 ## Configuration ###############################################################

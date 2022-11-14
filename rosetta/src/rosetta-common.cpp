@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -12,7 +11,10 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <charconv>
+
+//#if HAS_INCLUDE_CHARCONV
+//#include <charconv>
+//#endif
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cuda.h>
@@ -1218,13 +1220,17 @@ void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size
           std::max(2, log10ceil(std::numeric_limits<double>::max_exponent10));
       std::array<char, MaxConvLen> str; 
 
+#if HAS_CHARCONV_DOUBLE
       // std::to_chars returns a string representation that allows recovering the original float binary representation, and locale-independent.
       // FIXME: Does the python part actually do? Could also use std::chars_format::hex or use binary directly.
       // https://eel.is/c++draft/charconv.to.chars#2
       auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val,std::chars_format::general);
       assert(ec == std::errc());
-   
-      std::string_view strv(str.data(),  ptr - str.data()); 
+       / std::string_view strv(str.data(),  ptr - str.data()); 
+#else 
+auto strv =  std::to_string(val) ;
+#endif 
+
       verifyout << '\t' << strv;
   }
   verifyout << '\n';
@@ -1618,10 +1624,15 @@ static std::string_view trim(std::string_view str) {
 
 
 static int parseInt(std::string_view s) {
+#if HAS_INCLUDE_CHARCONV
   int result;
   auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.length(), result);
   // TODO: check for error
   return result;
+#else 
+  std::string str (s);
+  return std::stoi(str);
+#endif
 }
 
 
