@@ -7,7 +7,7 @@
 
 
 
-__global__ void kernel_A_mul_b(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl,
+__global__ void kernel_A_mul_B(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl,
                    real alpha, real beta,
                   real *tmp,
                  real * A,
@@ -68,7 +68,7 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl,
 
     {
     dim3 grid{num_blocks(ni, block.x), num_blocks(nj, block.y), 1};
-    kernel_A_mul_b <<<block ,grid >>> (ni,nj,nk,nl,alpha,beta,tmp,A,B,C,D);
+    kernel_A_mul_B <<<block ,grid >>> (ni,nj,nk,nl,alpha,beta,tmp,A,B,C,D);
     }
 
 

@@ -3,7 +3,7 @@
 
 
 
-static void kernel(int ni, int nj, int nk, int nl, int nm,
+static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl, pbsize_t nm,
                    multarray<real, 2> E,
                    multarray<real, 2> A,
                    multarray<real, 2> B,
@@ -16,28 +16,28 @@ static void kernel(int ni, int nj, int nk, int nl, int nm,
 {
   /* E := A*B */
   #pragma omp  for collapse(2) schedule(static)
-  for (int i = 0; i < ni; i++)
-    for (int j = 0; j < nj; j++) {
+  for (idx_t i = 0; i < ni; i++)
+    for (idx_t j = 0; j < nj; j++) {
       E[i][j] = 0;
-      for (int k = 0; k < nk; ++k)
+      for (idx_t k = 0; k < nk; ++k)
         E[i][j] += A[i][k] * B[k][j];
     }
 
   /* F := C*D */
   #pragma omp  for collapse(2) schedule(static)
-  for (int i = 0; i < nj; i++)
-    for (int j = 0; j < nl; j++) {
+  for (idx_t i = 0; i < nj; i++)
+    for (idx_t j = 0; j < nl; j++) {
       F[i][j] = 0;
-      for (int k = 0; k < nm; ++k)
+      for (idx_t k = 0; k < nm; ++k)
         F[i][j] += C[i][k] * D[k][j];
     }
 
   /* G := E*F */
   #pragma omp  for collapse(2) schedule(static)
-  for (int i = 0; i < ni; i++)
-    for (int j = 0; j < nl; j++) {
+  for (idx_t i = 0; i < ni; i++)
+    for (idx_t j = 0; j < nl; j++) {
       G[i][j] = 0;
-      for (int k = 0; k < nj; ++k)
+      for (idx_t k = 0; k < nj; ++k)
         G[i][j] += E[i][k] * F[k][j];
     }
 }
@@ -45,22 +45,22 @@ static void kernel(int ni, int nj, int nk, int nl, int nm,
 
 
 
-void run(State &state, int pbsize) {
-  size_t ni = pbsize - pbsize / 3;  // 800
-  size_t nj = pbsize - pbsize / 4;  // 900
-  size_t nk = pbsize - pbsize / 6;  // 1000
-  size_t nl = pbsize - pbsize / 12; // 1100
-  size_t nm = pbsize;               // 1200
+void run(State &state, pbsize_t pbsize) {
+  pbsize_t ni = pbsize - pbsize / 3;  // 800
+  pbsize_t nj = pbsize - pbsize / 4;  // 900
+  pbsize_t nk = pbsize - pbsize / 6;  // 1000
+  pbsize_t nl = pbsize - pbsize / 12; // 1100
+  pbsize_t nm = pbsize;               // 1200
 
 
 
-  auto E = state.allocate_array<double>({ni, nj}, /*fakedata*/ false, /*verify*/ false);
-  auto A = state.allocate_array<double>({ni, nk}, /*fakedata*/ true, /*verify*/ false);
-  auto B = state.allocate_array<double>({nk, nj}, /*fakedata*/ true, /*verify*/ false);
-  auto F = state.allocate_array<double>({nj, nl}, /*fakedata*/ false, /*verify*/ false);
-  auto C = state.allocate_array<double>({nj, nm}, /*fakedata*/ true, /*verify*/ false);
-  auto D = state.allocate_array<double>({nm, nl}, /*fakedata*/ true, /*verify*/ false);
-  auto G = state.allocate_array<double>({ni, nl}, /*fakedata*/ false, /*verify*/ true);
+  auto E = state.allocate_array<real>({ni, nj}, /*fakedata*/ false, /*verify*/ false, "E");
+  auto A = state.allocate_array<real>({ni, nk}, /*fakedata*/ true, /*verify*/ false, "A");
+  auto B = state.allocate_array<real>({nk, nj}, /*fakedata*/ true, /*verify*/ false, "B");
+  auto F = state.allocate_array<real>({nj, nl}, /*fakedata*/ false, /*verify*/ false, "F");
+  auto C = state.allocate_array<real>({nj, nm}, /*fakedata*/ true, /*verify*/ false, "C");
+  auto D = state.allocate_array<real>({nm, nl}, /*fakedata*/ true, /*verify*/ false, "D");
+  auto G = state.allocate_array<real>({ni, nl}, /*fakedata*/ false, /*verify*/ true, "G");
 
   for (auto &&_ : state)
     kernel(ni, nj, nk, nl, nm, E, A, B, F, C, D, G);
