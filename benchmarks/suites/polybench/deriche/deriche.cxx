@@ -4,7 +4,7 @@
 
 
 
-static void kernel(int w, int h,
+static void kernel(pbsize_t w, pbsize_t h,
                    real alpha,
                    multarray<real, 2> imgIn,
                    multarray<real, 2> imgOut,
@@ -23,11 +23,11 @@ static void kernel(int w, int h,
   real b2 = -std::exp(-2 * alpha);
   real c1 = 1, c2 = 1;
 
-  for (int i = 0; i < w; i++) {
+  for (idx_t i = 0; i < w; i++) {
     real ym1 = 0;
     real ym2 = 0;
     real xm1 = 0;
-    for (int j = 0; j < h; j++) {
+    for (idx_t j = 0; j < h; j++) {
       y1[i][j] = a1 * imgIn[i][j] + a2 * xm1 + b1 * ym1 + b2 * ym2;
       xm1 = imgIn[i][j];
       ym2 = ym1;
@@ -35,12 +35,12 @@ static void kernel(int w, int h,
     }
   }
 
-  for (int i = 0; i < w; i++) {
+  for (idx_t i = 0; i < w; i++) {
     real yp1 = 0;
     real yp2 = 0;
     real xp1 = 0;
     real xp2 = 0;
-    for (int j = h - 1; j >= 0; j--) {
+    for (idx_t j = h - 1; j >= 0; j--) {
       y2[i][j] = a3 * xp1 + a4 * xp2 + b1 * yp1 + b2 * yp2;
       xp2 = xp1;
       xp1 = imgIn[i][j];
@@ -49,16 +49,16 @@ static void kernel(int w, int h,
     }
   }
 
-  for (int i = 0; i < w; i++)
-    for (int j = 0; j < h; j++) {
+  for (idx_t i = 0; i < w; i++)
+    for (idx_t j = 0; j < h; j++) {
       imgOut[i][j] = c1 * (y1[i][j] + y2[i][j]);
     }
 
-  for (int j = 0; j < h; j++) {
+  for (idx_t j = 0; j < h; j++) {
     real tm1 = 0;
     real ym1 = 0;
     real ym2 = 0;
-    for (int i = 0; i < w; i++) {
+    for (idx_t i = 0; i < w; i++) {
       y1[i][j] = a5 * imgOut[i][j] + a6 * tm1 + b1 * ym1 + b2 * ym2;
       tm1 = imgOut[i][j];
       ym2 = ym1;
@@ -67,12 +67,12 @@ static void kernel(int w, int h,
   }
 
 
-  for (int j = 0; j < h; j++) {
+  for (idx_t j = 0; j < h; j++) {
     real tp1 = 0;
     real tp2 = 0;
     real yp1 = 0;
     real yp2 = 0;
-    for (int i = w - 1; i >= 0; i--) {
+    for (idx_t i = w - 1; i >= 0; i--) {
       y2[i][j] = a7 * tp1 + a8 * tp2 + b1 * yp1 + b2 * yp2;
       tp2 = tp1;
       tp1 = imgOut[i][j];
@@ -81,23 +81,23 @@ static void kernel(int w, int h,
     }
   }
 
-  for (int i = 0; i < w; i++)
-    for (int j = 0; j < h; j++)
+  for (idx_t i = 0; i < w; i++)
+    for (idx_t j = 0; j < h; j++)
       imgOut[i][j] = c2 * (y1[i][j] + y2[i][j]);
 #pragma endscop
 }
 
 
-void run(State &state, int pbsize) {
-  size_t w = pbsize;                        // 4096
-  size_t h = pbsize / 2 + 7 * pbsize / 256; // 2160
+void run(State &state, pbsize_t pbsize) {
+  pbsize_t w = pbsize;                        // 4096
+  pbsize_t h = pbsize / 2 + 7 * pbsize / 256; // 2160
 
   real alpha = 0.25;
 
-  auto imgIn = state.allocate_array<real>({w, h}, /*fakedata*/ true, /*verify*/ false);
-  auto imgOut = state.allocate_array<real>({w, h}, /*fakedata*/ true, /*verify*/ true);
-  auto y1 = state.allocate_array<real>({w, h}, /*fakedata*/ false, /*verify*/ false);
-  auto y2 = state.allocate_array<real>({w, h}, /*fakedata*/ false, /*verify*/ false);
+  auto imgIn = state.allocate_array<real>({w, h}, /*fakedata*/ true, /*verify*/ false, "imgIn");
+  auto imgOut = state.allocate_array<real>({w, h}, /*fakedata*/ false, /*verify*/ true, "imgOut");
+  auto y1 = state.allocate_array<real>({w, h}, /*fakedata*/ false, /*verify*/ false, "y1");
+  auto y2 = state.allocate_array<real>({w, h}, /*fakedata*/ false, /*verify*/ false, "y2");
 
   for (auto &&_ : state)
     kernel(w, h, alpha, imgIn, imgOut, y1, y2);
