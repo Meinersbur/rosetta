@@ -38,7 +38,7 @@ if (j< m) {
 
 
 static void kernel(pbsize_t m, pbsize_t n, real * A, real s[], real q[], real p[], real r[]) {
-  unsigned threadsPerBlock = 256;
+ const  unsigned threadsPerBlock = 256;
   kernel_q<<<threadsPerBlock, num_blocks(n,threadsPerBlock)>>>(m,n,A,s,q,p,r);
   kernel_s<<<threadsPerBlock, num_blocks(m,threadsPerBlock)>>>(m,n,A,s,q,p,r);
 }
