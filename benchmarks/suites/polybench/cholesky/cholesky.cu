@@ -32,7 +32,7 @@ __global__ void kernel2(pbsize_t n, idx_t j, real * A) {
 
 
 static
-int num_blocks(int num, int factor) {
+unsigned num_blocks(int num, int factor) {
     return (num + factor -1)/factor ;
 }
 
