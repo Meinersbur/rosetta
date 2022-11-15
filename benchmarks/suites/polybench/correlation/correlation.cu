@@ -165,7 +165,7 @@ void run(State &state, pbsize_t pbsize) {
   for (auto &&_ : state) {
     cudaMemcpy(dev_data, data.data(), n*m * sizeof(real), cudaMemcpyHostToDevice);
      cudaMemset(dev_corr, '\0', m * m * sizeof(real));
-        cudaMemset(dev_mean, '\0', m  * sizeof(real));
+  //      cudaMemset(dev_mean, '\0', m  * sizeof(real));
 
     kernel(m, n,  dev_data, dev_corr, dev_mean, dev_stddev);
 
