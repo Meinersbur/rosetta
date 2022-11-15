@@ -346,7 +346,7 @@ public:
     assert(i < len);
 
     auto rest = _unqueue_tuple<RemainingLengthsTy>::get_rest(remainingLengths);
-    return _multarray_partial_subscript<T, nTogo - 1>(data + get_stride(rest), rest);
+    return _multarray_partial_subscript<T, nTogo - 1>(data + i*get_stride(rest), rest);
   }
 }; // class _multarray_partial_subscript
 
