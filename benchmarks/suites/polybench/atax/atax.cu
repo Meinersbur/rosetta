@@ -13,7 +13,6 @@ __global__ void kernel3(int m, int n, real * A, real *x, real *y, real *tmp) {
 if (i< m) {
             for (idx_t j = 0; j < n; j++)
                 tmp[i] += A[i*n+j] * x[j];
-             //   tmp[i] = 42;  
 }
 }
 
