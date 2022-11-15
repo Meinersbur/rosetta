@@ -18,7 +18,7 @@ static void kernel(pbsize_t m, pbsize_t n,
 #pragma omp for schedule(static)
       for (idx_t j = 0; j < m; j++) {
           mean[j] = 0.0;
-          for (int i = 0; i < n; i++)
+          for (idx_t i = 0; i < n; i++)
               mean[j] += data[i][j];
           mean[j] /= n;
       }
@@ -33,7 +33,8 @@ static void kernel(pbsize_t m, pbsize_t n,
           /* The following in an inelegant but usual way to handle
              near-zero std. dev. values, which below would cause a zero-
              divide. */
-          stddev[j] = stddev[j] <= eps ? 1.0 : stddev[j];
+             if (stddev[j] <= eps)
+                stddev[j] = 1.0;
       }
 
 
@@ -50,9 +51,9 @@ static void kernel(pbsize_t m, pbsize_t n,
 #pragma omp for 
       for (idx_t i = 0; i < m - 1; i++) {
           corr[i][i] = 1.0;
-          for (int j = i + 1; j < m; j++) {
+          for (idx_t j = i + 1; j < m; j++) {
               corr[i][j] = 0.0;
-              for (int k = 0; k < n; k++)
+              for (idx_t k = 0; k < n; k++)
                   corr[i][j] += (data[k][i] * data[k][j]);
               corr[j][i] = corr[i][j];
           }
@@ -66,15 +67,16 @@ static void kernel(pbsize_t m, pbsize_t n,
 }
 
 
-void run(State &state, int pbsize) {
+void run(State &state, pbsize_t pbsize) {
   pbsize_t n = pbsize;
   pbsize_t m = pbsize - pbsize / 6;
 
-  real float_n = n;
-  auto data = state.allocate_array<real>({ n,m}, /*fakedata*/ true, /*verify*/ false);
-  auto corr = state.allocate_array<real>({m, m}, /*fakedata*/ false, /*verify*/ true);
-  auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true);
-  auto stddev = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true);
+
+  auto data = state.allocate_array<real>({ n,m}, /*fakedata*/ true, /*verify*/ false, "data");
+    auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "mean");
+      auto stddev = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "stddev");
+  auto corr = state.allocate_array<real>({m, m}, /*fakedata*/ false, /*verify*/ true, "corr");
+
 
 
   for (auto &&_ : state)
