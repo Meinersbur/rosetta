@@ -50,15 +50,11 @@ static void
                                U:                                 A[i][k] /= A[k][k];
                                }
 
-#pragma omp for collapse(2) /* schedule(static) */
-                               for (idx_t i = k + 1; i < n; i++)
-                                   for (idx_t j = i; j < n; j++) {
-                                   V:                                      A[i][j] -= A[i][k] * A[k][j];
-                                   }
+
 
 #pragma omp for collapse(2) /* schedule(static) */
                                for (idx_t i = k + 1; i < n; i++)
-                                   for (idx_t j = k+1; j < i; j++) {
+                                   for (idx_t j = k+1; j < n; j++) {
                                    T:                                      A[i][j] -= A[i][k] * A[k][j];
                                    }
                            }
