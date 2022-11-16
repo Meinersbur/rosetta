@@ -24,10 +24,10 @@ __global__ void kernel_x(pbsize_t n, real alpha, real beta,
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
 
-if (i < n ) {
-          for (idx_t j = 0; j < n; j++)
-                                   x[i] +=  beta * A[j*n+i] * y[j];
-}
+    if (i < n ) {
+            for (idx_t j = 0; j < n; j++)
+                                    x[i] +=  beta * A[j*n+i] * y[j];
+    }
 }
 
 
@@ -36,8 +36,8 @@ __global__ void kernel_y(pbsize_t n, real alpha, real beta,
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
   
 
-if (i < n )
-             x[i] +=  z[i];
+    if (i < n )
+                x[i] +=  z[i];
 }
 
 __global__ void kernel_w(pbsize_t n, real alpha, real beta,
@@ -45,10 +45,10 @@ __global__ void kernel_w(pbsize_t n, real alpha, real beta,
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
     
 
-if (i < n ) {
-         for (idx_t j = 0; j < n; j++)
-                                   w[i] +=  alpha * A[i*n+j] * x[j] ;
-}
+    if (i < n ) {
+            for (idx_t j = 0; j < n; j++)
+                                    w[i] +=  alpha * A[i*n+j] * x[j] ;
+    }
 }
 
 
@@ -72,11 +72,6 @@ static void kernel(pbsize_t n, real alpha, real beta,
  kernel_x <<<threadsPerBlock ,num_blocks(n,threadsPerBlock) >>> (n,alpha,beta,A,u1,v1,u2,v2,w,x,y,z);
  kernel_y <<<threadsPerBlock ,num_blocks(n,threadsPerBlock) >>> (n,alpha,beta,A,u1,v1,u2,v2,w,x,y,z);
  kernel_w <<<threadsPerBlock ,num_blocks(n,threadsPerBlock) >>> (n,alpha,beta,A,u1,v1,u2,v2,w,x,y,z);
-
-
-
-
-
 }
 
 
