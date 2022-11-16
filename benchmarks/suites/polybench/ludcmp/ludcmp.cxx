@@ -30,7 +30,7 @@ static void kernel(pbsize_t  n,   multarray<real, 2> A, real b[], real x[], real
     y[i] = w;
   }
 
-  for (idx_t i = n - 1; i >= 0; i--) {
+  for (idx_t i = n - 1; i >= 0; i--) { 
     real w = y[i];
     for (idx_t j = i + 1; j < n; j++)
       w -= A[i][j] * x[j];
@@ -50,8 +50,8 @@ void run(State &state, pbsize_t pbsize) {
    
   auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false, "A");
   auto b = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "b");
-  auto x = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true, "x");
-  auto y = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "y");
+  auto x = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "x");
+  auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "y");
 
 
 

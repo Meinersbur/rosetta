@@ -34,8 +34,6 @@ U:             A[i][j] /= A[j][j];
              for (idx_t k = 0; k < i; k++)
 V:                 A[i][j] -= A[i][k] * A[k][j];
      }
-
-     // 
 }
 
 
