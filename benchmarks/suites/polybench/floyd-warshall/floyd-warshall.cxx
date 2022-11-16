@@ -20,7 +20,7 @@ void run(State &state, pbsize_t pbsize) {
 
 
 
-  auto path = state.allocate_array<double>({n, n}, /*fakedata*/ true, /*verify*/ true);
+  auto path = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "path");
 
 
 
