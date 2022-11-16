@@ -10,11 +10,10 @@ static real kernel(pbsize_t n) {
 }
 
 void run(State& state, pbsize_t n) {
- auto sum = state.allocate_array<real>({}, /*fakedata*/ false, /*verify*/ true, "sum");
+ auto sum_owner = state.allocate_array<real>({1}, /*fakedata*/ false, /*verify*/ true, "sum");
+ multarray<real, 1> sum = sum_owner;
 
-
-    for (auto &&_ : state) {1
+    for (auto &&_ : state) {
         sum[0] = kernel(n);
-        benchmark::DoNotOptimize(result);
     }
 }

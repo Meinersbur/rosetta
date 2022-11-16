@@ -34,19 +34,6 @@ static void kernel(pbsize_t nr, pbsize_t nq, pbsize_t np,
           dim3 block{1, threadsPerBlock / 32, 32};
     dim3 grid{num_blocks(nr, block.x), num_blocks(nq, block.y), num_blocks(np, block.z)};
     kernel_sum <<<block ,grid >>> (nr,nq,np, A, C4, sum);
-
-#if 0
-  for (idx_t r = 0; r < nr; r++)
-    for (idx_t q = 0; q < nq; q++) {
-      for (idx_t p = 0; p < np; p++) {
-        sum[p] = 0;
-        for (idx_t s = 0; s < np; s++)
-          sum[p] += A[r][q][s] * C4[s][p];
-      }
-      for (idx_t p = 0; p < np; p++)
-        A[r][q][p] = sum[p];
-    }
-    #endif
 }
 
 
@@ -68,14 +55,14 @@ void run(State &state, pbsize_t pbsize) {
       real* dev_sum = state.allocate_dev<real>(nr*nq*np);
 
   for (auto &&_ : state) {
-  cudaMemcpy(dev_A, A.data(),  nr*nq*np* sizeof(real), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_C4, C4.data(),  np*np* sizeof(real), cudaMemcpyHostToDevice);
+  BENCH_CUDA_TRY( cudaMemcpy(dev_A, A.data(),  nr*nq*np* sizeof(real), cudaMemcpyHostToDevice));
+    BENCH_CUDA_TRY( cudaMemcpy(dev_C4, C4.data(),  np*np* sizeof(real), cudaMemcpyHostToDevice));
 
     kernel(nr, nq, np, dev_A, dev_C4, dev_sum);
 
        cudaMemcpy( A.data() ,dev_sum,  nr*nq*np* sizeof(real), cudaMemcpyDeviceToHost ); 
 
-     cudaDeviceSynchronize();
+    BENCH_CUDA_TRY(  cudaDeviceSynchronize());
   }
 
                state.free_dev(dev_A);     

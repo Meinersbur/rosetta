@@ -1324,7 +1324,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                     reld = 0 if absd==0 else math.inf 
                   else:
                     reld = absd/mid
-                  if reld > 1e-6: # TODO: Don't hardcode difference; this default is also quite high
+                  if reld > 1e-4: # TODO: Don't hardcode difference
                     print(f"While comparing {refpath} and {testoutpath}:")
                     die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
 

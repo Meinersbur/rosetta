@@ -93,6 +93,8 @@ endif ()
 if (CMAKE_CUDA_COMPILER)
   # only for CUDA_VERSION
   find_package(CUDA REQUIRED)
+  find_package(Thrust REQUIRED CONFIG)
+  thrust_create_target(Thrust) # https://github.com/NVIDIA/thrust/blob/main/thrust/cmake/README.md
 endif ()
 
 # For Nvidia platform
