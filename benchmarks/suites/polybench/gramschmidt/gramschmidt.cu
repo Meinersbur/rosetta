@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=cuda,sources=[__file__, "gramschmidt-common.cxx"])
+// TODO: add_benchmark(ppm=cuda,sources=[__file__, "gramschmidt-common.cxx"])
 
 #include <rosetta.h>
 #include "gramschmidt-common.h"
