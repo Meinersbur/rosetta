@@ -35,13 +35,6 @@ unsigned num_blocks(int num, int factor) {
 }
 
 
-__global__ void kernel_init(pbsize_t n,
-                   real r[],
-                   real y[], real z[], real alpha) {
-    y[0] = alpha;
-}
-
-
 
 
 template<typename T>
@@ -73,11 +66,6 @@ if (i < k)
 }
 
 
-__global__ void kernel_set(pbsize_t n,
-                   real r[],
-                   real y[], real z[], idx_t k, real alpha) {
-    y[0] = alpha;
-}
 
 
 
@@ -86,7 +74,7 @@ static void kernel(pbsize_t n,
                    real r[],
                    real y[], real z[]) {
                            const  unsigned threadsPerBlock = 256;
-                           // https://github.com/NVIDIA/thrust/blob/master/examples/cuda/wrap_pointer.cu/
+// https://github.com/NVIDIA/thrust/blob/master/examples/cuda/wrap_pointer.cu/
 thrust::device_ptr<real> wrapped_r = thrust::device_pointer_cast(r);
 thrust::device_ptr<real> wrapped_y = thrust::device_pointer_cast(y);
 
@@ -95,9 +83,6 @@ thrust::device_ptr<real> wrapped_y = thrust::device_pointer_cast(y);
   
 
 
-
-//kernel_init<<<1,1>>>(n,r,y,z,alpha);
- //     return ;
 
 
 
@@ -121,52 +106,12 @@ thrust::device_ptr<real> wrapped_y = thrust::device_pointer_cast(y);
 
       BENCH_CUDA_TRY(   cudaMemcpy( y ,z, k*sizeof(real), cudaMemcpyDeviceToDevice)); 
  
-       wrapped_y[k] = alpha;     //   kernel_set<<<1,1>>>(n,r,y,z,k,alpha);
+       wrapped_y[k] = alpha;     
     }
 
 
 
-#if 0
-// https://github.com/NVIDIA/thrust/blob/master/examples/padded_grid_reduction.cu
-         result_type result = 
-    thrust::transform_reduce(
-        thrust::make_zip_iterator(thrust::make_tuple(thrust::counting_iterator<int>(0), data.begin())),
-        thrust::make_zip_iterator(thrust::make_tuple(thrust::counting_iterator<int>(0), data.begin())) + data.size(),
-        unary_op,
-        init,
-        binary_op);
-    }
-    #endif
 
-
-
-#if 0
-    y[0] = -r[0];
-
-    for (idx_t k = 1; k < n; k++) {
-        real sum = 0;
-#pragma omp parallel for default(none) reduction(+:sum) firstprivate(k,r,y) schedule(static)
-        for (idx_t i = 0; i < k; i++) 
-            sum += r[k - i - 1] * y[i];
-        
-
-        beta = (1 - alpha * alpha) * beta;
-        alpha = -(r[k] + sum) / beta;
-
-#pragma omp parallel 
-        {
-#pragma omp for schedule(static)
-            for (idx_t i = 0; i < k; i++)
-                z[i] = y[i] + alpha * y[k - i - 1];
-
-#pragma omp for schedule(static)
-            for (idx_t i = 0; i < k; i++)
-                y[i] = z[i];
-        }
-        
-        y[k] = alpha;
-    }
-    #endif
 }
 
 
