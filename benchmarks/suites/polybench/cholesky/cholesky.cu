@@ -13,6 +13,8 @@ __global__ void kernel0(pbsize_t n, idx_t j, real * A) {
     A[j*n +j] = std::sqrt( A[j*n +j] );
 }
 
+
+
 __global__ void kernel1(pbsize_t n, idx_t j, real * A) {
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -39,7 +41,7 @@ unsigned num_blocks(int num, int factor) {
 
 
 static void kernel_polly(pbsize_t n, real *dev_A) {
-    int threadsPerBlock = 256;
+   const  unsigned  int threadsPerBlock = 256;
 
     
         for (idx_t j = 0; j < n; j++) { 

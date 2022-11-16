@@ -1,6 +1,8 @@
-﻿// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_parallel,sources=[__file__, "gramschmidt-common.cxx"])
 
-#include "rosetta.h"
+
+#include <rosetta.h>
+#include "gramschmidt-common.h"
 
 #if 0
 void kernel_polly(pbsize_t m, pbsize_t n,
@@ -42,7 +44,7 @@ static void kernel(pbsize_t m, pbsize_t n,
                        
                            for (idx_t k = 0; k < n; k++) {
 
-                               double sum = 0;
+                               real sum = 0;
                                // FIXME: For some reason OpenMP-reduction numericall destabilizes this
                                // Possibly inherent to Gram-Schmidt numeric instability
                                // https://en.wikipedia.org/wiki/Gram–Schmidt_process#Numerical_stability
@@ -83,15 +85,6 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 
-static void condition( pbsize_t m,  pbsize_t n,multarray<real, 2> A) {
-    for (idx_t i = 0; i < m; i++) {
-        for (idx_t j = 0; j < n; j++) {
-            if ( std::abs(i-j) > 1 ) continue;
-
-            A[i][j] = 0.25;
-        }
-    }
-}
 
 
 void run(State &state, pbsize_t pbsize) {
