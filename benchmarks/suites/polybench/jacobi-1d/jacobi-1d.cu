@@ -31,24 +31,6 @@ static void kernel(pbsize_t tsteps, pbsize_t n,  real A[], real B[]) {
                     kernel_stencil<<<threadsPerBlock,num_blocks(n,threadsPerBlock)>>>(n,A,B);
                     kernel_stencil<<<threadsPerBlock,num_blocks(n,threadsPerBlock)>>>(n,B,A);
        }
-
-
-#if 0
-#pragma omp parallel default(none) firstprivate(tsteps,n,A,B)
-    {
-        for (idx_t t = 0; t < tsteps; t++) {
-
-#pragma omp for schedule(static)
-            for (idx_t i = 1; i < n - 1; i++)
-                B[i] = (A[i - 1] + A[i] + A[i + 1])/3;
-
-#pragma omp for schedule(static)
-            for (idx_t i = 1; i < n - 1; i++)
-                A[i] =  (B[i - 1] + B[i] + B[i + 1])/3;
-
-        }
-    }
-    #endif
 }
 
 
