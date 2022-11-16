@@ -14,19 +14,17 @@ unsigned num_blocks(int num, int factor) {
 
 
 
-template<typename T>
-struct r_times_y : public thrust:: unary_function<T,T>
+
+struct r_times_y : public thrust:: unary_function<real,real>
 {
-    T *r;
-    T *y;
+  thrust::device_ptr<real> r;
+  thrust::device_ptr<real> y;
     idx_t k;
 
-r_times_y(T *r, T*y, idx_t k) : r(r), y(y), k(k)  {  }
+r_times_y(thrust::device_ptr<real> r, thrust::device_ptr<real> y, idx_t k) : r(r), y(y), k(k)  {  }
 
 
-  __host__ __device__ T operator()(const T &x) const
-  {
-    idx_t i = x;
+  __host__ __device__ real operator()(idx_t i) const  {
     return  r[k - i - 1] * y[i];
   }
 };
@@ -48,25 +46,22 @@ if (i < k)
 
 
 static void kernel(pbsize_t n,
-                   real r[],
-                   real y[], real z[]) {
+  thrust::device_ptr<real> r,
+  thrust::device_ptr<real> y, thrust::device_ptr<real> z) {
                            const  unsigned threadsPerBlock = 256;
-// https://github.com/NVIDIA/thrust/blob/master/examples/cuda/wrap_pointer.cu/
-thrust::device_ptr<real> wrapped_r = thrust::device_pointer_cast(r);
-thrust::device_ptr<real> wrapped_y = thrust::device_pointer_cast(y);
 
     real beta = 1;
-    real alpha = -wrapped_r[0];
+    real alpha = -r[0];
   
 
 
 
 
 
-  wrapped_y[0] = alpha;
+  y[0] = alpha;
   for (idx_t k = 1; k < n; k++) {
     // FIXME: Quite approximate sum
-       r_times_y<real> op{r,y,k};
+       r_times_y op{r,y,k};
         real sum  = thrust::transform_reduce(
                                     thrust::device,
                                       thrust::make_counting_iterator(0), 
@@ -77,13 +72,13 @@ thrust::device_ptr<real> wrapped_y = thrust::device_pointer_cast(y);
                                
 
         beta = (1 - alpha * alpha) * beta;
-        alpha = -(wrapped_r[k] + sum) / beta;
+        alpha = -(r[k] + sum) / beta;
 
-      kernel_z<<<threadsPerBlock,num_blocks(k,threadsPerBlock)>>>(n,r,y,z,k,alpha);
+      kernel_z<<<threadsPerBlock,num_blocks(k,threadsPerBlock)>>>(n,r.get(),y.get(),z.get(),k,alpha);
 
-      BENCH_CUDA_TRY(   cudaMemcpy( y ,z, k*sizeof(real), cudaMemcpyDeviceToDevice)); 
+      BENCH_CUDA_TRY(   cudaMemcpy( y.get() ,z.get(), k*sizeof(real), cudaMemcpyDeviceToDevice));
  
-       wrapped_y[k] = alpha;     
+       y[k] = alpha;
     }
 
 
@@ -99,18 +94,16 @@ void run(State &state, pbsize_t pbsize) {
 
   auto r = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "r");
   auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");
- // auto z = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "z");
 
 
-  real* dev_r = state.allocate_dev<real>(n);
+
+  real* dev_r = state.allocate_dev<real>(n);// thrust::device_malloc ?
 real* dev_y = state.allocate_dev<real>(n);
 real* dev_z = state.allocate_dev<real>(n);
 
   for (auto &&_ : state) {
  BENCH_CUDA_TRY( cudaMemcpy(dev_r, r.data(),  n* sizeof(real), cudaMemcpyHostToDevice));
-
-    kernel(n, dev_r, dev_y, dev_z);
-
+    kernel(n,  thrust::device_pointer_cast(dev_r),  thrust::device_pointer_cast(dev_y),  thrust::device_pointer_cast(dev_z));
      BENCH_CUDA_TRY(    cudaMemcpy( y.data() ,dev_y,  n*sizeof(real), cudaMemcpyDeviceToHost )); 
 
     BENCH_CUDA_TRY(  cudaDeviceSynchronize());

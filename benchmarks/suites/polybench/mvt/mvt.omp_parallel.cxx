@@ -1,6 +1,6 @@
 // BUILD: add_benchmark(ppm=omp_parallel)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
 
 
@@ -29,11 +29,11 @@ void run(State &state, pbsize_t pbsize) {
 
 
 
-  auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false);
-  auto x1 = state.allocate_array<real>({ n },/*fakedata*/ true, /*verify*/ true);
-  auto x2 = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true);
-  auto y_1 = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false);
-  auto y_2 = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false);
+  auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false, "A");
+  auto x1 = state.allocate_array<real>({n},/*fakedata*/ true, /*verify*/ true, "x1");
+  auto x2 = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true, "x2");
+  auto y_1 = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "y_1");
+  auto y_2 = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "y_2");
 
 
   for (auto &&_ : state)
