@@ -1,32 +1,9 @@
 // BUILD: add_benchmark(ppm=cuda)
 
-#include "rosetta.h"
-
-#include <cub/cub.cuh>   
-#include <thrust/iterator/iterator_traits.h>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-#include <thrust/generate.h>
+#include <rosetta.h>
 #include <thrust/reduce.h>
-#include <thrust/functional.h>
-#include <algorithm>
-#include <cstdlib>
-#include <thrust/system/cuda/vector.h>
-#include <thrust/system/cuda/execution_policy.h>
-#include <thrust/host_vector.h>
-#include <thrust/generate.h>
-#include <thrust/sort.h>
-#include <thrust/pair.h>
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <map>
-#include <cassert>
-#include <thrust/detail/config.h>
-#include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
-#include <thrust/fill.h>
-#include <cuda.h>
+
 
 
 static
