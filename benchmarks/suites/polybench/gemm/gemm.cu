@@ -52,9 +52,9 @@ void run(State &state, pbsize_t pbsize) {
 
   real alpha = 1.5;
   real beta = 1.2;
-  auto C = state.allocate_array<real>({ni, nj}, /*fakedata*/ true, /*verify*/ true);
-  auto A = state.allocate_array<real>({ni, nk}, /*fakedata*/ true, /*verify*/ false);
-  auto B = state.allocate_array<real>({nk, nj}, /*fakedata*/ true, /*verify*/ false);
+  auto C = state.allocate_array<real>({ni, nj}, /*fakedata*/ true, /*verify*/ true,"C");
+  auto A = state.allocate_array<real>({ni, nk}, /*fakedata*/ true, /*verify*/ false,"A");
+  auto B = state.allocate_array<real>({nk, nj}, /*fakedata*/ true, /*verify*/ false,"B");
 
 
   real* dev_C  = state.allocate_dev<real>(ni* nj);

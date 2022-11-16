@@ -37,7 +37,7 @@ struct AtomicMin<double> {
          // 3. Someone else overwrote dst with a smaller value than val.
          // dst and old both contains that smallest value
          // Will break the loop at next iteration because old <= newval
-    } 
+    } }
 };
 
 
