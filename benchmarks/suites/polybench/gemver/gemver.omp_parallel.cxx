@@ -30,7 +30,7 @@ static void kernel(pbsize_t n, real alpha, real beta,
 
 
 void run(State &state, pbsize_t n) {
-  real alpha = 1.5;
+      real alpha = 1.5;
   real beta = 1.2;
   auto y = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "y");
   auto z = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "z");

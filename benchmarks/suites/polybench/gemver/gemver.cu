@@ -76,36 +76,14 @@ static void kernel(pbsize_t n, real alpha, real beta,
 
 
 
-#if 0
-#pragma omp parallel default(none) firstprivate(n,alpha,beta,A,u1,v1,u2,v2,w,x,y,z)
-                       {
-#pragma omp for collapse(2) schedule(static)
-                           for (idx_t i = 0; i < n; i++)
-                               for (idx_t j = 0; j < n; j++)
-                                   A[i][j] +=  u1[i] * v1[j] + u2[i] * v2[j];
 
-#pragma omp for  schedule(static)
-                           for (idx_t i = 0; i < n; i++)
-                               for (idx_t j = 0; j < n; j++)
-                                   x[i] +=  beta * A[j][i] * y[j];
-
-#pragma omp for  schedule(static)
-                           for (idx_t i = 0; i < n; i++)
-                               x[i] +=  z[i];
-
-#pragma omp for  schedule(static)
-                           for (idx_t i = 0; i < n; i++)
-                               for (idx_t j = 0; j < n; j++)
-                                   w[i] +=  alpha * A[i][j] * x[j] ;
-                       }
-                       #endif
 }
 
 
 
 
 void run(State &state, pbsize_t n) {
-  real alpha = 1.5;
+      real alpha = 1.5;
   real beta = 1.2;
   auto y = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "y");
   auto z = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "z");

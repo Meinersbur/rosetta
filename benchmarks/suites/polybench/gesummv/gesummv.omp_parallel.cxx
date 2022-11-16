@@ -27,11 +27,11 @@ static void kernel(pbsize_t n,
 void run(State &state, pbsize_t n) {
   real alpha = 1.5;
   real beta = 1.2;
-  auto A = state.allocate_array<double>({n, n}, /*fakedata*/ true, /*verify*/ false);
-  auto B = state.allocate_array<double>({n, n}, /*fakedata*/ true, /*verify*/ false);
-  auto tmp = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ false);
-  auto x = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false);
-  auto y = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ true);
+  auto A = state.allocate_array<double>({n, n}, /*fakedata*/ true, /*verify*/ false, "A");
+  auto B = state.allocate_array<double>({n, n}, /*fakedata*/ true, /*verify*/ false, "B");
+  auto tmp = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ false, "tmp");
+  auto x = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "x");
+  auto y = state.allocate_array<double>({n}, /*fakedata*/ false, /*verify*/ true, "y");
 
 
 
