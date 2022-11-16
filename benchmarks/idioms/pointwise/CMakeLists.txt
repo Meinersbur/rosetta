@@ -1,5 +1,0 @@
-add_benchmark_serial(pointwise)
-add_benchmark_cuda(pointwise)
-add_benchmark_openmp_parallel(pointwise)
-add_benchmark_openmp_task(pointwise)
-add_benchmark_openmp_target(pointwise)
