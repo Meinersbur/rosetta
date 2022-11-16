@@ -20,21 +20,14 @@ __global__ void kernel_div(pbsize_t n, real* A,idx_t k) {
 }
 
 
-__global__ void kernel_A1(pbsize_t n, real* A,idx_t k) {
+
+
+__global__ void kernel_A(pbsize_t n, real* A,idx_t k) {
     idx_t i = blockDim.x * blockIdx.x + threadIdx.x +k+1;
    idx_t j = blockDim.y * blockIdx.y + threadIdx.y +k+1;
 
 
-    if (i < n && i <= j && j < n) 
-              A[i*n+j] -= A[i*n+k] * A[k*n+j];
-}
-
-__global__ void kernel_A2(pbsize_t n, real* A,idx_t k) {
-    idx_t i = blockDim.x * blockIdx.x + threadIdx.x +k+1;
-   idx_t j = blockDim.y * blockIdx.y + threadIdx.y +k+1;
-
-
-    if (i < n && j < i ) 
+    if (i < n && j < n ) 
               A[i*n+j] -= A[i*n+k] * A[k*n+j];
 }
 
@@ -51,38 +44,8 @@ const  unsigned  int threadsPerBlock = 256;
     
       dim3 block {threadsPerBlock/32, 32,1};     
                     dim3 grid {num_blocks(n-(k+1),block.x), num_blocks(n-(k+1),block.y), 1}; 
-                    kernel_A1<<<block,grid>>>(n,A,k);        
-          kernel_A2<<<block,grid>>>(n,A,k);   
+          kernel_A<<<block,grid>>>(n,A,k);   
   }
-
-
-
-#if 0
-#pragma omp parallel default(none) firstprivate(n,A)
-                       {
-                           for (idx_t k = 0; k < n-1; k++) {
-#pragma omp for schedule(static)
-                               for (idx_t i = k + 1; i < n; i++) {
-                                                          A[i][k] /= A[k][k];
-                               }
-
-#pragma omp for collapse(2) /* schedule(static) */
-                               for (idx_t i = k + 1; i < n; i++)
-                                   for (idx_t j = i; j < n; j++) {
-                                                                 A[i][j] -= A[i][k] * A[k][j];
-                                   }
-
-#pragma omp for collapse(2) /* schedule(static) */
-                               for (idx_t i = k + 1; i < n; i++)
-                                   for (idx_t j = k+1; j < i; j++) {
-                                                           A[i][j] -= A[i][k] * A[k][j];
-                                   }
-                           }
-
-
-
-                       }
-                       #endif
 }
 
 
