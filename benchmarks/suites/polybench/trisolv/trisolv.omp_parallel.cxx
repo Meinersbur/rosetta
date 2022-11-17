@@ -1,6 +1,6 @@
 // BUILD: add_benchmark(ppm=omp_parallel)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
 
 static void kernel(pbsize_t  n,
