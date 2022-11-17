@@ -32,26 +32,6 @@ static void kernel(pbsize_t tsteps, pbsize_t n,
                     kernel_stencil<<<block,grid>>>(n,A,B);
                     kernel_stencil<<<block,grid>>>(n,B,A);
        }
-
-                    
-                    #if 0
-#pragma omp parallel default(none) firstprivate(tsteps,n,A,B)
-                       {
-                           for (idx_t t = 0; t < tsteps; t++) {
-
-#pragma omp for collapse(2) schedule(static)
-                               for (idx_t i = 1; i < n - 1; i++)
-                                   for (idx_t j = 1; j < n - 1; j++)
-                                       B[i][j] = (A[i][j] + A[i][j - 1] + A[i][1 + j] + A[1 + i][j] + A[i - 1][j]) / 5;
-
-#pragma omp for collapse(2) schedule(static)
-                               for (idx_t i = 1; i < n - 1; i++)
-                                   for (idx_t j = 1; j < n - 1; j++)
-                                       A[i][j] = (B[i][j] + B[i][j - 1] + B[i][1 + j] + B[1 + i][j] + B[i - 1][j]) / 5;
-
-                           }
-                       }
-                       #endif
 }
 
 
@@ -69,9 +49,7 @@ void run(State &state, pbsize_t pbsize) {
 
   for (auto &&_ : state) {
 BENCH_CUDA_TRY( cudaMemcpy(dev_A, A.data(), n*n* sizeof(real), cudaMemcpyHostToDevice));
-
     kernel(tsteps, n, dev_A, dev_B);
-
         BENCH_CUDA_TRY(    cudaMemcpy( B.data() ,dev_B,  n*n*sizeof(real), cudaMemcpyDeviceToHost )); 
 
     BENCH_CUDA_TRY(  cudaDeviceSynchronize());

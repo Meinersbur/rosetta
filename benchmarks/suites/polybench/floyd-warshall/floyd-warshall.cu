@@ -1,7 +1,7 @@
 // BUILD: add_benchmark(ppm=cuda)
 
 #include <rosetta.h>
-
+#include <cuda.h>
 
 static
 unsigned num_blocks(int num, int factor) {
