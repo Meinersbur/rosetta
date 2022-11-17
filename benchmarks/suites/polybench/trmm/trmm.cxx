@@ -1,6 +1,6 @@
 // BUILD: add_benchmark(ppm=serial)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
 /*
       #pragma omp parallel for
@@ -53,8 +53,8 @@ void run(State &state, pbsize_t pbsize) {
     pbsize_t m = pbsize - pbsize / 6;
 
   real alpha = 1.5;
-  auto B = state.allocate_array<double>({m, n}, /*fakedata*/ true, /*verify*/ true, "B");
-  auto A = state.allocate_array<double>({n, m}, /*fakedata*/ true, /*verify*/ false, "A");
+  auto B = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "B");
+  auto A = state.allocate_array<real>({n, m}, /*fakedata*/ true, /*verify*/ false, "A");
 
   for (auto &&_ : state)
     kernel(n, m, alpha, B, A);
