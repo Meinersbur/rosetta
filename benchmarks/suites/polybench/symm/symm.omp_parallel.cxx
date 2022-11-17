@@ -1,35 +1,7 @@
 // BUILD: add_benchmark(ppm=omp_parallel)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
-
-/*
-      #pragma omp parallel for
-      for (int c0 = 0; c0 < m; c0 += 1)
-        #pragma simd
-        for (int c1 = 0; c1 < n; c1 += 1)
-          Stmt_for_body4(c0, c1);
-
-      #pragma omp parallel for
-      for (int c0 = 1; c0 < m; c0 += 1)
-        for (int c1 = 0; c1 < n; c1 += 1)
-          #pragma minimal dependence distance: 1
-          for (int c2 = 0; c2 < c0; c2 += 1)
-            Stmt_for_body28(c0, c1, c2);
-
-      #pragma omp parallel for
-      for (int c0 = 0; c0 < m; c0 += 1)
-        #pragma simd
-        for (int c1 = 0; c1 < n; c1 += 1)
-          Stmt_for_end44(c0, c1);
-
-      #pragma omp parallel for
-      for (int c0 = 0; c0 < n; c0 += 1)
-        for (int c1 = 0; c1 < m - 1; c1 += 1)
-          #pragma minimal dependence distance: 1
-          for (int c2 = c1 + 1; c2 < m; c2 += 1)
-            Stmt_for_body10(c2, c0, c1);
-*/
 
 
 static void kernel(pbsize_t  m, pbsize_t  n,
@@ -71,11 +43,15 @@ void run(State &state, pbsize_t pbsize) {
 
   real alpha = 1.5;
   real beta = 1.2;
-  auto C = state.allocate_array<double>({m, n}, /*fakedata*/ false, /*verify*/ true,"C");
-  auto A = state.allocate_array<double>({m, m}, /*fakedata*/ true, /*verify*/ false,"A");
-  auto B = state.allocate_array<double>({m, n}, /*fakedata*/ true, /*verify*/ false, "B");
-  auto tmp = state.allocate_array<double>({m, n}, /*fakedata*/ true, /*verify*/ false, "tmp");
+  auto C = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true,"C");
+  auto A = state.allocate_array<real>({m, m}, /*fakedata*/ true, /*verify*/ false,"A");
+  auto B = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ false, "B");
+  auto tmp = state.allocate_array<double>({m, n}, /*fakedata*/ false, /*verify*/ false);
+
+
 
   for (auto &&_ : state)
     kernel(m, n, alpha, beta, C, A, B,tmp);
 }
+
+
