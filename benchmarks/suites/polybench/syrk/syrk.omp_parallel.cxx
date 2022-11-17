@@ -1,14 +1,13 @@
 // BUILD: add_benchmark(ppm=omp_parallel)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
 
 static void kernel(pbsize_t n, pbsize_t m,
     real alpha, real beta,
     multarray<real, 2> C,
-    multarray<real, 2> A,
-    multarray<real, 2> B) {
-#pragma omp parallel default(none) firstprivate(n,m,alpha,beta,C,A,B)
+    multarray<real, 2> A) {
+#pragma omp parallel default(none) firstprivate(n,m,alpha,beta,C,A)
         {
 #pragma omp for collapse(2) /* schedule(static) */ 
             for (idx_t i = 0; i < n; i++)
@@ -20,8 +19,6 @@ static void kernel(pbsize_t n, pbsize_t m,
                 for (idx_t j = 0; j <= i; j++)
                     for (idx_t k = 0; k < m; k++)                                  
                         C[i][j] += alpha * A[i][k] * A[j][k];
-
-
         }
 }
 
@@ -37,9 +34,8 @@ void run(State &state, pbsize_t pbsize) {
   real beta = 1.2;
   auto C = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "C");
   auto A = state.allocate_array<real>({n, m}, /*fakedata*/ true, /*verify*/ false, "A");
-  auto B = state.allocate_array<real>({n, m}, /*fakedata*/ true, /*verify*/ false, "B");
 
 
   for (auto &&_ : state)
-    kernel(n, m, alpha, beta, C, A, B);
+    kernel(n, m, alpha, beta, C, A);
 }
