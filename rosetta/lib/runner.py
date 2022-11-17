@@ -617,10 +617,10 @@ class Statistic:
         return c * self.corrected_variance / math.sqrt(n)
 
     def relerr(self,ratio=0.95):
-        mean = self.mean 
-        if not mean :
+        mean = self.mean
+        if not mean:
             return None
-        return self.abserr(ratio=ratio) / self.mean 
+        return self.abserr(ratio=ratio) / self.mean
 
     # TODO: signal/noise ratio (relative_rmse?)
 
