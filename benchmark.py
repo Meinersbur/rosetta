@@ -13,13 +13,7 @@ import importlib
 
 
 
-# TODO: There must be a better way, including for vscode to find it
-# TODO: move all the plumbing into lib
-if __name__ == '__main__':
-    #  FIXME: hardcoded path
-    sys.path.insert(0, '/home/meinersbur/src/rosetta/rosetta/lib') 
-import rosetta
-runner = rosetta.runner
+
 
 script = Path(sys.argv[0]).absolute()
 thisscript = Path(__file__)
@@ -28,7 +22,8 @@ thisscriptdir = thisscript.parent
 sys.path.insert(0,str( (thisscript.parent / 'rosetta' /  'lib').absolute() ))
 from rosetta import *
 
-
+import rosetta
+runner = rosetta.runner
 
 
 class BuildConfig:
