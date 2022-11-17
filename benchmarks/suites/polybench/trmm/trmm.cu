@@ -18,8 +18,8 @@ real * B, real* A) {
 
     if (j <n   ) {
         for (idx_t i = 0; i < m; i++)
-        for (idx_t k = i + 1; k < m; k++)
-            B[i*n+j] += A[k*n+i] * B[k*n+j];
+          for (idx_t k = i + 1; k < m; k++)
+            B[i*n+j] += A[k*m+i] * B[k*n+j];
     }
 }
 
@@ -30,9 +30,8 @@ real * B, real* A) {
     idx_t j = blockDim.y * blockIdx.y + threadIdx.y ;
 
 
-    if (i <m && j < n  ) {
+    if (i <m && j < n  )
         B[i*n+j] *= alpha;
-    }
 }
 
 
@@ -50,6 +49,9 @@ static void kernel(pbsize_t n, pbsize_t m,
                         dim3 grid {num_blocks(m,block.x), num_blocks(n,block.y), 1};
                         kernel_alpha<<<block,grid>>>(n,m,alpha,B,A);
                     }
+
+
+
 
 #if 0
 #pragma omp parallel default(none) firstprivate(n,m,alpha,B,A)
