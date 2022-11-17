@@ -1,6 +1,12 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=cuda)
 
 #include <rosetta.h>
+
+
+static
+unsigned num_blocks(int num, int factor) {
+    return (num + factor -1)/factor ;
+}
 
 
 __global__ void kernel_tmp(pbsize_t  m, pbsize_t  n,
@@ -13,9 +19,9 @@ real* A,
 
 
     if (i < m && j < n ) {
-        tmp[i][j] = 0;
+        tmp[i*n+j] = 0;
         for (idx_t k = 0; k < i; k++)
-            tmp[i][j] += B[k][j] * A[i][k];
+            tmp[i*n+j] += B[k*n+j] * A[i*m+k];
     }
 }
 
@@ -29,9 +35,8 @@ real* A,
     idx_t j = blockDim.y * blockIdx.y + threadIdx.y ;
 
 
-    if (i < m && j < n ) {
-        C[i][j] = beta * C[i][j] + alpha * B[i][j] * A[i][i] + alpha * tmp[i][j];
-    }
+    if (i < m && j < n )
+        C[i*n+j] = beta * C[i*n+j] + alpha * B[i*n+j] * A[i*m+i] + alpha * tmp[i*n+j];
 }
 
 
@@ -46,7 +51,7 @@ real* A,
 
     if (k < m-1 && j < n ) {
         for (idx_t i = k + 1; i < m; i++)
-          C[k][j] += alpha * B[i][j] * A[i][k];
+          C[k*n+j] += alpha * B[i*n+j] * A[i*m+k];
     }
 }
 

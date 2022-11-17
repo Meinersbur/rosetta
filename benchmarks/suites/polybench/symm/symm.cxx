@@ -1,6 +1,6 @@
 // BUILD: add_benchmark(ppm=serial)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
 
 
@@ -80,9 +80,9 @@ void run(State &state, pbsize_t pbsize) {
 
   real alpha = 1.5;
   real beta = 1.2;
-  auto C = state.allocate_array<double>({m, n}, /*fakedata*/ false, /*verify*/ true,"C");
-  auto A = state.allocate_array<double>({m, m}, /*fakedata*/ true, /*verify*/ false,"A");
-  auto B = state.allocate_array<double>({m, n}, /*fakedata*/ true, /*verify*/ false, "B");
+  auto C = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true,"C");
+  auto A = state.allocate_array<real>({m, m}, /*fakedata*/ true, /*verify*/ false,"A");
+  auto B = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ false, "B");
 
 
   for (auto &&_ : state)
