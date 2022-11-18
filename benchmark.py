@@ -9,6 +9,6 @@ if __name__ == '__main__':
     scriptdir = pathlib.Path(__file__).parent
     sys.path.insert(0, str(scriptdir.parent.absolute() / 'src'))
     import rosetta
-    retcode := rosetta.benchmark.main(rootdir=scriptdir,argv=sys.argv)
+    retcode = rosetta.scripts.benchmark.main(rootdir=scriptdir,argv=sys.argv)
     if retcode:
         exit(retcode)

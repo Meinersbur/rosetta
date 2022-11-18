@@ -31,9 +31,9 @@ import cwcwidth
 
 # Rosetta-provided
 from . import invoke
-from .support import *
-from .orderedset import OrderedSet
-from .cmdtool import *
+from .util.support import *
+from .util.orderedset import OrderedSet
+from .util.cmdtool import *
 
 
 # FIXME: Hack
