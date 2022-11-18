@@ -375,7 +375,7 @@ foreach (file IN LISTS format_files)
   )
   add_dependencies(check-format "check-format${i}")
 
-  set(_stamp "update-format-stamp${i}")
+  set(_stamp "stamps/update-format-stamp${i}")
   add_custom_command(#check-format${i}
     OUTPUT ${_stamp}
     DEPENDS .clang-format ${file}
@@ -391,6 +391,20 @@ foreach (file IN LISTS format_files)
   math(EXPR i ${i}+1)
 endforeach ()
 
+file(GLOB_RECURSE format_py_files rosetta/src/*.py)
+foreach (file IN LISTS format_py_files)
+  set(_stamp "stamps/update-py-format-stamp${i}")
+  add_custom_command(
+    OUTPUT ${_stamp}
+    COMMAND  autopep8  --max-line-length 120 -i "${file}"
+    COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
+    VERBATIM
+    COMMENT "Updating format of ${file}..."
+  )
+  list(APPEND update_format_depends "${_stamp}")
+
+  math(EXPR i ${i}+1)
+endforeach ()
 
 add_custom_target(update-format DEPENDS ${update_format_depends})
 
