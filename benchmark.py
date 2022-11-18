@@ -55,7 +55,7 @@ class BuildConfig:
             cmake_opts += [f"-DCMAKE_C_FLAGS={opt_args}", f"-DCMAKE_CXX_FLAGS={opt_args}", f"-DCMAKE_CUDA_FLAGS={opt_args}"] # TODO: Release flags?
 
         if self.ppm:
-          # TODO: Case, shortcuts  
+          # TODO: Case, shortcuts
           for ppm in ['serial', 'cuda', 'openmp-thread', 'openmp-task', 'openmp-target']:
             ucase_name = ppm.upper().replace('-','_')
             if ppm in self.ppm:
@@ -77,7 +77,7 @@ def make_buildconfig(name,ppm,cmake_arg,cmake_def,compiler_arg,compiler_def):
 configsplitarg =         re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
 configsplitdef =         re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)(\=(?P<defvalue>.*))?')
 configsplitdefrequired = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)\=(?P<defvalue>.*)')
-configppm =         re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<ppm>[a-zA-Z\-]+)')
+configppm =              re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<ppm>[a-zA-Z\-]+)')
 def parse_build_configs(args,implicit_reference):
     def parse_arglists(l):
         raw = defaultdict(lambda: [])
@@ -114,7 +114,7 @@ def parse_build_configs(args,implicit_reference):
     keys |= cmake_def.keys()
     keys |= compiler_arg.keys()
     keys |= compiler_def.keys()
-
+    keys |= ppm.keys()
 
     configs = []
     for k in keys:
@@ -164,7 +164,7 @@ def main(argv):
     args = parser.parse_args(argv[1:])
     verbose = args.verbose
 
-    with runner.globalctxmgr :
+    with runner.globalctxmgr:
 
         # TODO: If not specified, just reuse existing configs 
         configs = parse_build_configs(args,implicit_reference=args.verify)
@@ -201,17 +201,17 @@ def main(argv):
 
 
         for config in configs:
-            builddir = config.builddir 
+            builddir = config.builddir
             configdescfile  = builddir/'RosettaCache.txt'
 
             # TODO: Support other generators as well
             opts = ['cmake', srcdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
             opts += config.gen_cmake_args()
-            expectedopts = shjoin(opts)
+            expectedopts = shjoin(opts).rstrip()
 
             reusebuilddir = False
             if not args.clean and configdescfile.is_file() and (builddir / 'build.ninja').exists():
-                existingopts = readfile(configdescfile)            
+                existingopts = readfile(configdescfile).rstrip()
                 if existingopts == expectedopts:
                     reusebuilddir=True
 
@@ -221,11 +221,11 @@ def main(argv):
                 builddir.mkdir(exist_ok=True,parents=True)
                 invoke_verbose(*opts, cwd=config.builddir)
                 createfile(configdescfile, expectedopts)
-            
 
-            
-                
-                
+
+
+
+
         for config in configs:
             if args.build:
                 # TODO: Select subset to be build 
@@ -236,29 +236,36 @@ def main(argv):
 
 
         # Load all available benchmarks
-        if args.verify or args.bench or args.probe or  (not args.verify and args.bench is None and not args.probe):
+        if args.verify or args.bench or args.probe or (not args.verify and args.bench is None and not args.probe):
             for config in configs:
                 load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
-        
-            
-            
-            
+
+
+
+
         def only_REF(bench):
             return bench.configname == 'REF' 
         def no_ref(bench):
             return bench.configname != 'REF' 
 
-        
+
         try:
             [refconfig] = (c for c in configs if c.name == 'REF')
         except:
             refconfig = None
-        runner.subcommand_run(None,args,srcdir=thisscriptdir,buildondemand=not args.build,builddirs=[config.builddir for config in configs], refbuilddir= refconfig.builddir if refconfig else None,filterfunc=no_ref,resultdir =resultdir)
+        runner.subcommand_run(None,args,
+            srcdir=thisscriptdir,
+            buildondemand=not args.build,
+            builddirs=[config.builddir for config in configs],
+            refbuilddir= refconfig.builddir if refconfig else None,
+            filterfunc=no_ref,
+            resultdir =resultdir
+            )
 
 
         #if args.verify:
         #   def only_REF(bench):
-        #       return bench.configname =='REF' 
+        #       return bench.configname =='REF'
         #   [refconfig] = (c for c in configs if c.name == 'REF')
         #   refdir = refconfig.builddir / 'refout'
         #   refdir.mkdir(exist_ok=True,parents=True)

@@ -1495,7 +1495,7 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
         parser.add_argument('--verbose', '-v', action='count')
 
         # Command
-        add_boolean_argument(parser, 'probe', default=False, help="Enable probling")
+        add_boolean_argument(parser, 'probe', default=False, help="Enable probing")
         parser.add_argument('--limit-walltime', type=parse_time)
         parser.add_argument('--limit-rss', type=parse_memsize)
         parser.add_argument('--limit-alloc', type=parse_memsize)
@@ -1506,14 +1506,17 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
         # Run step
         add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
 
+        add_boolean_argument(parser, 'evaluate', default=None, help="Evaluate result")
+
         parser.add_argument('--boxplot', type=pathlib.Path, help="Save as boxplot to FILENAME")
     
 
     if args:
         # If neither no action is specified, enable --bench implicitly unless --no-bench
         probe = args.probe
-        verify = args.verify 
+        verify = args.verify
         bench =  args.bench
+        evaluate = args.evaluate
         if bench is None and not verify and not probe:
             bench = True
 
@@ -1522,7 +1525,6 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
             assert args.problemsizefile , "Requires to set a problemsizefile to set"
             run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-   
 
         if verify:
             refdir = refbuilddir / 'refout'
@@ -1542,6 +1544,13 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
                 evaluate(resultfiles)
 
 
+        if evaluate:
+           if not resultfiles:
+                assert False, "TODO: Lookup last (successful) results dir"
+            if len(configs) == 1:
+                runner.evaluate(resultfiles)
+            else:
+                runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
 
 
 
