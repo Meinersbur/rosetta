@@ -1,9 +1,10 @@
-// BUILD: add_benchmark(ppm=serial)
+// BUILD: add_benchmark(ppm=omp_parallel)
 
 #include "rosetta.h"
 
 static real kernel(pbsize_t n) {
     real sum = 0;
+    #pragma omp parallel reduction(+:sum)
     for (idx_t i = 0; i < n; i += 1)
         sum += i;
     return sum;
