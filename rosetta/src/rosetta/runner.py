@@ -1489,7 +1489,40 @@ def runner_main_run(srcdir,builddir):
 
 
 
-def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuilddir=None,filterfunc=None,resultdir=None):
+def subcommand_run(parser,args,srcdir,buildondemand:bool=False,builddirs=None,refbuilddir=None,filterfunc=None,resultdir=None):
+    """
+The common functionality of the probe/verify/bench per-builddir scripts and the benchmark.py multi-builddir driver.
+
+General pipeline:
+1. configure (handled by benchmark.py; per-builddir setup is pre-configured)
+2. build
+3. probe (reconfigure/rebuild required after probing)
+4. verify
+5. bench
+6. evaluate
+
+Parameters
+----------
+parser : ArgumentParser
+    ArgumentParser from argparse for adding arguments
+args
+    Parsed command line from argparse
+srcdir
+    Root of the source repository (where the benchmarks and rosetta folders are in);
+    FIXME: Should be the benchmarks folder
+buildondemand
+    False: Called from make/ninja, targets already built
+    True: Called from script, executables may need to be rebuilt
+builddirs:
+    per-builddir: The root of CMake's binary dir
+    multi-builddor: List of builddires that have been configured
+refbuilddir:
+    CMake binary root dir that creates the reference outputs, but is itself not benchmarked
+filterfunc:
+    Run/evaluate only those benchmarks for which this function returns true
+resultdir:
+    Where to put the benchmark results xml files.
+"""
     if parser:
         parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
         parser.add_argument('--verbose', '-v', action='count')
@@ -1516,7 +1549,7 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
         probe = args.probe
         verify = args.verify
         bench =  args.bench
-        evaluate = args.evaluate
+        eval = args.evaluate
         if bench is None and not verify and not probe:
             bench = True
 
