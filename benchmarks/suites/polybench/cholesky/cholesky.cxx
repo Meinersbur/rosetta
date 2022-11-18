@@ -105,8 +105,8 @@ V:    A[i][i] = std::sqrt(A[i][i]);
 
 
 
-void run(State &state, int pbsize) {
-  size_t n = pbsize; // 2000
+void run(State &state, pbsize_t pbsize) {
+  pbsize_t n = pbsize; // 2000
 
   auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "A");
 
