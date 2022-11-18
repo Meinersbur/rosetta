@@ -30,8 +30,8 @@ static void kernel(pbsize_t m, pbsize_t n,
     /* The following in an inelegant but usual way to handle
        near-zero std. dev. values, which below would cause a zero-
        divide. */
-             if (stddev[j] <= eps)
-                stddev[j] = 1.0;
+    if (stddev[j] <= eps)
+      stddev[j] = 1.0;
   }
 
   /* Center and reduce the column vectors. */
@@ -61,13 +61,13 @@ void run(State &state, pbsize_t pbsize) {
   pbsize_t m = pbsize - pbsize / 6;
 
 
-  auto data = state.allocate_array<real>({ n,m}, /*fakedata*/ true, /*verify*/ false, "data");
-    auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "mean");
-      auto stddev = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "stddev");
+  auto data = state.allocate_array<real>({n, m}, /*fakedata*/ true, /*verify*/ false, "data");
+  auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "mean");
+  auto stddev = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "stddev");
   auto corr = state.allocate_array<real>({m, m}, /*fakedata*/ false, /*verify*/ true, "corr");
 
 
 
   for (auto &&_ : state)
-    kernel(m, n,  data, corr, mean, stddev);
+    kernel(m, n, data, corr, mean, stddev);
 }

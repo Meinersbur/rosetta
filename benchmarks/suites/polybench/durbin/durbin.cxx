@@ -15,17 +15,17 @@ static void kernel(pbsize_t n,
   for (idx_t k = 1; k < n; k++) {
     beta = (1 - alpha * alpha) * beta;
     real sum = 0;
-    for (idx_t i = 0; i < k; i++) 
+    for (idx_t i = 0; i < k; i++)
       sum += r[k - i - 1] * y[i];
-    
+
     alpha = -(r[k] + sum) / beta;
 
-    for (idx_t i = 0; i < k; i++) 
+    for (idx_t i = 0; i < k; i++)
       z[i] = y[i] + alpha * y[k - i - 1];
-    
-    for (idx_t i = 0; i < k; i++) 
+
+    for (idx_t i = 0; i < k; i++)
       y[i] = z[i];
-    
+
     y[k] = alpha;
   }
 #pragma endscop
@@ -33,7 +33,7 @@ static void kernel(pbsize_t n,
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t n = pbsize; // 2000
+  pbsize_t n = pbsize; // 2000
 
   auto r = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "r");
   auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");

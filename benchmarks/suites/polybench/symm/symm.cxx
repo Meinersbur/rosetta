@@ -53,7 +53,7 @@ extern "C"
 
 
 
-static void kernel(pbsize_t  m, pbsize_t  n,
+static void kernel(pbsize_t m, pbsize_t n,
                    real alpha, real beta,
                    multarray<real, 2> C,
                    multarray<real, 2> A,
@@ -74,14 +74,14 @@ static void kernel(pbsize_t  m, pbsize_t  n,
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t n = pbsize;
-    pbsize_t m = pbsize - pbsize / 8;
+  pbsize_t n = pbsize;
+  pbsize_t m = pbsize - pbsize / 8;
 
 
   real alpha = 1.5;
   real beta = 1.2;
-  auto C = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true,"C");
-  auto A = state.allocate_array<real>({m, m}, /*fakedata*/ true, /*verify*/ false,"A");
+  auto C = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true, "C");
+  auto A = state.allocate_array<real>({m, m}, /*fakedata*/ true, /*verify*/ false, "A");
   auto B = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ false, "B");
 
 

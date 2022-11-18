@@ -4,7 +4,7 @@
 
 
 
-static void kernel(pbsize_t  tsteps, pbsize_t n,
+static void kernel(pbsize_t tsteps, pbsize_t n,
                    multarray<real, 2> A) {
 #pragma scop
   for (idx_t t = 0; t <= tsteps - 1; t++)
@@ -16,8 +16,8 @@ static void kernel(pbsize_t  tsteps, pbsize_t n,
 
 
 void run(State &state, int pbsize) {
-    pbsize_t tsteps = 1; // 500
-    pbsize_t n = pbsize; // 2000
+  pbsize_t tsteps = 1; // 500
+  pbsize_t n = pbsize; // 2000
 
 
 

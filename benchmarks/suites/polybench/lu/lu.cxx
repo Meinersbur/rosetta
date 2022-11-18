@@ -1,7 +1,7 @@
 // BUILD: add_benchmark(ppm=serial,sources=[__file__,"lu-common.cxx"])
 
-#include <rosetta.h>
 #include "lu-common.h"
+#include <rosetta.h>
 
 
 
@@ -41,20 +41,20 @@ __attribute__((noinline))
     }
     
 }
-#endif 
+#endif
 
-__attribute__((noinline))
- void kernel(pbsize_t  n,  multarray<real, 2> A) {
-#pragma scop 
+__attribute__((noinline)) void kernel(pbsize_t n, multarray<real, 2> A) {
+#pragma scop
   for (idx_t i = 0; i < n; i++) {
     for (idx_t j = 0; j < i; j++) {
-        for (idx_t k = 0; k < j; k++) 
-             A[i][j] -= A[i][k] * A[k][j];
-U:      A[i][j] /= A[j][j];
+      for (idx_t k = 0; k < j; k++)
+        A[i][j] -= A[i][k] * A[k][j];
+    U:
+      A[i][j] /= A[j][j];
     }
-    for (idx_t j = i; j < n; j++) 
-        for (idx_t k = 0; k < i; k++) 
-           A[i][j] -= A[i][k] * A[k][j];
+    for (idx_t j = i; j < n; j++)
+      for (idx_t k = 0; k < i; k++)
+        A[i][j] -= A[i][k] * A[k][j];
   }
 #pragma endscop
 
@@ -65,20 +65,19 @@ U:      A[i][j] /= A[j][j];
 
 
 
-
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t n = pbsize; // 2000
+  pbsize_t n = pbsize; // 2000
 
 
   auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "A");
 
 
 
-    for (auto&& _ : state.manual()) {
-        ensure_fullrank(n, A);
-        {
-            auto &&scope = _.scope();
-            kernel(n, A);
-        }
+  for (auto &&_ : state.manual()) {
+    ensure_fullrank(n, A);
+    {
+      auto &&scope = _.scope();
+      kernel(n, A);
     }
+  }
 }
