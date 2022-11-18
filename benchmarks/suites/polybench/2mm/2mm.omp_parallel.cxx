@@ -8,23 +8,23 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl,
                    multarray<real, 2> tmp,
                    multarray<real, 2> A,
                    multarray<real, 2> B, multarray<real, 2> C, multarray<real, 2> D) {
-  /* D := alpha*A*B*C + beta*D */
-  #pragma omp parallel
+/* D := alpha*A*B*C + beta*D */
+#pragma omp parallel
   {
-    #pragma omp for collapse(2) schedule(static)
-      for (idx_t i = 0; i < ni; i++)
-        for (idx_t j = 0; j < nj; j++) {
-          tmp[i][j] = 0;
-          for (idx_t k = 0; k < nk; ++k)
-            tmp[i][j] += alpha * A[i][k] * B[k][j];
-        }
-         #pragma omp for collapse(2) schedule(static)
-      for (idx_t i = 0; i < ni; i++)
-        for (idx_t j = 0; j < nl; j++) {
-          D[i][j] *= beta;
-          for (idx_t k = 0; k < nj; ++k)
-            D[i][j] += tmp[i][k] * C[k][j];
-        }
+#pragma omp for collapse(2) schedule(static)
+    for (idx_t i = 0; i < ni; i++)
+      for (idx_t j = 0; j < nj; j++) {
+        tmp[i][j] = 0;
+        for (idx_t k = 0; k < nk; ++k)
+          tmp[i][j] += alpha * A[i][k] * B[k][j];
+      }
+#pragma omp for collapse(2) schedule(static)
+    for (idx_t i = 0; i < ni; i++)
+      for (idx_t j = 0; j < nl; j++) {
+        D[i][j] *= beta;
+        for (idx_t k = 0; k < nj; ++k)
+          D[i][j] += tmp[i][k] * C[k][j];
+      }
   }
 }
 
@@ -41,7 +41,7 @@ void run(State &state, pbsize_t pbsize) {
   auto tmp = state.allocate_array<real>({ni, nj}, /*fakedata*/ false, /*verify*/ false, "tmp");
   auto A = state.allocate_array<real>({ni, nk}, /*fakedata*/ true, /*verify*/ false, "A");
   auto B = state.allocate_array<real>({nk, nj}, /*fakedata*/ true, /*verify*/ false, "B");
-  auto C = state.allocate_array<real>({nj, nl}, /*fakedata*/ true, /*verify*/ false , "C");
+  auto C = state.allocate_array<real>({nj, nl}, /*fakedata*/ true, /*verify*/ false, "C");
   auto D = state.allocate_array<real>({ni, nl}, /*fakedata*/ true, /*verify*/ true, "D");
 
   for (auto &&_ : state)

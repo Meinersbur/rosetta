@@ -1,8 +1,8 @@
 // BUILD: add_benchmark(ppm=omp_parallel,sources=[__file__, "gramschmidt-common.cxx"])
 
 
-#include <rosetta.h>
 #include "gramschmidt-common.h"
+#include <rosetta.h>
 
 #if 0
 void kernel_polly(pbsize_t m, pbsize_t n,
@@ -36,71 +36,66 @@ void kernel_polly(pbsize_t m, pbsize_t n,
 #endif
 
 
-static real sqr(real v) { return v*v;}
+static real sqr(real v) { return v * v; }
 
 static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A, multarray<real, 2> R, multarray<real, 2> Q) {
 
-                       
-                           for (idx_t k = 0; k < n; k++) {
 
-                               real sum = 0;
-                               // FIXME: For some reason OpenMP-reduction numericall destabilizes this
-                               // Possibly inherent to Gram-Schmidt numeric instability
-                               // https://en.wikipedia.org/wiki/Gram–Schmidt_process#Numerical_stability
-                               // Generate fakedata that a not that similat to each other
-#pragma omp parallel for schedule(static) default(none) firstprivate(k,m,A) reduction(+:sum)
-                               for (int i = 0; i < m; i++) {
-//#pragma omp critical
-//                                   printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
-                                   sum += sqr(A[i][k]) ;
-                               }
+  for (idx_t k = 0; k < n; k++) {
 
-                           //    printf("%lu: sum=%g\n",k,sum );
-                               R[k][k] = std::sqrt(sum);
+    real sum = 0;
+    // FIXME: For some reason OpenMP-reduction numericall destabilizes this
+    // Possibly inherent to Gram-Schmidt numeric instability
+    // https://en.wikipedia.org/wiki/Gram–Schmidt_process#Numerical_stability
+    // Generate fakedata that a not that similat to each other
+#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A) reduction(+ \
+                                                                                        : sum)
+    for (int i = 0; i < m; i++) {
+      //#pragma omp critical
+      //                                   printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
+      sum += sqr(A[i][k]);
+    }
 
-
-#pragma omp parallel for schedule(static)  default(none)  firstprivate(k,m,A,Q,R)
-                               for (int i = 0; i < m; i++)
-                                   Q[i][k] = A[i][k] / R[k][k];
+    //    printf("%lu: sum=%g\n",k,sum );
+    R[k][k] = std::sqrt(sum);
 
 
-#pragma omp parallel for schedule(static)  default(none)  firstprivate(k,m,n,A,Q,R)
-                               for (int j = k + 1; j < n; j++) {
-                                   R[k][j] = 0;
-                                   for (idx_t i = 0; i < m; i++)
-                                       R[k][j] += Q[i][k] * A[i][j];
-                               }
+#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A, Q, R)
+    for (int i = 0; i < m; i++)
+      Q[i][k] = A[i][k] / R[k][k];
 
-#pragma omp parallel for schedule(static)  default(none) firstprivate(k,m,n,A,Q,R)
-                               for (int j = k + 1; j < n; j++) 
-                                   for (idx_t i = 0; i < m; i++)
-                                       A[i][j] -= Q[i][k] * R[k][j];
-                               
-                           }
-                       
+
+#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, n, A, Q, R)
+    for (int j = k + 1; j < n; j++) {
+      R[k][j] = 0;
+      for (idx_t i = 0; i < m; i++)
+        R[k][j] += Q[i][k] * A[i][j];
+    }
+
+#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, n, A, Q, R)
+    for (int j = k + 1; j < n; j++)
+      for (idx_t i = 0; i < m; i++)
+        A[i][j] -= Q[i][k] * R[k][j];
+  }
 }
 
 
 
-
-
-
-
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t m = pbsize - pbsize / 6; // 1000
-    pbsize_t n = pbsize;              // 1200
+  pbsize_t m = pbsize - pbsize / 6; // 1000
+  pbsize_t n = pbsize;              // 1200
 
 
-    auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
-    auto R = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ true, "R");
-    auto Q = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true, "Q");
+  auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
+  auto R = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ true, "R");
+  auto Q = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true, "Q");
 
-    for (auto&& _ : state.manual()) {
-        condition(m,n,A);
-        {
-            auto &&scope = _.scope();
-            kernel(m, n, A, R, Q);
-        }
+  for (auto &&_ : state.manual()) {
+    condition(m, n, A);
+    {
+      auto &&scope = _.scope();
+      kernel(m, n, A, R, Q);
     }
+  }
 }

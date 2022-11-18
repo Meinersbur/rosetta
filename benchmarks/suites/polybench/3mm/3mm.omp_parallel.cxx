@@ -12,35 +12,35 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl, pbsize_t 
                    multarray<real, 2> D,
                    multarray<real, 2> G) {
 
-#pragma omp parallel default(none) firstprivate(ni,nj,nk,nl,nm,E,A,B,F,C,D,G)
-{
-  /* E := A*B */
-  #pragma omp  for collapse(2) schedule(static)
-  for (idx_t i = 0; i < ni; i++)
-    for (idx_t j = 0; j < nj; j++) {
-      E[i][j] = 0;
-      for (idx_t k = 0; k < nk; ++k)
-        E[i][j] += A[i][k] * B[k][j];
-    }
+#pragma omp parallel default(none) firstprivate(ni, nj, nk, nl, nm, E, A, B, F, C, D, G)
+  {
+/* E := A*B */
+#pragma omp for collapse(2) schedule(static)
+    for (idx_t i = 0; i < ni; i++)
+      for (idx_t j = 0; j < nj; j++) {
+        E[i][j] = 0;
+        for (idx_t k = 0; k < nk; ++k)
+          E[i][j] += A[i][k] * B[k][j];
+      }
 
-  /* F := C*D */
-  #pragma omp  for collapse(2) schedule(static)
-  for (idx_t i = 0; i < nj; i++)
-    for (idx_t j = 0; j < nl; j++) {
-      F[i][j] = 0;
-      for (idx_t k = 0; k < nm; ++k)
-        F[i][j] += C[i][k] * D[k][j];
-    }
+/* F := C*D */
+#pragma omp for collapse(2) schedule(static)
+    for (idx_t i = 0; i < nj; i++)
+      for (idx_t j = 0; j < nl; j++) {
+        F[i][j] = 0;
+        for (idx_t k = 0; k < nm; ++k)
+          F[i][j] += C[i][k] * D[k][j];
+      }
 
-  /* G := E*F */
-  #pragma omp  for collapse(2) schedule(static)
-  for (idx_t i = 0; i < ni; i++)
-    for (idx_t j = 0; j < nl; j++) {
-      G[i][j] = 0;
-      for (idx_t k = 0; k < nj; ++k)
-        G[i][j] += E[i][k] * F[k][j];
-    }
-}
+/* G := E*F */
+#pragma omp for collapse(2) schedule(static)
+    for (idx_t i = 0; i < ni; i++)
+      for (idx_t j = 0; j < nl; j++) {
+        G[i][j] = 0;
+        for (idx_t k = 0; k < nj; ++k)
+          G[i][j] += E[i][k] * F[k][j];
+      }
+  }
 }
 
 

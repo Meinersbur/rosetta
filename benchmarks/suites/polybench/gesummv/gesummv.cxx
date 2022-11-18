@@ -15,8 +15,8 @@ static void kernel(pbsize_t n,
     tmp[i] = 0;
     y[i] = 0;
     for (idx_t j = 0; j < n; j++) {
-      tmp[i] += A[i][j] * x[j] ;
-      y[i]   += B[i][j] * x[j] ;
+      tmp[i] += A[i][j] * x[j];
+      y[i] += B[i][j] * x[j];
     }
     y[i] = alpha * tmp[i] + beta * y[i];
   }

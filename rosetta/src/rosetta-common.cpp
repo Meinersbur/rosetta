@@ -30,46 +30,44 @@
 #endif
 #include <shlwapi.h>
 #undef StrCat // Don't let StrCat in string_util.h be renamed to lstrcatA
+#include <Psapi.h>
+#include <Psapi.h>  // memory_info(), memory_maps()
+#include <bcrypt.h> // NTSTATUS
+#include <ntstatus.h>
+#include <signal.h>
+#include <tlhelp32.h>
 #include <versionhelpers.h>
 #include <windows.h>
-#include <Psapi.h>  
-#include <signal.h>
-#include <bcrypt.h>   // NTSTATUS
-#include <ntstatus.h>
-#include <windows.h>
-#include <Psapi.h>  // memory_info(), memory_maps()
-#include <signal.h>
-#include <tlhelp32.h>  
 
 // #include <ntdef.h>
 // #include <ntifs.h>
 // (requires driver SDK)
-#define NtCurrentProcess() ( (HANDLE)(LONG_PTR) -1 )  
+#define NtCurrentProcess() ((HANDLE)(LONG_PTR)-1)
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
-NTSTATUS (NTAPI *_NtQueryVirtualMemory) (
+NTSTATUS(NTAPI *_NtQueryVirtualMemory)
+(
     HANDLE ProcessHandle,
     PVOID BaseAddress,
     int MemoryInformationClass,
     PVOID MemoryInformation,
     SIZE_T MemoryInformationLength,
-    PSIZE_T ReturnLength
-    );
+    PSIZE_T ReturnLength);
 #define NtQueryVirtualMemory _NtQueryVirtualMemory
 #define MemoryWorkingSetInformation 0x1
 typedef struct _MEMORY_WORKING_SET_BLOCK {
-    ULONG_PTR Protection : 5;
-    ULONG_PTR ShareCount : 3;
-    ULONG_PTR Shared : 1;
-    ULONG_PTR Node : 3;
+  ULONG_PTR Protection : 5;
+  ULONG_PTR ShareCount : 3;
+  ULONG_PTR Shared : 1;
+  ULONG_PTR Node : 3;
 #ifdef _WIN64
-    ULONG_PTR VirtualPage : 52;
+  ULONG_PTR VirtualPage : 52;
 #else
-    ULONG VirtualPage : 20;
+  ULONG VirtualPage : 20;
 #endif
 } MEMORY_WORKING_SET_BLOCK, *PMEMORY_WORKING_SET_BLOCK;
 typedef struct _MEMORY_WORKING_SET_INFORMATION {
-    ULONG_PTR NumberOfEntries;
-    MEMORY_WORKING_SET_BLOCK WorkingSetInfo[1];
+  ULONG_PTR NumberOfEntries;
+  MEMORY_WORKING_SET_BLOCK WorkingSetInfo[1];
 } MEMORY_WORKING_SET_INFORMATION, *PMEMORY_WORKING_SET_INFORMATION;
 
 #else
@@ -156,8 +154,6 @@ using memory_t = ssize_t;
 
 
 
-
-
 namespace {
 #if defined(CLOCK_PROCESS_CPUTIME_ID) || defined(CLOCK_THREAD_CPUTIME_ID)
 static std::chrono::nanoseconds MakeTime(struct timespec const &ts) {
@@ -240,10 +236,10 @@ std::pair<usage_duration_t, usage_duration_t> ProcessCPUUsage() {
 memory_t getMaxRSS() {
 #if defined(BENCHMARK_OS_WINDOWS)
 
-    // https://docs.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters
-    PROCESS_MEMORY_COUNTERS meminfo = {0};
-    GetProcessMemoryInfo ( GetCurrentProcess(),  &meminfo, sizeof(meminfo ) );
-    return meminfo.PeakWorkingSetSize;
+  // https://docs.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters
+  PROCESS_MEMORY_COUNTERS meminfo = {0};
+  GetProcessMemoryInfo(GetCurrentProcess(), &meminfo, sizeof(meminfo));
+  return meminfo.PeakWorkingSetSize;
 
 #if 0
     // https://github.com/giampaolo/psutil/blob/master/psutil/_psutil_windows.c
@@ -311,10 +307,10 @@ memory_t getMaxRSS() {
     return 0;
 #endif
 
-#else 
-    struct rusage ru = {0}; // TODO: Just one call with ProcessCPUUsage
-    getrusage(RUSAGE_SELF, & ru);
-    return ru.ru_maxrss * 1024;
+#else
+  struct rusage ru = {0}; // TODO: Just one call with ProcessCPUUsage
+  getrusage(RUSAGE_SELF, &ru);
+  return ru.ru_maxrss * 1024;
 #endif
 }
 
@@ -821,74 +817,74 @@ public:
   bool isBenchRun() const { return !verify; }
 
 public:
-  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {  }
- // ~BenchmarkRun() {
- //   if (verifyout) 
-//        verifyout.close();
- // }
+  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {}
+  // ~BenchmarkRun() {
+  //   if (verifyout)
+  //        verifyout.close();
+  // }
 
   void run(std::string program, int n) {
     startTime = std::chrono::steady_clock::now();
 
     if (!verifyoutpath.empty()) {
-        verifyout.open(verifyoutpath, std::ios::trunc);
-    //    assert(verifyout);
-         assert(verifyout.good());
-        assert(verifyout.is_open());
+      verifyout.open(verifyoutpath, std::ios::trunc);
+      //    assert(verifyout);
+      assert(verifyout.good());
+      assert(verifyout.is_open());
     }
 
     {
-        State state{ this };
+      State state{this};
 
 #if ROSETTA_PLATFORM_NVIDIA
-        // TODO: exclude cupti time from startTime
+      // TODO: exclude cupti time from startTime
 
-        // subscribe to CUPTI callbacks
-        // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
+      // subscribe to CUPTI callbacks
+      // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
 
-        // DRIVER_API_CALL(cuInit(0));
-        // CUcontext context = 0;
-        //   CUdevice device = 0;
-        //  DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
-
-
-        // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
-        // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
-
-        size_t attrValue = 0, attrValueSize = sizeof(size_t);
-        // Device activity record is created when CUDA initializes, so we
-        // want to enable it before cuInit() or any CUDA runtime call.
-        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
-        // Enable all other activity record kinds.
-        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
-        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
-        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
-        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
-        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
-        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_NAME));
-        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MARKER));
-        CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));
-        // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
-
-        // Register callbacks for buffer requests and for buffers completed by CUPTI.
-        CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
+      // DRIVER_API_CALL(cuInit(0));
+      // CUcontext context = 0;
+      //   CUdevice device = 0;
+      //  DRIVER_API_CALL(cuCtxCreate(&context, 0, device));
 
 
-        uint64_t cuptiStart;
-        CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
-        startTimestamp = cuptiStart;
+      // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API));
+      // CUPTI_CALL(cuptiEnableDomain(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API));
+
+      size_t attrValue = 0, attrValueSize = sizeof(size_t);
+      // Device activity record is created when CUDA initializes, so we
+      // want to enable it before cuInit() or any CUDA runtime call.
+      CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DEVICE));
+      // Enable all other activity record kinds.
+      // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT));
+      // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER));
+      // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME));
+      CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY));
+      CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET));
+      CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_NAME));
+      // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MARKER));
+      CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL));
+      // CUPTI_CALL(cuptiActivityEnable(CUPTI_ACTIVITY_KIND_OVERHEAD));
+
+      // Register callbacks for buffer requests and for buffers completed by CUPTI.
+      CUPTI_CALL(cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted));
+
+
+      uint64_t cuptiStart;
+      CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
+      startTimestamp = cuptiStart;
 #endif
-        preinitRSS = getMaxRSS();
+      preinitRSS = getMaxRSS();
 
-        // TODO: make flexible, this is just on way to find a run function
-        ::run(state, n);
+      // TODO: make flexible, this is just on way to find a run function
+      ::run(state, n);
 
-        lastRSS = getMaxRSS();
+      lastRSS = getMaxRSS();
     }
 
     if (verifyout.is_open()) {
-        std::cerr << "Closing verifyfile: " << verifyoutpath << std::endl;
-        verifyout.close();
+      std::cerr << "Closing verifyfile: " << verifyoutpath << std::endl;
+      verifyout.close();
     }
 
 
@@ -901,15 +897,6 @@ public:
 
     // TODO: print basic timing info so user knows something happened
   }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1022,7 +1009,6 @@ public:
 
 
 
-
 #if ROSETTA_PLATFORM_NVIDIA
     auto firstEvent = std::min({cuptiStartHtoD, cuptiStartDtoH, cuptiStartCompute, cuptiStartOther});
     auto lastEvent = std::max({cuptiStopHtoD, cuptiStopDtoH, cuptiStopCompute, cuptiStopOther});
@@ -1052,14 +1038,14 @@ public:
   }
 
   int refresh() {
-      switch (measurements.size()) {
-      case 0:
-          postinitRSS = getMaxRSS();
-          break;
-      case 1:
-          firstRSS = getMaxRSS();
-          break;
-      }
+    switch (measurements.size()) {
+    case 0:
+      postinitRSS = getMaxRSS();
+      break;
+    case 1:
+      firstRSS = getMaxRSS();
+      break;
+    }
 
 
 
@@ -1072,8 +1058,8 @@ public:
 
       if (exactRepeats >= 1) {
         measurements.reserve(exactRepeats);
-        if (measurements.size() ==0)
-            return std::min( (size_t)1, exactRepeats - measurements.size() ); // Ensure that refresh() is called again after the first iterations to measure firstRSS.
+        if (measurements.size() == 0)
+          return std::min((size_t)1, exactRepeats - measurements.size()); // Ensure that refresh() is called again after the first iterations to measure firstRSS.
         return exactRepeats - measurements.size();
       }
 
@@ -1176,62 +1162,62 @@ void DataHandler<double>::fake(double *data, ssize_t count) {
     data[i] = 0.5 + i * 0.125;
 }
 
-template<typename T>
+template <typename T>
 constexpr int log10ceil(T num) {
-    return num < 10? 1: 1 + log10ceil(num / 10);
+  return num < 10 ? 1 : 1 + log10ceil(num / 10);
 }
 
 // TODO: Make template to also cover float
-void DataHandler<double>::verify(double *data, ssize_t count,  std::vector <size_t> dims, std::string_view name) {
-   // bool warning_shown = false;
-    for (ssize_t i = 0; i < count; i += 1) {
-        auto val = data[i];
-        if (std::isinf(val) || std::isnan(val)) {
-            std::cerr << "WARNING: Inf/NaN output " << val << " at " << name << "[" << i << "]\n";
-            break;
-        }
+void DataHandler<double>::verify(double *data, ssize_t count, std::vector<size_t> dims, std::string_view name) {
+  // bool warning_shown = false;
+  for (ssize_t i = 0; i < count; i += 1) {
+    auto val = data[i];
+    if (std::isinf(val) || std::isnan(val)) {
+      std::cerr << "WARNING: Inf/NaN output " << val << " at " << name << "[" << i << "]\n";
+      break;
     }
+  }
 
   if (!impl->isVerifyRun())
     return;
 
- auto &verifyout =  impl->verifyout;
- 
- verifyout << "array"; // Output kind
- verifyout << " binary64"; // Data format according to IEEE 754-2019
+  auto &verifyout = impl->verifyout;
 
- verifyout << ' ' << dims.size();
- for (auto l : dims)
-     verifyout << ' ' << l;
+  verifyout << "array";     // Output kind
+  verifyout << " binary64"; // Data format according to IEEE 754-2019
 
- if (!name.empty())
-     verifyout << ' ' << name;
+  verifyout << ' ' << dims.size();
+  for (auto l : dims)
+    verifyout << ' ' << l;
 
- verifyout << ':';
+  if (!name.empty())
+    verifyout << ' ' << name;
+
+  verifyout << ':';
 
 
   for (ssize_t i = 0; i < count; i += 1) {
-      auto val = data[i];
+    auto val = data[i];
 
-      // https://stackoverflow.com/a/68475665
-      // Evaluates to 24
-      constexpr int MaxConvLen = 4 + 
-          std::numeric_limits<double>::max_digits10 + 
-          std::max(2, log10ceil(std::numeric_limits<double>::max_exponent10));
-      std::array<char, MaxConvLen> str; 
+    // https://stackoverflow.com/a/68475665
+    // Evaluates to 24
+    constexpr int MaxConvLen = 4 +
+                               std::numeric_limits<double>::max_digits10 +
+                               std::max(2, log10ceil(std::numeric_limits<double>::max_exponent10));
+    std::array<char, MaxConvLen> str;
 
 #if HAS_CHARCONV_DOUBLE
-      // std::to_chars returns a string representation that allows recovering the original float binary representation, and locale-independent.
-      // FIXME: Does the python part actually do? Could also use std::chars_format::hex or use binary directly.
-      // https://eel.is/c++draft/charconv.to.chars#2
-      auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val,std::chars_format::general);
-      assert(ec == std::errc());
-       / std::string_view strv(str.data(),  ptr - str.data()); 
-#else 
-auto strv =  std::to_string(val) ;
-#endif 
+    // std::to_chars returns a string representation that allows recovering the original float binary representation, and locale-independent.
+    // FIXME: Does the python part actually do? Could also use std::chars_format::hex or use binary directly.
+    // https://eel.is/c++draft/charconv.to.chars#2
+    auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), val, std::chars_format::general);
+    assert(ec == std::errc());
+    / std::string_view strv(str.data(), ptr - str.data());
+#else
+    auto strv = std::to_string(val);
+#endif
 
-      verifyout << '\t' << strv;
+    verifyout << '\t' << strv;
   }
   verifyout << '\n';
 }
@@ -1431,7 +1417,7 @@ struct Rosetta {
   }
 
   static BenchmarkRun *currentRun;
-  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify,std::filesystem::path verifyout,  int n, int repeats) {
+  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, std::filesystem::path verifyout, int n, int repeats) {
     BenchmarkRun executor(verify, repeats, verifyout);
     currentRun = &executor;
     executor.run(program, n);
@@ -1503,7 +1489,7 @@ struct Rosetta {
           cxml << " configname=\"" << escape(rosetta_configname) << '\"';
         if (strlen(bench_buildtype) >= 1)
           cxml << " buildtype=\"" << escape(bench_buildtype) << '\"';
-        cxml << " maxrss=\"" <<   executor.lastRSS - executor.preinitRSS << "\""; // Discount RSS for process overhead to avoid a OS-specific constant baseline (not entirely accurate; those parts like the loader may be removed from the working set during exeuction because of memory pressure) 
+        cxml << " maxrss=\"" << executor.lastRSS - executor.preinitRSS << "\""; // Discount RSS for process overhead to avoid a OS-specific constant baseline (not entirely accurate; those parts like the loader may be removed from the working set during exeuction because of memory pressure)
         cxml << ">" << std::endl;
         for (int i = startMeasures; i < numMeasures; i += 1) {
           auto &m = executor.measurements[i];
@@ -1629,15 +1615,15 @@ static int parseInt(std::string_view s) {
   auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.length(), result);
   // TODO: check for error
   return result;
-#else 
-  std::string str (s);
+#else
+  std::string str(s);
   return std::stoi(str);
 #endif
 }
 
 
 dyn_array_base::
-    dyn_array_base(BenchmarkRun *impl, int size, bool verify, std::vector<size_t> dims , std::string_view name) : impl(impl), size(size), verify(verify), dims(std::move(dims)), name(name) {
+    dyn_array_base(BenchmarkRun *impl, int size, bool verify, std::vector<size_t> dims, std::string_view name) : impl(impl), size(size), verify(verify), dims(std::move(dims)), name(name) {
   if (!impl)
     return;
   impl->curAllocatedBytes += size;
@@ -1682,7 +1668,6 @@ static void warn_load() {
 
 
 
-
 int main(int argc, char *argv[]) {
   assert(argc >= 1);
 
@@ -1698,7 +1683,7 @@ int main(int argc, char *argv[]) {
 
     auto dotpos = progname.find_first_of('.');
     benchname = progname;
-    if (dotpos != std::string::npos) 
+    if (dotpos != std::string::npos)
       benchname = progname.substr(0, dotpos);
   }
 
@@ -1713,7 +1698,7 @@ int main(int argc, char *argv[]) {
   while (i < argc) {
     auto [name, val] = nextArg(argc, argv, i);
 
-    if (name == "n" || name=="problemsize" || name=="pbsize")  {
+    if (name == "n" || name == "problemsize" || name == "pbsize") {
       if (!val.has_value() && i <= argc) {
         val = argv[i];
         i += 1;
@@ -1735,12 +1720,12 @@ int main(int argc, char *argv[]) {
       assert(!val.has_value());
       verify = true;
     } else if (name == "verifyfile") {
-        assert(val.has_value() || i <= argc);
-        if (!val.has_value() && i <= argc) {
-            val = argv[i];
-            i += 1;
-        }
-        verifyfile = *val;
+      assert(val.has_value() || i <= argc);
+      if (!val.has_value() && i <= argc) {
+        val = argv[i];
+        i += 1;
+      }
+      verifyfile = *val;
     } else if (name == "xmlout") {
       if (!val.has_value() && i <= argc) {
         val = argv[i];
@@ -1751,7 +1736,7 @@ int main(int argc, char *argv[]) {
       assert(!"unknown switch");
     }
   }
-  
+
 
   int64_t n = -1;
   if (problemsize >= 0) {
@@ -1805,7 +1790,6 @@ int main(int argc, char *argv[]) {
 
 
 
-
   std::filesystem::path resultsfilename;
   if (!xmlout.empty()) {
     resultsfilename = xmlout;
@@ -1827,7 +1811,7 @@ int main(int argc, char *argv[]) {
       auto q = std::ctime(&now_time);
       char buf[200];
       std::strftime(buf, sizeof(buf), "%Y%m%d_%H%M", std::localtime(&now_time));
-      std::string  filename = std::string(buf) + "_" + benchname + suffix + ".xml";
+      std::string filename = std::string(buf) + "_" + benchname + suffix + ".xml";
 
       // auto filename = std::vformat("{0:%F_%R}_{1}{2}.xml",now,benchname, suffix  );
       resultsfilename /= filename;
@@ -1841,9 +1825,11 @@ int main(int argc, char *argv[]) {
   // TOOD: allow more than one benchmark per executable
   assert(n >= 1);
 
-  if (!verify)  warn_load();
+  if (!verify)
+    warn_load();
   Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats);
-  if (!verify)  warn_load();
+  if (!verify)
+    warn_load();
 
   return EXIT_SUCCESS;
 }

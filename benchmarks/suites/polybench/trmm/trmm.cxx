@@ -41,7 +41,7 @@ static void kernel(pbsize_t n, pbsize_t m,
     for (idx_t j = 0; j < n; j++) {
       for (idx_t k = i + 1; k < m; k++)
         B[i][j] += A[k][i] * B[k][j];
-      B[i][j] *= alpha ;
+      B[i][j] *= alpha;
     }
 #pragma endscop
 }
@@ -49,8 +49,8 @@ static void kernel(pbsize_t n, pbsize_t m,
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t n = pbsize;
-    pbsize_t m = pbsize - pbsize / 6;
+  pbsize_t n = pbsize;
+  pbsize_t m = pbsize - pbsize / 6;
 
   real alpha = 1.5;
   auto B = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "B");

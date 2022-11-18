@@ -10,16 +10,16 @@ static void kernel(pbsize_t n,
                    real tmp[],
                    real x[],
                    real y[]) {
-#pragma omp parallel for schedule(static) default(none) firstprivate(n,alpha,beta,A,B,tmp,x,y)
-                           for (idx_t i = 0; i < n; i++) {
-                               tmp[i] = 0;
-                               y[i] = 0;
-                               for (idx_t j = 0; j < n; j++) {
-                                   tmp[i] += A[i][j] * x[j];
-                                   y[i] += B[i][j] * x[j];
-                               }
-                               y[i] = alpha * tmp[i] + beta * y[i];
-                           }
+#pragma omp parallel for schedule(static) default(none) firstprivate(n, alpha, beta, A, B, tmp, x, y)
+  for (idx_t i = 0; i < n; i++) {
+    tmp[i] = 0;
+    y[i] = 0;
+    for (idx_t j = 0; j < n; j++) {
+      tmp[i] += A[i][j] * x[j];
+      y[i] += B[i][j] * x[j];
+    }
+    y[i] = alpha * tmp[i] + beta * y[i];
+  }
 }
 
 

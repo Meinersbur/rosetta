@@ -8,14 +8,14 @@ static void kernel(pbsize_t n, real alpha, real beta,
 #pragma scop
   for (idx_t i = 0; i < n; i++)
     for (idx_t j = 0; j < n; j++)
-      A[i][j] +=  u1[i] * v1[j] + u2[i] * v2[j];
+      A[i][j] += u1[i] * v1[j] + u2[i] * v2[j];
 
   for (idx_t i = 0; i < n; i++)
     for (idx_t j = 0; j < n; j++)
       x[i] += beta * A[j][i] * y[j];
 
   for (idx_t i = 0; i < n; i++)
-    x[i] +=  z[i];
+    x[i] += z[i];
 
   for (idx_t i = 0; i < n; i++)
     for (idx_t j = 0; j < n; j++)
@@ -25,7 +25,7 @@ static void kernel(pbsize_t n, real alpha, real beta,
 
 
 void run(State &state, pbsize_t n) {
-    real alpha = 1.5;
+  real alpha = 1.5;
   real beta = 1.2;
   auto y = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "y");
   auto z = state.allocate_array<double>({n}, /*fakedata*/ true, /*verify*/ false, "z");

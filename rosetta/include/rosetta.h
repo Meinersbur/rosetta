@@ -7,10 +7,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <string>
 #include <type_traits>
 #include <variant>
-#include <iostream>
 
 
 // TODO: ROSETTA_PLATFORM_NVIDIA
@@ -62,9 +62,6 @@ typedef ROSETTA_REALTYPE real_t;
 typedef double real_t;
 #endif
 typedef real_t real;
-
-
-
 
 
 
@@ -215,57 +212,52 @@ static auto extract_subtuple(TUPLE tuple, std::index_sequence<Is...>) {
 
 
 // from https://en.cppreference.com/w/cpp/utility/integer_sequence
-template<typename Array, std::size_t... I>
-auto a2t_impl( Array a, std::index_sequence<I...>){
-    return std::make_tuple(a[I]...);
+template <typename Array, std::size_t... I>
+auto a2t_impl(Array a, std::index_sequence<I...>) {
+  return std::make_tuple(a[I]...);
 }
 
-template<typename T, std::size_t N, typename Indices = std::make_index_sequence<N>>
-auto a2t( std::array<T, N> a){
-    return a2t_impl(a, Indices{});
-}
-
-
-
-
-template<typename T, std::size_t N>
-auto a2v( std::array<T, N> a){
-    std::vector<T> v;
-    v.reserve(N);
-    for (auto val : a)
-        v.push_back(val);
-    return v;
+template <typename T, std::size_t N, typename Indices = std::make_index_sequence<N>>
+auto a2t(std::array<T, N> a) {
+  return a2t_impl(a, Indices{});
 }
 
 
-template<typename T, std::size_t N , typename Is=typename std::make_index_sequence<N>>
-struct t2v_helper ;
 
-template<typename T, std::size_t N >
-struct t2v_helper<T,N,std::index_sequence<> > {
-    static  void add_elements(std::vector<T>& v,  typename _make_tuple<typename _make_dimlengths<N>::type>::type t  ) {    }
+template <typename T, std::size_t N>
+auto a2v(std::array<T, N> a) {
+  std::vector<T> v;
+  v.reserve(N);
+  for (auto val : a)
+    v.push_back(val);
+  return v;
+}
+
+
+template <typename T, std::size_t N, typename Is = typename std::make_index_sequence<N>>
+struct t2v_helper;
+
+template <typename T, std::size_t N>
+struct t2v_helper<T, N, std::index_sequence<>> {
+  static void add_elements(std::vector<T> &v, typename _make_tuple<typename _make_dimlengths<N>::type>::type t) {}
 };
 
 
-template<typename T, std::size_t N , size_t I, size_t... IRest>
-struct t2v_helper<T,N,std::index_sequence<I,IRest...> > {
-   static  void add_elements(std::vector<T>& v,  typename _make_tuple<typename _make_dimlengths<N>::type>::type t  ) {
-       v.push_back(std::get<I>(t));
-       t2v_helper <T,N,std::index_sequence<IRest...>>::   add_elements(v, t);
-    }
+template <typename T, std::size_t N, size_t I, size_t... IRest>
+struct t2v_helper<T, N, std::index_sequence<I, IRest...>> {
+  static void add_elements(std::vector<T> &v, typename _make_tuple<typename _make_dimlengths<N>::type>::type t) {
+    v.push_back(std::get<I>(t));
+    t2v_helper<T, N, std::index_sequence<IRest...>>::add_elements(v, t);
+  }
 };
 
-template<typename T, std::size_t N>
-auto t2v( typename _make_tuple<typename _make_dimlengths<N>::type>::type t){
-    std::vector<T> v;
-    v.reserve(N);
-    t2v_helper<T,N>::add_elements(v, t);
-    return v;
+template <typename T, std::size_t N>
+auto t2v(typename _make_tuple<typename _make_dimlengths<N>::type>::type t) {
+  std::vector<T> v;
+  v.reserve(N);
+  t2v_helper<T, N>::add_elements(v, t);
+  return v;
 }
-
-
-
-
 
 
 
@@ -346,7 +338,7 @@ public:
     assert(i < len);
 
     auto rest = _unqueue_tuple<RemainingLengthsTy>::get_rest(remainingLengths);
-    return _multarray_partial_subscript<T, nTogo - 1>(data + i*get_stride(rest), rest);
+    return _multarray_partial_subscript<T, nTogo - 1>(data + i * get_stride(rest), rest);
   }
 }; // class _multarray_partial_subscript
 
@@ -417,8 +409,8 @@ public:
     assert(i < len);
 
     auto rest = _unqueue_tuple<TupleTy>::get_rest(DimLengths);
-    //std::cerr << "DIMS=" << DIMS << " i=" <<i << " len=" << len <<  " i*get_stride(rest)=" << i* get_stride(rest) << "\n";
-    return _multarray_partial_subscript<T, DIMS - 1>(data + i* get_stride(rest), rest);
+    // std::cerr << "DIMS=" << DIMS << " i=" <<i << " len=" << len <<  " i*get_stride(rest)=" << i* get_stride(rest) << "\n";
+    return _multarray_partial_subscript<T, DIMS - 1>(data + i * get_stride(rest), rest);
   }
 
 
@@ -609,14 +601,14 @@ public:
   explicit DataHandler(BenchmarkRun *impl) : DataHandlerBase(impl) {}
 
   void fake(double *data, ssize_t count);
-  void verify(double *data, ssize_t count, std::vector <size_t> dims, std::string_view name);
+  void verify(double *data, ssize_t count, std::vector<size_t> dims, std::string_view name);
 };
 
 
 
 class dyn_array_base {
 protected:
-  dyn_array_base(BenchmarkRun *impl, int size, bool verify, std::vector<size_t> dims , std::string_view name);
+  dyn_array_base(BenchmarkRun *impl, int size, bool verify, std::vector<size_t> dims, std::string_view name);
   dyn_array_base(dyn_array_base &&that) : impl(that.impl), size(that.size), verify(that.verify), dims(std::move(that.dims)), name(std::move(that.name)) {
     that.impl = nullptr;
     that.verify = false;
@@ -666,14 +658,14 @@ public:
 
   void fakedata() { DataHandler<T>(impl).fake(mydata, size / sizeof(T)); }
   void verifydata() {
-    DataHandler<T>(impl).verify(mydata, size / sizeof(T), dims, name );
+    DataHandler<T>(impl).verify(mydata, size / sizeof(T), dims, name);
   }
 
 
 
   // TODO: realloc
 private:
-  dyn_array(BenchmarkRun *impl, int count, bool verify, std::vector<size_t> dims , std::string_view name) : dyn_array_base(impl, count * sizeof(T), verify,std::move(dims), name), mydata(new T[count]) {}
+  dyn_array(BenchmarkRun *impl, int count, bool verify, std::vector<size_t> dims, std::string_view name) : dyn_array_base(impl, count * sizeof(T), verify, std::move(dims), name), mydata(new T[count]) {}
 
   // typed, to ensure TBAA can be effective
   T *mydata;
@@ -681,24 +673,22 @@ private:
 
 
 
-
-
 template <typename T, size_t DIMS>
 class owning_array {
 public:
-  owning_array(BenchmarkRun *impl,  bool verify,      typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type  dims , std::string_view name) 
-   : mydata(impl, get_stride(dims), verify, t2v<size_t,DIMS> ( dims), name), sizes(dims) {}
- //   owning_array(dyn_array<T>& mydata) : mydata(impl, get_stride(sizes), verify, std::move(dims), name), sizes(sizes) {}
+  owning_array(BenchmarkRun *impl, bool verify, typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type dims, std::string_view name)
+      : mydata(impl, get_stride(dims), verify, t2v<size_t, DIMS>(dims), name), sizes(dims) {}
+  //   owning_array(dyn_array<T>& mydata) : mydata(impl, get_stride(sizes), verify, std::move(dims), name), sizes(sizes) {}
 
   multarray<T, DIMS> get() {
     return multarray<T, DIMS>(mydata.data(), sizes);
   }
 
   void fakedata() {
-      mydata.fakedata();
+    mydata.fakedata();
   }
   void zerodata() {
-      mydata.zerodata();
+    mydata.zerodata();
   }
 
   operator multarray<T, DIMS>() { return get(); }
@@ -710,7 +700,7 @@ public:
   template <typename U = T, typename = typename std::enable_if<std::is_same<U, T>::value && DIMS == 1, T>::type>
   operator T *() { return data(); }
 
-  T* data() { return mydata.data(); }
+  T *data() { return mydata.data(); }
 
 
 #if ROSETTA_CUDA
@@ -770,45 +760,40 @@ public:
 
 
 
+  template <typename T, size_t DIMS>
+  owning_array<T, DIMS>
+  allocate_array(
+      typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type sizes,
+      bool fakedata,
+      bool verify,
+      std::string_view name = std::string_view()) {
+    owning_array<T, DIMS> result(impl, verify, sizes, name);
+    if (fakedata)
+      result.fakedata();
+    else
+      result.zerodata();
+    return result; // NRVO
+  }
+
+  // FIXME: Template deduction doesn't work on number of elements in @p sizes.
+  template <typename T>
+  owning_array<T, 1>
+  allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+    return allocate_array<T, 1>(sizes, fakedata, verify, name);
+  }
 
 
-    template<typename T, size_t DIMS> 
-    owning_array< T,DIMS> 
-        allocate_array( 
-            typename _make_tuple<typename _make_dimlengths<DIMS>::type>::type  sizes, 
-            bool fakedata, 
-            bool verify, 
-            std::string_view name = std::string_view()) {
-        owning_array<T, DIMS> result(impl,  verify, sizes,name);
-        if (fakedata)
-            result.fakedata();
-        else 
-            result.zerodata();
-        return    result; // NRVO 
-    }
+  template <typename T>
+  owning_array<T, 2>
+  allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+    return allocate_array<T, 2>(sizes, fakedata, verify, name);
+  }
 
-    // FIXME: Template deduction doesn't work on number of elements in @p sizes.
-    template <typename T>
-    owning_array<T, 1>
-        allocate_array(typename _make_tuple<typename _make_dimlengths<1>::type>::type  sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
-        return allocate_array<T, 1>(sizes, fakedata, verify, name);
-    }
-
-
-    template <typename T>
-    owning_array<T, 2>
-        allocate_array(typename _make_tuple<typename _make_dimlengths<2>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
-        return allocate_array<T,2>(sizes, fakedata,verify,name);
-    }
-
-    template <typename T>
-    owning_array<T, 3>
-        allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
-        return allocate_array<T,3>(sizes, fakedata,verify,name);
-    }
-
-
-
+  template <typename T>
+  owning_array<T, 3>
+  allocate_array(typename _make_tuple<typename _make_dimlengths<3>::type>::type sizes, bool fakedata, bool verify, std::string_view name = std::string_view()) {
+    return allocate_array<T, 3>(sizes, fakedata, verify, name);
+  }
 
 
 
@@ -837,22 +822,18 @@ public:
 
 
 
-
-
-
-
 #ifdef ROSETTA_PPM_CUDA
-  template<typename T>
-  T * allocate_dev( size_t n) {
-      T* devptr=nullptr;
-      // TODO: Count device memory allocation
-      BENCH_CUDA_TRY(cudaMalloc((void**)&devptr, n *  sizeof(real)));
-      return devptr;
+  template <typename T>
+  T *allocate_dev(size_t n) {
+    T *devptr = nullptr;
+    // TODO: Count device memory allocation
+    BENCH_CUDA_TRY(cudaMalloc((void **)&devptr, n * sizeof(real)));
+    return devptr;
   }
 
-  template<typename T>
-  void free_dev(T* dev_ptr) {
-      BENCH_CUDA_TRY(   cudaFree(dev_ptr));
+  template <typename T>
+  void free_dev(T *dev_ptr) {
+    BENCH_CUDA_TRY(cudaFree(dev_ptr));
   }
 
 #endif
@@ -927,7 +908,6 @@ inline Iterator<Iteration> Range::end() { return Iterator<Iteration>(state, true
 inline Iterator<AutoIteration> State::begin() { return Iterator<AutoIteration>(*this, false); }
 inline Iterator<AutoIteration> State::end() { return Iterator<AutoIteration>(*this, true); }
 
- 
 
 
 #if 0

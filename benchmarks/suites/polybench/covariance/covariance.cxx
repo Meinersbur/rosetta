@@ -36,12 +36,12 @@ void run(State &state, pbsize_t pbsize) {
   pbsize_t n = pbsize;
   pbsize_t m = pbsize - pbsize / 8;
 
-  auto data = state.allocate_array<real>({ n, m}, /*fakedata*/ true, /*verify*/ false, "data");
-    auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "mean");
+  auto data = state.allocate_array<real>({n, m}, /*fakedata*/ true, /*verify*/ false, "data");
+  auto mean = state.allocate_array<real>({m}, /*fakedata*/ false, /*verify*/ true, "mean");
   auto cov = state.allocate_array<real>({m, m}, /*fakedata*/ false, /*verify*/ true, "cov");
 
 
 
   for (auto &&_ : state)
-    kernel(m, n,  data, cov, mean);
+    kernel(m, n, data, cov, mean);
 }

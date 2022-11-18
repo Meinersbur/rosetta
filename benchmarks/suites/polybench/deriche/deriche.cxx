@@ -12,7 +12,7 @@ static void kernel(pbsize_t w, pbsize_t h,
                    multarray<real, 2> y2) {
 #pragma scop
   real k = (1 - std::exp(-alpha)) * (1 - std::exp(-alpha)) / (1 + 2 * alpha * std::exp(-alpha) - std::exp(2 * alpha));
-  real a1 = k,a5 = k;
+  real a1 = k, a5 = k;
   real a6 = k * std::exp(-alpha) * (alpha - 1);
   real a2 = a6;
   real a7 = k * std::exp(-alpha) * (alpha + 1);

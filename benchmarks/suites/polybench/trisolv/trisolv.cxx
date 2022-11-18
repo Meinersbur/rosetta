@@ -35,13 +35,13 @@ extern "C"
 #endif
 
 
-static void kernel(pbsize_t  n,
+static void kernel(pbsize_t n,
                    multarray<real, 2> L, real x[], real b[]) {
 #pragma scop
   for (idx_t i = 0; i < n; i++) {
     x[i] = b[i];
     for (idx_t j = 0; j < i; j++)
-      x[i] -= L[i][j] * x[j]; 
+      x[i] -= L[i][j] * x[j];
     x[i] /= L[i][i];
   }
 #pragma endscop
@@ -49,15 +49,13 @@ static void kernel(pbsize_t  n,
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t n = pbsize; // 2000
+  pbsize_t n = pbsize; // 2000
 
 
   auto L = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false, "L");
-  auto x = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true,"x");
-  auto b = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false,"b");
+  auto x = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true, "x");
+  auto b = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "b");
 
   for (auto &&_ : state)
     kernel(n, L, x, b);
 }
-
-

@@ -4,7 +4,6 @@
 
 
 
-
 static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk,
                    real alpha,
                    real beta,
@@ -23,15 +22,15 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk,
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t ni = pbsize - pbsize / 4;
-    pbsize_t nj = pbsize - pbsize / 8;
-    pbsize_t nk = pbsize;
+  pbsize_t ni = pbsize - pbsize / 4;
+  pbsize_t nj = pbsize - pbsize / 8;
+  pbsize_t nk = pbsize;
 
   real alpha = 1.5;
   real beta = 1.2;
-  auto C = state.allocate_array<real>({ni, nj}, /*fakedata*/ true, /*verify*/ true,"C");
-  auto A = state.allocate_array<real>({ni, nk}, /*fakedata*/ true, /*verify*/ false,"A");
-  auto B = state.allocate_array<real>({nk, nj}, /*fakedata*/ true, /*verify*/ false,"B");
+  auto C = state.allocate_array<real>({ni, nj}, /*fakedata*/ true, /*verify*/ true, "C");
+  auto A = state.allocate_array<real>({ni, nk}, /*fakedata*/ true, /*verify*/ false, "A");
+  auto B = state.allocate_array<real>({nk, nj}, /*fakedata*/ true, /*verify*/ false, "B");
 
   for (auto &&_ : state)
     kernel(ni, nj, nk, alpha, beta, C, A, B);

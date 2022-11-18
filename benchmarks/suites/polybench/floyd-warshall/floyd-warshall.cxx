@@ -3,7 +3,7 @@
 #include "rosetta.h"
 
 
-static void kernel(pbsize_t  n, multarray<real, 2> path) {
+static void kernel(pbsize_t n, multarray<real, 2> path) {
 #pragma scop
   for (idx_t k = 0; k < n; k++) {
     for (idx_t i = 0; i < n; i++)
@@ -16,7 +16,7 @@ static void kernel(pbsize_t  n, multarray<real, 2> path) {
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t n = pbsize; // 2800
+  pbsize_t n = pbsize; // 2800
 
 
 
