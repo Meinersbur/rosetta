@@ -407,7 +407,7 @@ file(GENERATE
 
 if __name__ == '__main__':
   import sys
-  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
 from rosetta import runner_main_run, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent
@@ -433,7 +433,7 @@ file(GENERATE
 
 if __name__ == '__main__':
   import sys
-  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
 from rosetta import runner_main_verify, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent
@@ -459,7 +459,7 @@ file(GENERATE
 
 if __name__ == '__main__':
   import sys
-  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
+  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
 from rosetta import runner_main_probe, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent

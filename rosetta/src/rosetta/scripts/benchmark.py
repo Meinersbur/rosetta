@@ -139,12 +139,13 @@ def invoke_verbose(*args, **kwargs):
 
 
 
-
 def main(argv,rootdir=None):
     global verbose
     parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
 
-    parser.add_argument('--rootdir', type=pathlib.Path, default=rootdir, help="Root dir")
+    # Used by launcher which is itself in the repository root directory
+    if not rootdir:
+        parser.add_argument('--rootdir', type=pathlib.Path, default=rootdir, help=argparse.SUPPRESS)
 
     # Clean step
     add_boolean_argument(parser, 'clean', default=False, help="Start from scratch")
