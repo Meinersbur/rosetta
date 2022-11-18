@@ -1509,7 +1509,7 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
         add_boolean_argument(parser, 'evaluate', default=None, help="Evaluate result")
 
         parser.add_argument('--boxplot', type=pathlib.Path, help="Save as boxplot to FILENAME")
-    
+
 
     if args:
         # If neither no action is specified, enable --bench implicitly unless --no-bench
