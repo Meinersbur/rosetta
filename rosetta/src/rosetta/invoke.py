@@ -9,7 +9,7 @@ import threading
 import datetime
 import contextlib
 from collections.abc import Iterable
-from support import *
+from .support import *
 
 
 class Invoke:

@@ -30,10 +30,10 @@ import cwcwidth
 #import tqdm # progress meter
 
 # Rosetta-provided
-import invoke
-from support import *
-from orderedset import OrderedSet
-from cmdtool import *
+from . import invoke
+from .support import *
+from .orderedset import OrderedSet
+from .cmdtool import *
 
 
 # FIXME: Hack
@@ -1542,15 +1542,6 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
                 results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
             else:
                 evaluate(resultfiles)
-
-
-        if evaluate:
-           if not resultfiles:
-                assert False, "TODO: Lookup last (successful) results dir"
-            if len(configs) == 1:
-                runner.evaluate(resultfiles)
-            else:
-                runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
 
 
 
