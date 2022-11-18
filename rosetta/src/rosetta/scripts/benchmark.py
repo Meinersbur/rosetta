@@ -19,12 +19,12 @@ script = Path(sys.argv[0]).absolute()
 thisscript = Path(__file__)
 thisscriptdir = thisscript.parent
 
-sys.path.insert(0,str( (thisscript.parent / 'rosetta' /  'lib').absolute() ))
+#sys.path.insert(0,str( (thisscript.parent / 'rosetta' /  'lib').absolute() ))
 from rosetta import *
 
 import rosetta
 runner = rosetta.runner
-from . import support
+from rosetta.util import support
 
 class BuildConfig:
     def __init__(self,name,ppm,cmake_arg,cmake_def,compiler_arg,compiler_def):

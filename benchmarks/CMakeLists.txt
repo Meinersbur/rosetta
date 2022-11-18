@@ -100,7 +100,7 @@ endfunction ()
 
 # https://stackoverflow.com/a/52714922
 set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/stage1.cmake")
-set(_stage1generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage1.py")
+set(_stage1generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage1.py" )
 
 # Python::Interpreter does not work?
 set(_stage1args
@@ -112,11 +112,13 @@ if (ROSETTA_CONFIGNAME)
   list (APPEND "--configname=${ROSETTA_CONFIGNAME}")
 endif ()
 list(APPEND _stage1args ${ROSETTA_BENCH_FILTER})
-message("Executing: ${Python_EXECUTABLE} -m rosetta.gen-stage1 ${_stage1args}")
+message("Executing: ${Python_EXECUTABLE} -m rosetta.scripts.gen-stage1 ${_stage1args}")
 execute_process(
-  COMMAND "${Python_EXECUTABLE}" -m rosetta.gen-stage1 ${_stage1args}
+  COMMAND "${Python_EXECUTABLE}" -m rosetta.scripts.gen-stage1 ${_stage1args}
   COMMAND_ERROR_IS_FATAL ANY
 )
+list(APPEND CMAKE_CONFIGURE_DEPENDS ${_stage1generator})
+
 #execute_process(
 #  COMMAND "${Python_EXECUTABLE}" "${_stage1generator}"
 #    "--builddir=${CMAKE_CURRENT_BINARY_DIR}"
@@ -204,7 +206,7 @@ foreach (_benchmark IN LISTS _benchmarks)
   list(APPEND _benchpropfiles "${_benchpropfile}")
 endforeach ( )
 
-set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage2.py" )
+set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage2.py" )
 set(_stage2stampfile "stage2-stamp-$<CONFIG>")
 
 set(_stage2args
@@ -216,7 +218,8 @@ set(_stage2args
 )
 add_custom_command(
     OUTPUT "${_stage2stampfile}" ${_benchpropfiles} 
-    COMMAND "${CMAKE_COMMAND}" -E env "PYTHONPATH=${_pythonpath}" "$<TARGET_FILE:Python::Interpreter>" -m rosetta.gen-stage2 ${_stage2args}
+    DEPENDS "${_stage2generator}"
+    COMMAND "${CMAKE_COMMAND}" -E env "PYTHONPATH=${_pythonpath}" "$<TARGET_FILE:Python::Interpreter>" -m rosetta.scripts.gen-stage2 ${_stage2args}
     COMMENT "Generate properties files ..."
   )
 
