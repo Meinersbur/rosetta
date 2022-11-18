@@ -138,6 +138,8 @@ def invoke_verbose(*args, **kwargs):
         invoke.run(*args, **kwargs)
 
 
+
+
 def main(argv):
     global verbose
     parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
@@ -148,11 +150,13 @@ def main(argv):
     # Configure step
     add_boolean_argument(parser, 'configure', default=True, help="Enable configure (CMake) step")
     #TODO: Add switches that parse multiple arguments using shsplit
+    parser.add_argument('--config', metavar="CONFIG", action='append')
+    parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
     parser.add_argument('--cmake-arg', metavar="CONFIG:ARG", action='append')
     parser.add_argument('--cmake-def', metavar="CONFIG:DEF[=VAL]", action='append')
     parser.add_argument('--compiler-arg', metavar="CONFIG:ARG", action='append')
     parser.add_argument('--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
-    parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
+
 
     # Build step
     add_boolean_argument(parser, 'build', default=True, help="Enable build step")
