@@ -9,7 +9,8 @@ def _str_to_bool(s):
     """Convert string to bool (in argparse context)."""
     if s.lower() not in ['true', 'false', '1', '0', 'y', 'n', 'yes', 'no', 'on', 'off']:
         raise ValueError('Need bool; got %r' % s)
-    return {'true': True, 'false': False, '1': True, '0': False, 'y': True, 'n': False, 'yes': True, 'no': False, 'on': True, 'of': False}[s.lower()]
+    return {'true': True, 'false': False, '1': True, '0': False, 'y': True,
+            'n': False, 'yes': True, 'no': False, 'on': True, 'of': False}[s.lower()]
 
 
 def add_boolean_argument(parser, name, default=False, dest=None, help=None):
@@ -18,7 +19,7 @@ def add_boolean_argument(parser, name, default=False, dest=None, help=None):
     try:
         parser.add_argument('--' + name, action=argparse.BooleanOptionalAction, default=default, help=help)
         return
-    except:
+    except BaseException:
         pass
 
     # Fallback for Python < 3.9
@@ -41,8 +42,8 @@ def get_boolean_cmdline(name, val):
     if val is None:
         return []
     if not val:
-        return ['--no-'+name]
-    return ['--'+name]
+        return ['--no-' + name]
+    return ['--' + name]
 
 
 class ConfigParam:
@@ -56,7 +57,8 @@ class ConfigParam:
     CMDARGDICT = NamedSentinel('CMDARGDICT')
     PATH = NamedSentinel('PATH')
 
-    def __init__(self, parent, propname, type, cmdargname=None, inherits_from=[], defaultval=None, help=None, userparam=False):
+    def __init__(self, parent, propname, type, cmdargname=None,
+                 inherits_from=[], defaultval=None, help=None, userparam=False):
         self.parent = parent
         self.propname = propname
         self.type = type
@@ -79,7 +81,7 @@ class ConfigParam:
         return self.val
 
     def set_raw_value(self, val):
-        assert val != None, "Don't try to reset value this way"
+        assert val is not None, "Don't try to reset value this way"
         if self.type is ConfigParam.BOOL:
             val = bool(val)
         elif self.type in (ConfigParam.INT, ConfigParam.INTMIN):
@@ -105,19 +107,20 @@ class ConfigParam:
             for prop in walk_inheritance_chain(self):
                 # return first defined item
                 val = prop.get_raw_value()
-                if val != None:
+                if val is not None:
                     return val
         elif self.type is ConfigParam.INTMIN:
-            l = [p.val for p in walk_inheritance_chain(self) if p.val != None]
+            l = [p.val for p in walk_inheritance_chain(self) if p.val is not None]
             if not l:
                 return None
             return min(l)
         elif self.type in (ConfigParam.STRLIST, ConfigParam.CMDARGLIST):
-            return [item for items in (p.val for p in walk_inheritance_chain(self) if p.val != None) for item in items]
+            return [item for items in (p.val for p in walk_inheritance_chain(self)
+                                       if p.val is not None) for item in items]
         elif self.type is (ConfigParam.CMDARGDICT):
             result = {}
             for d in walk_inheritance_chain(self):
-                if d.val == None:
+                if d.val is None:
                     continue
                 for k, v in d.val.items():
                     if k in result:
@@ -164,56 +167,56 @@ class ConfigParam:
         dest = propprefix + self.propname
         lookup = argdict.get(dest)
         if self.type is ConfigParam.BOOL:
-            if lookup == None:
+            if lookup is None:
                 return
             assert isinstance(lookup, bool)
         elif self.type in (ConfigParam.INT, ConfigParam.INTMIN):
-            if lookup == None:
+            if lookup is None:
                 return
             assert isinstance(lookup, int)
         elif self.type is ConfigParam.NUMBER:
-            if lookup == None:
+            if lookup is None:
                 return
             assert isinstance(lookup, int) or isinstance(lookup, float)
         elif self.type is ConfigParam.STRING:
-            if lookup == None:
+            if lookup is None:
                 return
             assert isinstance(lookup, str)
         elif self.type is ConfigParam.STRLIST:
-            if lookup == None:
+            if lookup is None:
                 return
             assert isinstance(lookup, list)
         elif self.type is ConfigParam.CMDARGLIST:
             singularpropname = propprefix + self.propname[:-1]
             plurallookup = lookup
             singularlookup = argdict.get(singularpropname)
-            if plurallookup == None and singularlookup == None:
+            if plurallookup is None and singularlookup is None:
                 return
 
             args = []
-            if plurallookup != None:
+            if plurallookup is not None:
                 args += [arg for args in plurallookup for arg in shsplit(args)]
-            if singularlookup != None:
+            if singularlookup is not None:
                 args += singularlookup
             lookup = args
         elif self.type is ConfigParam.CMDARGDICT:
             singularpropname = propprefix + self.propname[:-1]
             plurallookup = lookup
             singularlookup = argdict.get(singularpropname)
-            if plurallookup == None and singularlookup == None:
+            if plurallookup is None and singularlookup is None:
                 return
 
             args = []
-            if plurallookup != None:
+            if plurallookup is not None:
                 args += [arg for args in plurallookup for arg in shsplit(args)]
-            if singularlookup != None:
+            if singularlookup is not None:
                 args += singularlookup
             lookup = {}
             for arg in args:
-                k, v = arg.split('=',   maxsplit=1)
+                k, v = arg.split('=', maxsplit=1)
                 lookup[k] = v
         elif self.type is ConfigParam.PATH:
-            if lookup == None:
+            if lookup is None:
                 return
             assert isinstance(lookup, str)
             lookup = pathlib.Path(lookup)
@@ -226,7 +229,7 @@ class ConfigParam:
         cmdargname = cmdargprefix + self.cmdargname
 
         val = self.get_value(effective=effective)
-        if val == None:
+        if val is None:
             return []
         if self.type is ConfigParam.BOOL:
             return get_boolean_cmdline(cmdargname, val)
@@ -244,7 +247,7 @@ class ConfigParam:
             return result
         elif self.type is ConfigParam.PATH:
             assert isinstance(val, pathlib.Path)
-            return ['--'+cmdargname + '=' + str(val)]
+            return ['--' + cmdargname + '=' + str(val)]
         else:
             assert False, "forgotten to implement this for type?"
 
@@ -294,7 +297,7 @@ class Configurable:
         assert propname not in self.props
         assert propname not in self.subconfigs
         assert self != configurable
-        assert configurable.parent == None
+        assert configurable.parent is None
         configurable.parent = self
         configurable.propname = propname
         self.subconfigs[propname] = configurable
@@ -369,7 +372,7 @@ def walk_mergeprops(rootprop):
         propname = cur.propname
         parent = cur.parent
 
-        if parent == None:
+        if parent is None:
             # This was the root
             break
 
@@ -384,7 +387,7 @@ def walk_inheritance_chain(rootprop):
     visited_mergeinherits = set()
 
     def process_mergeinherits(seed=None):
-        if seed != None:
+        if seed is not None:
             worklist_mergeinherits.append(seed)
 
         # Visit merge inheritances in dfs
@@ -401,7 +404,7 @@ def walk_inheritance_chain(rootprop):
                 worklist_propinherits.append(subo)
 
     def process_propinherits(seed=None):
-        if seed != None:
+        if seed is not None:
             worklist_propinherits.append(seed)
 
         # Visit prop inheritances in dfs
@@ -414,7 +417,8 @@ def walk_inheritance_chain(rootprop):
             # Visit merge inheritances first
             yield from process_mergeinherits(obj)
 
-            # Push prop inheritances on top of the stack, so they are processed before merge-inheritance's prop inheritances
+            # Push prop inheritances on top of the stack, so they are processed before
+            # merge-inheritance's prop inheritances
             worklist_propinherits.extend(obj.inherits)
 
     yield from process_propinherits(rootprop)
