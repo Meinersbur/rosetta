@@ -1,6 +1,8 @@
-// BUILD: add_benchmark(ppm=serial)
+// BUILD: add_benchmark(ppm=serial,sources=[__file__, "gramschmidt-common.cxx"])
 
-#include "rosetta.h"
+#include <rosetta.h>
+#include "gramschmidt-common.h"
+
 
 static real sqr(real v) { return v*v;}
 
@@ -11,9 +13,10 @@ static void kernel(pbsize_t m, pbsize_t n,
       R[k][k] = 0;
     for (idx_t i = 0; i < m; i++)
         R[k][k] += sqr(A[i][k] );
-    R[k][k] = std::sqrt( R[k][k]);
+    R[k][k] =  std::sqrt( R[k][k]);
     for (idx_t i = 0; i < m; i++)
       Q[i][k] = A[i][k] / R[k][k];
+#if 1
     for (idx_t j = k + 1; j < n; j++) {
       R[k][j] = 0;
       for (idx_t i = 0; i < m; i++)
@@ -21,20 +24,11 @@ static void kernel(pbsize_t m, pbsize_t n,
       for (idx_t i = 0; i < m; i++)
         A[i][j] -=  Q[i][k] * R[k][j];
     }
+#endif
   }
 #pragma endscop
 }
 
-
-static void condition( pbsize_t m,  pbsize_t n,multarray<real, 2> A) {
-    for (idx_t i = 0; i < m; i++) {
-        for (idx_t j = 0; j < n; j++) {
-            if ( std::abs(i-j) > 1 ) continue;
-
-            A[i][j] = 0.25;
-        }
-    }
-}
 
 
 

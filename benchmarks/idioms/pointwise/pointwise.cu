@@ -1,55 +1,42 @@
-//#include "pointwise.h"
+// BUILD: add_benchmark(ppm=cuda)
+
 #include "rosetta.h"
-//#include <benchmark/benchmark.h>
-//#include <cstdlib>
-//#include <string>
-//#include "synchronization.hpp" 
 
-// Loosely based on CUDA Toolkit sample: vectorAdd
 
-__global__ void kernel(int n, double *A) {
-    int i = blockDim.x * blockIdx.x + threadIdx.x;
+
+static
+unsigned num_blocks(int num, int factor) {
+    return (num + factor -1)/factor ;
+}
+
+
+
+
+__global__ void kernel_device(pbsize_t n,                   real A[]) {
+        idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i < n)
-        A[i] += 42;
+      A[i] += 42;
 }
 
 
- void run(State& state, int n) {
-     auto A  = state.fakedata_array<double>(n,/*verify*/true);   
-
-
-    double *dev_A;
-    BENCH_CUDA_TRY(cudaMalloc((void**)&dev_A, n * sizeof(double)));
-
-
-    cudaMemcpy(dev_A, A.data(), n * sizeof(double), cudaMemcpyHostToDevice);
 
 
 
-// TODO: dim3 dimBlock(16, 16, 1);
-    int threadsPerBlock = 256;
-    int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+void run(State &state, pbsize_t n) {
+    auto A = state.allocate_array<real>({n}, /*fakedata*/true, /*verify*/true, "A");
+      real* dev_A = state.allocate_dev<real>(n);
 
-//state.PauseTiming();
-    for (auto &&_ : state.manual()) {
-//state.PauseTiming();
-       cudaStream_t stream = 0;
-    //    cuda_event_timer raii(state, true, stream); 
-//state.ResumeTiming();
+  // TODO: #pragma omp parallel outside of loop
+  for (auto &&_ : state) {
+ BENCH_CUDA_TRY( cudaMemcpy(dev_A, A.data(),  n* sizeof(real), cudaMemcpyHostToDevice));
 
-{
-        auto &&scope = _.scope();
-        kernel<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(n, dev_A);
-        }
+       const  unsigned threadsPerBlock = 256;
+    kernel_device <<<threadsPerBlock ,num_blocks(n,threadsPerBlock) >>> (n,dev_A);
 
-        // TODO: Is the invocation already blocking?
-        cudaMemcpy( A.data(), dev_A, n * sizeof(double), cudaMemcpyDeviceToHost ); cudaDeviceSynchronize();
+     BENCH_CUDA_TRY(  cudaMemcpy( A.data() ,dev_A, n*sizeof(real), cudaMemcpyDeviceToHost )); 
 
-    }
-
-    cudaFree(dev_A);
-
-
-
+     BENCH_CUDA_TRY( cudaDeviceSynchronize());
+  }
 }
+
 

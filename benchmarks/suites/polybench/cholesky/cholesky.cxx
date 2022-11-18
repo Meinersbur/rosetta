@@ -9,6 +9,7 @@ static real sqr(real v) {
 
 
 
+#if 0
 /* Polly parallelizes this as follows:
 #pragma minimal dependence distance: 1
 for (int c0 = 0; c0 < n; c0 += 1) {
@@ -25,10 +26,10 @@ for (int c0 = 0; c0 < n; c0 += 1) {
 }
 */
 extern
-void kernel2(int n, double A[128][128]) {
+void kernel2(pbsize_t n, double A[128][128]) {
 #pragma scop
-    for (int i = 0; i < n; i++) { // c1
-        for (int j = 0; j <= i; j++) { //c0
+    for (idx_t i = 0; i < n; i++) { // c1
+        for (idx_t j = 0; j <= i; j++) { //c0
             for (int k = 0; k < j; k++) // c2
                 A[i][j] -= A[i][k] * A[j][k]; // Stmt_for_body8(c1, c2, c0)
             if (i == j) {
@@ -41,16 +42,17 @@ void kernel2(int n, double A[128][128]) {
 #pragma endscop
 }
 
-void kernel3(int n, double A[128][128]) {
+static 
+void kernel3(pbsize_t n, double A[128][128]) {
 #pragma scop
-    for (int i = 0; i < n; i++) { // c1
-        for (int j = 0; j <= i; j++) { //c0
+    for (idx_t i = 0; i < n; i++) { // c1
+        for (idx_t j = 0; j <= i; j++) { //c0
             if (i == j) {
-                for (int k = 0; k < j; k++) // c2
+                for (idx_t k = 0; k < j; k++) // c2
                         A[j][j] -= A[j][k] * A[j][k]; // Stmt_for_body8(c1, c2, c0)
                 A[j][j] = std::sqrt(A[j][j]); // Stmt_if_then(c0, c0)
             } else {
-                for (int k = 0; k < j; k++) // c2
+                for (idx_t k = 0; k < j; k++) // c2
                     A[i][j] -= A[i][k] * A[j][k]; // Stmt_for_body8(c1, c2, c0)
                 A[i][j] /= A[j][j]; // Stmt_if_else(c1, c0)
             }
@@ -58,24 +60,39 @@ void kernel3(int n, double A[128][128]) {
     } 
 #pragma endscop
 }
+#endif 
+
+
+static void kernel_polly(pbsize_t n, multarray<real, 2> A) {
+        for (idx_t j = 0; j < n; j++) { // c0
+            A[j][j] = std::sqrt(A[j][j]); // Stmt_if_then
+
+            for (idx_t i = j + 1; i < n; i++)
+                A[i][j] /= A[j][j]; // Stmt_if_else
+
+            for (idx_t i = j + 1; i < n; i++)
+                for (idx_t k = j + 1; k <= i; k++) // c2
+                    A[i][k] -= A[i][j] * A[k][j]; // Stmt_for_body8
+        }
+}
 
 
 
-
- void kernel(int n,
+static 
+ void kernel(pbsize_t n,
                    multarray<real, 2> A) {
 #pragma scop
-  for (int i = 0; i < n; i++) {
+  for (idx_t i = 0; i < n; i++) {
 
     // j<i case
-    for (int j = 0; j < i; j++) {
-      for (int k = 0; k < j; k++) 
+    for (idx_t j = 0; j < i; j++) {
+      for (idx_t k = 0; k < j; k++) 
 S:        A[i][j] -= A[i][k] * A[j][k];
 T:      A[i][j] /= A[j][j]; 
-    }
+   }
 
     // i==j case
-    for (int k = 0; k < i; k++) 
+    for (idx_t k = 0; k < i; k++) 
 U:      A[i][i] -= sqr(A[i][k]);
 V:    A[i][i] = std::sqrt(A[i][i]);
   }
@@ -121,3 +138,5 @@ void run(State &state, pbsize_t pbsize) {
       }
   }
 }
+
+

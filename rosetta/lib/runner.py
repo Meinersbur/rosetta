@@ -617,10 +617,10 @@ class Statistic:
         return c * self.corrected_variance / math.sqrt(n)
 
     def relerr(self,ratio=0.95):
-        mean = self.mean 
-        if not mean :
+        mean = self.mean
+        if not mean:
             return None
-        return self.abserr(ratio=ratio) / self.mean 
+        return self.abserr(ratio=ratio) / self.mean
 
     # TODO: signal/noise ratio (relative_rmse?)
 
@@ -1229,6 +1229,13 @@ def ensure_reffiles(refdir,problemsizefile,filterfunc=None,srcdir=None):
         ensure_reffile(bench,refdir=refdir,problemsizefile=problemsizefile)
 
 
+# math.prod only available in Python 3.8
+def prod(iter):
+    result = 1
+    for v in iter:
+        result *=v
+    return result
+
 
 def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
     problemsizefile = get_problemsizefile(srcdir=srcdir,problemsizefile=problemsizefile)
@@ -1275,7 +1282,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                refdim = int(refspec[2])
                refshape =  [int(i) for i in refspec[3:3+refdim]]
                refname = refspec[3+refdim] if len(refspec ) > 3+refdim else None
-               refcount = math.prod(refshape)
+               refcount = prod(refshape)
 
                refdata = [float(v) for v in refdata.split()]
                if refcount != len(refdata):
@@ -1289,7 +1296,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                testdim = int(testspec[2])
                testshape =  [int (i) for i in testspec[3:3+testdim]]
                testname = testspec[3+testdim] if len(testspec ) > 3+testdim  else None
-               testcount = math.prod(testshape) 
+               testcount = prod(testshape) 
                
                testdata = [float(v) for v in testdata.split()]
                if testcount != len(testdata):
@@ -1299,7 +1306,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                   die(f"Array names {refname} and {testname} disagree")
 
                for i,(refv,testv) in enumerate(zip(refdata,testdata)):
-                  coord = [str((i // math.prod(refshape[0:j])) % refshape[j]) for j in range(0,refdim)]
+                  coord = [str((i // prod(refshape[0:j])) % refshape[j]) for j in range(0,refdim)]
                   coord = '[' + ']['.join(coord) + ']'
 
                   if math.isnan(refv) and  math.isnan(testv):
@@ -1317,7 +1324,7 @@ def run_verify(problemsizefile,filterfunc=None,srcdir=None,refdir=None):
                     reld = 0 if absd==0 else math.inf 
                   else:
                     reld = absd/mid
-                  if reld > 1e-6: # TODO: Don't hardcode difference; this default is also quite high
+                  if reld > 1e-4: # TODO: Don't hardcode difference
                     print(f"While comparing {refpath} and {testoutpath}:")
                     die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
 
@@ -1488,7 +1495,7 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
         parser.add_argument('--verbose', '-v', action='count')
 
         # Command
-        add_boolean_argument(parser, 'probe', default=False, help="Enable probling")
+        add_boolean_argument(parser, 'probe', default=False, help="Enable probing")
         parser.add_argument('--limit-walltime', type=parse_time)
         parser.add_argument('--limit-rss', type=parse_memsize)
         parser.add_argument('--limit-alloc', type=parse_memsize)
@@ -1499,14 +1506,17 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
         # Run step
         add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
 
+        add_boolean_argument(parser, 'evaluate', default=None, help="Evaluate result")
+
         parser.add_argument('--boxplot', type=pathlib.Path, help="Save as boxplot to FILENAME")
-    
+
 
     if args:
         # If neither no action is specified, enable --bench implicitly unless --no-bench
         probe = args.probe
-        verify = args.verify 
+        verify = args.verify
         bench =  args.bench
+        evaluate = args.evaluate
         if bench is None and not verify and not probe:
             bench = True
 
@@ -1515,7 +1525,6 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
             assert args.problemsizefile , "Requires to set a problemsizefile to set"
             run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-   
 
         if verify:
             refdir = refbuilddir / 'refout'
@@ -1535,6 +1544,13 @@ def subcommand_run(parser,args,srcdir,buildondemand=False,builddirs=None,refbuil
                 evaluate(resultfiles)
 
 
+        if evaluate:
+           if not resultfiles:
+                assert False, "TODO: Lookup last (successful) results dir"
+            if len(configs) == 1:
+                runner.evaluate(resultfiles)
+            else:
+                runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
 
 
 
