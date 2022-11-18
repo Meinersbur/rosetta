@@ -396,7 +396,7 @@ foreach (file IN LISTS format_py_files)
   set(_stamp "stamps/update-py-format-stamp${i}")
   add_custom_command(
     OUTPUT ${_stamp}
-    COMMAND  autopep8  --max-line-length 120 -i "${file}"
+    COMMAND  autopep8  --max-line-length 120 -i -a "${file}"
     COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
     VERBATIM
     COMMENT "Updating format of ${file}..."

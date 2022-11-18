@@ -123,11 +123,11 @@ def parse_build_configs(args, implicit_reference):
         if not k:
             continue
         # TODO: Handle duplicate defs (specific override general)
-        configs.append(BuildConfig(k, ppm[''] + ppm[k],  cmake_arg=cmake_arg[''] + cmake_arg[k],  cmake_def=cmake_def[''] |
-                       cmake_def[k],  compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k]))
+        configs.append(BuildConfig(k, ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] |
+                       cmake_def[k], compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k]))
     # Use single config if not "CONFIG:" is specified
     if not configs:
-        configs.append(BuildConfig(None, ppm[''], cmake_arg=cmake_arg[''],  cmake_def=cmake_def[''],
+        configs.append(BuildConfig(None, ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
                        compiler_arg=compiler_arg[''], compiler_def=compiler_def['']))
     return configs
 
@@ -209,7 +209,7 @@ def main(argv, rootdir=None):
 
         for config in configs:
             builddir = config.builddir
-            configdescfile = builddir/'RosettaCache.txt'
+            configdescfile = builddir / 'RosettaCache.txt'
 
             # TODO: Support other generators as well
             opts = ['cmake', srcdir, '-GNinja Multi-Config',
@@ -248,7 +248,7 @@ def main(argv, rootdir=None):
 
         try:
             [refconfig] = (c for c in configs if c.name == 'REF')
-        except:
+        except BaseException:
             refconfig = None
         runner.subcommand_run(None, args,
                               srcdir=thisscriptdir,

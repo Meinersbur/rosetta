@@ -60,7 +60,7 @@ class StrConcat:  # Rename: Twine
             a = normalize(a)
             if isinstance(a, StrAlign):
                 prefixlen = sum(printlength(a) for a in self.args[:i])
-                return StrAlign(StrConcat(self.args[:i] + [a.s] + self.args[i+1:]), prefixlen+a.align)
+                return StrAlign(StrConcat(self.args[:i] + [a.s] + self.args[i + 1:]), prefixlen + a.align)
         return self
 
     def consolestr(self):
@@ -88,7 +88,8 @@ class StrColor:
 
     def consolestr(self):
         from colorama import Fore, Back, Style
-        if self.style in {Fore.BLACK, Fore.RED, Fore.GREEN, Fore.YELLOW, Fore. BLUE, Fore.MAGENTA, Fore.CYAN, Fore.WHITE, Fore.BWHITE}:
+        if self.style in {Fore.BLACK, Fore.RED, Fore.GREEN, Fore.YELLOW,
+                          Fore. BLUE, Fore.MAGENTA, Fore.CYAN, Fore.WHITE, Fore.BWHITE}:
             reset = Fore.RESET
         elif self.style in {Back.BLACK, Back.RED, Back.GREEN, Back.YELLOW, Back. BLUE, Back.MAGENTA, Back.CYAN, Back.WHITE}:
             reset = Back.RESET
@@ -224,14 +225,15 @@ class Table:
                         maxlen = max(maxlen, l)
                     strs.append(s)
 
-            maxlen = max(maxlen, maxleft+maxright)
+            maxlen = max(maxlen, maxleft + maxright)
             collen.append(maxlen)
             colleft.append(maxleft)
             colright.append(maxright)
             matrix.append(strs)
 
         # Adapt for supercolumns
-        # TODO: supercolumns might be hierarchical, so order is relevant TODO: determine the range of leaf columns in advance
+        # TODO: supercolumns might be hierarchical, so order is relevant TODO:
+        # determine the range of leaf columns in advance
         for supercol, subcols in self.supercolumns.items():
             subcollen = sum(collen[colname_to_idx.get(s)] for s in subcols)
 
@@ -242,7 +244,8 @@ class Table:
                 # supercolumn is wider than subcolumns: divide additional space evenly between subcolumns
                 overhang = supercollen - subcollen
                 for i, subcol in enumerate(subcols):
-                    addlen = ((i+1)*overhang+len(subcols)//2)//len(subcols) - (i*overhang+len(subcols)//2)//len(subcols)
+                    addlen = ((i + 1) * overhang + len(subcols) // 2) // len(subcols) - \
+                        (i * overhang + len(subcols) // 2) // len(subcols)
                     collen[colname_to_idx.get(subcol)] += addlen
             elif subcollen > supercollen:
                 # subcolumns are wider than supercolumn: extend supercolumn
@@ -252,8 +255,8 @@ class Table:
 
         def centering(s, collen):
             printlen = printlength(s)
-            half = (collen - printlen)//2
-            return ' '*half + consolestr(s) + ' ' * (collen - printlen - half)
+            half = (collen - printlen) // 2
+            return ' ' * half + consolestr(s) + ' ' * (collen - printlen - half)
 
         def raggedright(s, collen):
             printlen = printlength(s)
@@ -266,10 +269,10 @@ class Table:
                 printlen = printlength(s)
                 indent = maxleft - alignpos
                 cs = consolestr(s)
-                return ' ' * indent + cs + ' '*(maxlen - printlen - indent)
+                return ' ' * indent + cs + ' ' * (maxlen - printlen - indent)
 
         def linesep():
-            print(*(colorama.Style.DIM + '-'*collen[colname_to_idx.get(colname)] +
+            print(*(colorama.Style.DIM + '-' * collen[colname_to_idx.get(colname)] +
                   colorama.Style.RESET_ALL for i, colname in leafidx_to_name.items()))
 
         def print_row(rowdata: dict):
@@ -285,9 +288,9 @@ class Table:
                 indices = [name_to_leafidx.get(c) for c in cols]
                 start = min(indices)
                 stop = max(indices)
-                for i in range(start, stop+1):
+                for i in range(start, stop + 1):
                     currow[i] += 1
-                needlines = max(currow[cur] for cur in range(start, stop+1))
+                needlines = max(currow[cur] for cur in range(start, stop + 1))
                 while len(lines) < needlines:
                     lines.append([" " * collen[colname_to_idx.get(leafidx_to_name.get(j))]
                                  for j in range(0, leafcolnum)])
@@ -305,7 +308,7 @@ class Table:
                             # TODO: check correctness
                             printlen = printlength(s)
                             rightindent = maxright - printlen - s.align
-                            return centering(consolestr(s) + ' '*rightindent)
+                            return centering(consolestr(s) + ' ' * rightindent)
                         elif s.pos == StrAlign.RIGHT:
                             if s.align is None:
                                 return raggedright(s, maxlen)
@@ -313,18 +316,18 @@ class Table:
                             printlen = printlength(s)
                             rightindent = maxright - printlen - s.align
                             leftindent = maxlen - rightindent - printlen
-                            return ' '*leftindent + consolestr(s) + ' ' * rightindent
+                            return ' ' * leftindent + consolestr(s) + ' ' * rightindent
 
                     # Left align by default
                     return raggedright(s, maxlen)
 
                 totallen = sum(collen[colname_to_idx.get(leafidx_to_name.get(j))]
-                               for j in range(start, stop+1)) + stop - start
+                               for j in range(start, stop + 1)) + stop - start
                 totalleft = colleft[colname_to_idx.get(supercol)]
                 totalright = colright[colname_to_idx.get(supercol)]
-                lines[needlines-1][start] = colval(celldata, totallen,  totalleft, totalright)
-                for i in range(start+1, stop+1):
-                    lines[needlines-1][i] = None
+                lines[needlines - 1][start] = colval(celldata, totallen, totalleft, totalright)
+                for i in range(start + 1, stop + 1):
+                    lines[needlines - 1][i] = None
 
             for supercol, subcols in self.supercolumns.items():
                 superdata = rowdata.get(supercol)
@@ -458,7 +461,7 @@ class Statistic:
 
     @property
     def mean(self):
-        return self._sum/self.count
+        return self._sum / self.count
 
     @property
     def geomean(self):
@@ -485,8 +488,8 @@ class Statistic:
             return self._vals[-1]
 
         n = self.count
-        if (k*n-1) % d == 0:
-            return self._vals[(k*n-1)//d]
+        if (k * n - 1) % d == 0:
+            return self._vals[(k * n - 1) // d]
 
     def quartile(self, k: int):
         return self.quantile(k, 4)
@@ -499,7 +502,7 @@ class Statistic:
 
     @property
     def midrange(self):
-        return (self.minimum + self.maximum)/2
+        return (self.minimum + self.maximum) / 2
 
     def mode(self, boxsize):
         boxes = defaultdict(0)
@@ -519,9 +522,9 @@ class Statistic:
             boxids.append(boxids)
 
         if len(boxids) % 2 == 0:
-            midboxid = (boxids[len(boxids)//2] + boxids[len(boxids)//2+1])/2
+            midboxid = (boxids[len(boxids) // 2] + boxids[len(boxids) // 2 + 1]) / 2
         else:
-            midboxid = boxids[len(boxids)//2]
+            midboxid = boxids[len(boxids) // 2]
         return midboxid * boxsize
 
     # Spread
@@ -536,7 +539,7 @@ class Statistic:
     @property
     def corrected_variance(self):
         n = self.count
-        return self.variance * n / (n-1)
+        return self.variance * n / (n - 1)
 
     @property
     def stddev(self):
@@ -622,9 +625,9 @@ def statistic(data):
             hasnonpos = True
         sum += v
         sumabs = abs(v)
-        sumsqr += v*v
+        sumsqr += v * v
         if not hasnonpos:
-            sumreciproc += 1//v
+            sumreciproc += 1 // v
             prod *= v
         n += 1
 
@@ -632,7 +635,7 @@ def statistic(data):
         geomean = None
         sumreciproc = None
     else:
-        geomean = prod**(1/n)
+        geomean = prod**(1 / n)
 
     return Statistic(samples=vals, sum=sum, sumabs=sumabs, sumsqr=sumsqr, geomean=geomean, sumreciproc=sumreciproc)
 
@@ -644,7 +647,8 @@ class BenchVariants:
 
 #TODO: dataclass
 class BenchResult:
-    def __init__(self, name: str, ppm: str, buildtype: str, configname: str, count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
+    def __init__(self, name: str, ppm: str, buildtype: str, configname: str,
+                 count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         # self.bench=bench
         self.name = name
         self.ppm = ppm
@@ -784,12 +788,14 @@ def duration_formatter(best=None, worst=None):
             errstr = ''
 
         if v >= 1:
-            return highlight_extremes(align_decimal(f"{v:.2}")) + StrColor("s", colorama.Style.DIM) + (str_concat(' ', errstr) if errstr else '')
-        if v*1000 >= 1:
+            return highlight_extremes(align_decimal(f"{v:.2}")) + StrColor("s",
+                                                                           colorama.Style.DIM) + (str_concat(' ', errstr) if errstr else '')
+        if v * 1000 >= 1:
             return highlight_extremes(align_decimal(f"{v*1000:.2f}")) + StrColor("ms", colorama.Style.DIM) + errstr
-        if v*1000*1000 >= 1:
+        if v * 1000 * 1000 >= 1:
             return highlight_extremes(align_decimal(f"{v*1000*1000:.2f}")) + StrColor("µs", colorama.Style.DIM) + errstr
-        return highlight_extremes(align_decimal(f"{v*1000*1000*1000:.2f}")) + StrColor("ns", colorama.Style.DIM) + errstr
+        return highlight_extremes(align_decimal(f"{v*1000*1000*1000:.2f}")) + \
+            StrColor("ns", colorama.Style.DIM) + errstr
     return formatter
 
 
@@ -809,7 +815,7 @@ def load_resultfiles(resultfiles, filterfunc=None):
             configname = benchmark.attrib.get('configname')
             count = len(benchmark)
 
-            time_per_key = defaultdict(lambda:  [])
+            time_per_key = defaultdict(lambda: [])
             for b in benchmark:
                 for k, v in b.attrib.items():
                     time_per_key[k] .append(parse_time(v))
@@ -829,7 +835,7 @@ def load_resultfiles(resultfiles, filterfunc=None):
 def evaluate(resultfiles):
     results = load_resultfiles(resultfiles)
 
-    stats_per_key = defaultdict(lambda:  [])
+    stats_per_key = defaultdict(lambda: [])
     for r in results:
         for k, stat in r.durations.items():
             stats_per_key[k] .append(stat)
@@ -899,7 +905,7 @@ def print_comparison(groups_of_results, list_of_resultnames, common_columns=["pr
     for j, col in enumerate(compare_columns):
         supercolumns = []
         table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col),
-                         colorama.Style.BRIGHT),  pos=StrAlign.CENTER))
+                         colorama.Style.BRIGHT), pos=StrAlign.CENTER))
         for i, resultname in enumerate(list_of_resultnames):  # Common title
             sol = f"{col}_{i}"
             supercolumns.append(sol)
@@ -921,17 +927,17 @@ def print_comparison(groups_of_results, list_of_resultnames, common_columns=["pr
 
 
 def compareby(results: Iterable[BenchResult], compare_by: str):
-    results_by_group = defaultdict(lambda:  [])
+    results_by_group = defaultdict(lambda: [])
     for result in results:
         cmpval = get_column_data(result, compare_by)
         results_by_group[cmpval].append(result)
     return results_by_group
 
 
-def grouping(results: Iterable[BenchResult], compare_by: str,  group_by=None):
+def grouping(results: Iterable[BenchResult], compare_by: str, group_by=None):
     # TODO: allow compare_by multiple columns
     # TODO: allow each benchmark to be its own group; find description for each such "group"
-    results_by_group = defaultdict(lambda:  defaultdict(lambda:  []))
+    results_by_group = defaultdict(lambda: defaultdict(lambda: []))
     all_cmpvals = OrderedSet()
     for result in results:
         group = tuple(get_column_data(result, col) for col in group_by)
@@ -1030,26 +1036,26 @@ def results_boxplot(resultfiles: list, group_by=None, compare_by=None, filterfun
     benchs_per_group = len(all_cmpvals)
     barwidth = 0.3
     groupwidth = 0.2 + benchs_per_group * barwidth
-    width = left + right + groupwidth*numgroups
+    width = left + right + groupwidth * numgroups
     fig, ax = plt.subplots(figsize=(width, 10))
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = [c['color'] for j, c in zip(range(benchs_per_group), prop_cycle)]  # TODO: Consider seaborn palettes
 
-    fig.subplots_adjust(left=left/width, right=1-right/width, top=0.95, bottom=0.25)
+    fig.subplots_adjust(left=left / width, right=1 - right / width, top=0.95, bottom=0.25)
 
     for i, group in enumerate(grouped_results):
         benchs_this_group = len(group)
         for j, benchstat in enumerate(group):  # TODO: ensure grouped_results non-jagged so colors match
             data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
-            rel = (j-benchs_this_group/2.0+0.5)*barwidth
-            box = ax.boxplot(data, positions=[i*groupwidth + rel],
+            rel = (j - benchs_this_group / 2.0 + 0.5) * barwidth
+            box = ax.boxplot(data, positions=[i * groupwidth + rel],
                              notch=True, showmeans=False, showfliers=True, sym='+',
                              widths=barwidth,
                              patch_artist=True,  # fill with color
                              )
             for b in box['boxes']:
                 b.set_facecolor(colors[j])
-    ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',  alpha=0.5)
+    ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
 
     for j, (c, label) in enumerate(zip(colors, all_cmpvals)):
         # Dummy item to add a legend handle; like seaborn does
@@ -1070,7 +1076,7 @@ def results_boxplot(resultfiles: list, group_by=None, compare_by=None, filterfun
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
-    ax.set_xticks([groupwidth*i for i in range(len(labels))])
+    ax.set_xticks([groupwidth * i for i in range(len(labels))])
     ax.set_xticklabels(labels, rotation=20, ha="right", rotation_mode="anchor")
 
     plt.legend()
@@ -1103,11 +1109,13 @@ def getMeasureDisplayStr(s: str):
 
 
 def getPPMDisplayStr(s: str):
-    return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel", 'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s, s)
+    return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel",
+            'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s, s)
 
 
 class Benchmark:
-    def __init__(self, basename, target, exepath, buildtype, ppm, configname, sources=None, benchpropfile=None, compiler=None, compilerflags=None, pbsize=None, benchlistfile=None, is_ref=None):
+    def __init__(self, basename, target, exepath, buildtype, ppm, configname, sources=None,
+                 benchpropfile=None, compiler=None, compilerflags=None, pbsize=None, benchlistfile=None, is_ref=None):
         self.basename = basename
         self.target = target
         self.exepath = exepath
@@ -1151,7 +1159,7 @@ def get_problemsize(bench: Benchmark, problemsizefile: pathlib.Path):
 def get_refpath(bench, refdir, problemsizefile):
     pbsize = get_problemsize(bench, problemsizefile=problemsizefile)
     reffilename = f"{bench.name}.{pbsize}.reference_output"
-    refpath = refdir/reffilename
+    refpath = refdir / reffilename
     return refpath
 
 
@@ -1169,7 +1177,7 @@ def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
         refpath.unlink()
 
     # Invoke reference executable and write to file
-    args = [bench.exepath, f'--verify',  f'--verifyfile={refpath}']
+    args = [bench.exepath, f'--verify', f'--verifyfile={refpath}']
     if problemsizefile:
         args.append(f'--problemsizefile={problemsizefile}')
     invoke.call(*args, print_command=True)
@@ -1235,8 +1243,8 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                 refkind = refspec[0]
                 refformat = refspec[1]
                 refdim = int(refspec[2])
-                refshape = [int(i) for i in refspec[3:3+refdim]]
-                refname = refspec[3+refdim] if len(refspec) > 3+refdim else None
+                refshape = [int(i) for i in refspec[3:3 + refdim]]
+                refname = refspec[3 + refdim] if len(refspec) > 3 + refdim else None
                 refcount = prod(refshape)
 
                 refdata = [float(v) for v in refdata.split()]
@@ -1248,8 +1256,8 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                 testkind = testspec[0]
                 testformat = testspec[1]
                 testdim = int(testspec[2])
-                testshape = [int(i) for i in testspec[3:3+testdim]]
-                testname = testspec[3+testdim] if len(testspec) > 3+testdim else None
+                testshape = [int(i) for i in testspec[3:3 + testdim]]
+                testname = testspec[3 + testdim] if len(testspec) > 3 + testdim else None
                 testcount = prod(testshape)
 
                 testdata = [float(v) for v in testdata.split()]
@@ -1271,12 +1279,12 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                     if math.isnan(testv):
                         die(f"Array data mismatch: Output contains NaN at {testname}{coord}")
 
-                    mid = (abs(refv)+abs(testv))/2
-                    absd = abs(refv-testv)
+                    mid = (abs(refv) + abs(testv)) / 2
+                    absd = abs(refv - testv)
                     if mid == 0:
                         reld = 0 if absd == 0 else math.inf
                     else:
-                        reld = absd/mid
+                        reld = absd / mid
                     if reld > 1e-4:  # TODO: Don't hardcode difference
                         print(f"While comparing {refpath} and {testoutpath}:")
                         die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
@@ -1391,7 +1399,7 @@ def probe_bench(bench: Benchmark, limit_walltime, limit_rss, limit_alloc):
         lower_n = n
         n *= 2
 
-    return custom_bisect_left(lower_n, n-1, func)
+    return custom_bisect_left(lower_n, n - 1, func)
 
 
 def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
@@ -1429,7 +1437,8 @@ def runner_main_run(srcdir, builddir):
                        builddir], buildondemand=args.buildondemand, refbuilddir=builddir, resultdir=resultdir)
 
 
-def subcommand_run(parser, args, srcdir, buildondemand: bool = False, builddirs=None, refbuilddir=None, filterfunc=None, resultdir=None):
+def subcommand_run(parser, args, srcdir, buildondemand: bool = False, builddirs=None,
+                   refbuilddir=None, filterfunc=None, resultdir=None):
     """
 The common functionality of the probe/verify/bench per-builddir scripts and the benchmark.py multi-builddir driver.
 
@@ -1547,7 +1556,8 @@ import_is_ref = None
 benchmarks: typing .List[Benchmark] = []
 
 
-def register_benchmark(basename, target, exepath, buildtype, ppm, configname, benchpropfile=None, compiler=None, compilerflags=None, pbsize=None):
+def register_benchmark(basename, target, exepath, buildtype, ppm, configname,
+                       benchpropfile=None, compiler=None, compilerflags=None, pbsize=None):
     bench = Benchmark(basename=basename, target=target, exepath=mkpath(exepath), buildtype=buildtype, ppm=ppm, configname=configname,
                       benchpropfile=benchpropfile, compiler=compiler, compilerflags=compilerflags, pbsize=pbsize, benchlistfile=benchlistfile, is_ref=import_is_ref)
     benchmarks.append(bench)
@@ -1578,8 +1588,8 @@ def gen_reference(exepath, refpath, problemsizefile):
 def main(argv):
     colorama.init()
     parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    parser.add_argument('--gen-reference', nargs=2, type=pathlib.Path,  help="Write reference output file")
-    parser.add_argument('--problemsizefile',  type=pathlib.Path)
+    parser.add_argument('--gen-reference', nargs=2, type=pathlib.Path, help="Write reference output file")
+    parser.add_argument('--problemsizefile', type=pathlib.Path)
     args = parser.parse_args(argv[1:])
 
     if args.gen_reference:

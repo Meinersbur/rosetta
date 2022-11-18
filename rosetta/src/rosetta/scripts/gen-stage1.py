@@ -15,8 +15,7 @@ import importlib.util
 #sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.absolute() / 'lib'))
 from rosetta.util.support import *
 import rosetta.runner as runner
-from  rosetta import generator
-
+from rosetta import generator
 
 
 buildre = re.compile(r'^\s*//\s*BUILD\:(?P<script>.*)$')

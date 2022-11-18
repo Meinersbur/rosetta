@@ -55,7 +55,7 @@ def version_cmp(v1, v2):
         for p in v.split('.'):
             try:
                 i = int(p)
-            except:
+            except BaseException:
                 # development versions have their sha1 appended
                 break
             result.append(i)
@@ -123,7 +123,7 @@ else:
 def replace_file(src, dst):
     try:
         os.replace(src, dst)
-    except:
+    except BaseException:
         os.remove(dst)
         shutil.move(src, dst)
 
@@ -168,7 +168,7 @@ def mingwpath_to_ntpath(path):
 
 
 def mkpath(path):
-    if path == None:
+    if path is None:
         return None
     if isinstance(path, pathlib.Path):
         return path
@@ -340,7 +340,7 @@ def join_natural(l, separator=', ', lastseparator=' and '):
     for i, v in enumerate(l):
         if i == 0:
             result = str(v)
-        elif i == n-1:
+        elif i == n - 1:
             result += str(lastseparator) + str(v)
         else:
             result += str(separator) + str(v)

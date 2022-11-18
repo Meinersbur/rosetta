@@ -39,7 +39,7 @@ class Invoke:
 
     @staticmethod
     def assemble_env(env=None, setenv=None, appendenv=None):
-        if env == None and setenv == None and appendenv == None:
+        if env is None and setenv is None and appendenv is None:
             return None
         if env is None:
             env = dict(os.environ)
@@ -57,7 +57,8 @@ class Invoke:
                     env[key] = val
         return env
 
-    def __init__(self, cmd, *args, cwd=None, setenv=None, appendenv=None, stdout=None, stderr=None, std_joined=None, std_prefixed=None):
+    def __init__(self, cmd, *args, cwd=None, setenv=None, appendenv=None,
+                 stdout=None, stderr=None, std_joined=None, std_prefixed=None):
         self.cmdline = [str(cmd)] + [str(a) for a in args]
         self.cwd = cwd
         self.setenv = setenv
@@ -82,7 +83,7 @@ class Invoke:
                     continue
                 envs += [envkey + '=${' + envkey + '}:' + shquote(envval)]
         if envs:
-            env = ' '.join(envs)+' '
+            env = ' '.join(envs) + ' '
         else:
             env = ''
         if self.cwd is None:
@@ -160,7 +161,8 @@ class Invoke:
 
             stdout_str = ret.stdout if return_stdout else None
             stderr_str = ret.stderr if return_stderr else None
-            return Invoke.InvokeResult(exitcode=exitcode, stdout=stdout_str, stderr=stderr_str, joined=None, prefixed=None, walltime=walltime)
+            return Invoke.InvokeResult(exitcode=exitcode, stdout=stdout_str, stderr=stderr_str,
+                                       joined=None, prefixed=None, walltime=walltime)
 
         def execute_popen():
             stdin = None
@@ -282,7 +284,7 @@ class Invoke:
                         terr.daemon = True
                         terr.start()
 
-                    if stdin != None:
+                    if stdin is not None:
                         p.communicate(input=stdin)
 
                     exitcode = p.wait()
@@ -295,7 +297,7 @@ class Invoke:
                         tout.join()
                         try:
                             p.stdout.close()
-                        except:
+                        except BaseException:
                             # Stale file handle possible
                             # FIXME: why?
                             pass
@@ -304,7 +306,7 @@ class Invoke:
                         terr.join()
                         try:
                             p.stderr.close()
-                        except:
+                        except BaseException:
                             # Stale file handle possible
                             # FIXME: Why?
                             pass
@@ -350,7 +352,8 @@ class Invoke:
                 if isinstance(result_prefixed, io.StringIO):
                     result_prefixed = result_prefixed.getvalue()
 
-            return Invoke.InvokeResult(exitcode=exitcode, stdout=result_stdout, stderr=result_stderr, joined=result_joined, prefixed=result_prefixed, walltime=walltime)
+            return Invoke.InvokeResult(exitcode=exitcode, stdout=result_stdout, stderr=result_stderr,
+                                       joined=result_joined, prefixed=result_prefixed, walltime=walltime)
 
         if not forcepopen \
                 and not stdout and not stderr and not std_joined and not std_prefixed \
@@ -364,12 +367,15 @@ class Invoke:
     # Execute as if this is the command itself
 
     def run(self, onerror=None, print_stdout=True, print_stderr=True, **kwargs):
-        return self.execute(onerror=first_defined(onerror, Invoke.ABORT), print_stdout=print_stdout, print_stderr=print_stderr, **kwargs).exitcode
+        return self.execute(onerror=first_defined(onerror, Invoke.ABORT),
+                            print_stdout=print_stdout, print_stderr=print_stderr, **kwargs).exitcode
 
     # Diagnostic mode, execute with additional info
 
-    def diag(self, onerror=None, print_stdout=False, print_stderr=False, print_prefixed=True, print_command=True, print_exitcode=True, **kwargs):
-        return self.execute(onerror=first_defined(onerror, Invoke.IGNORE), print_stdout=print_stdout, print_stderr=print_stderr, print_prefixed=print_prefixed, print_exitcode=print_exitcode, **kwargs)
+    def diag(self, onerror=None, print_stdout=False, print_stderr=False,
+             print_prefixed=True, print_command=True, print_exitcode=True, **kwargs):
+        return self.execute(onerror=first_defined(onerror, Invoke.IGNORE), print_stdout=print_stdout,
+                            print_stderr=print_stderr, print_prefixed=print_prefixed, print_exitcode=print_exitcode, **kwargs)
 
     # Execute to get the command's result
 
