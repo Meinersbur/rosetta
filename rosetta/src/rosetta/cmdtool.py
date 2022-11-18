@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-from support import *
+from .support import *
 
 
 def _str_to_bool(s):
