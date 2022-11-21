@@ -1,8 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from rosetta.util.support import *
-from rosetta import register_benchmark
+
 import rosetta
 import argparse
 import configparser
@@ -13,12 +12,10 @@ import sys
 import re
 import importlib.util
 import importlib
-
-
-#print(pathlib.Path(__file__).parent.absolute() / 'lib')
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.absolute() / 'lib'))
-runner = rosetta.runner
-generator = rosetta.generator
+import rosetta.runner as runner
+import rosetta.generator as generator
+from rosetta.runner import register_benchmark, runner_main
+from rosetta.util.support import *
 
 
 def cquote(s):
