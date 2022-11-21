@@ -185,7 +185,6 @@ foreach (_benchmark IN LISTS _benchmarks)
     PROPERTY ROSETTA_BENCHPROPFILE)
   list(APPEND _benchpropfiles "${_benchpropfile}")
 endforeach ()
-message("_benchpropfiles: ${_benchpropfiles}")
 
 set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage2.py")
 set(_stage2args
