@@ -12,6 +12,7 @@ import sys
 import re
 import importlib.util
 import importlib
+from io import StringIO
 import rosetta.runner as runner
 import rosetta.generator as generator
 from rosetta.runner import register_benchmark, runner_main
@@ -80,7 +81,7 @@ int64_t bench_default_problemsize = {bench.pbsize};
 
     benchpropfile = bench.benchpropfile
     # print(f"{benchpropfile=}")
-    createfile(benchpropfile, content)
+    updatefile(benchpropfile, content)
 
 
 def gen_stage2(builddir, benchdir, benchlistfile, config, resultsdir):

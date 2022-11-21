@@ -15,8 +15,7 @@ function (add_format_target)
     add_custom_command(
       OUTPUT "${_stamp}"
       DEPENDS "${CMAKE_SOURCE_DIR}/.clang-format" "${file}"
-      COMMAND clang-format "${file}" --dry-run --output-replacements-xml --color=1 -Werror # | diff -u --color=always
-                                                                                           # ${file} -
+      COMMAND clang-format "${file}" --dry-run --output-replacements-xml --color=1 -Werror
       VERBATIM
       COMMENT "Check format of ${file}")
 
