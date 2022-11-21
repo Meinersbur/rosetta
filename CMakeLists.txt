@@ -53,8 +53,6 @@ set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
 
 # Dependencies ################################################################
 
-# set(CMAKE_CXX_STANDARD 17)
-
 # Python
 find_package(Python 3.6 REQUIRED)
 
@@ -350,7 +348,7 @@ get_property(_benchmarks GLOBAL PROPERTY benchmarks)
 
 file(
   GENERATE
-  OUTPUT "${CMAKE_BINARY_DIR}/run-$<CONFIG>.py"
+  OUTPUT "${CMAKE_BINARY_DIR}/bench-$<CONFIG>.py"
   CONTENT
     "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -359,7 +357,7 @@ if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
-from rosetta.runner import runner_main_probe, load_register_file
+from rosetta.runner import runner_main_run, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent
 
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
@@ -376,11 +374,11 @@ if __name__ == '__main__':
     WORLD_READ
     WORLD_EXECUTE)
 add_custom_target(
-  run
-  COMMAND Python::Interpreter "run-$<CONFIG>.py"
+  bench
+  COMMAND Python::Interpreter "bench-$<CONFIG>.py"
   COMMENT "Run benchmarks ..."
   USES_TERMINAL VERBATIM)
-add_dependencies(run ${_benchmarks})
+add_dependencies(bench ${_benchmarks})
 
 file(
   GENERATE
@@ -451,7 +449,7 @@ add_custom_target(
 add_dependencies(probe ${_benchmarks})
 
 if (_default_build_type)
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "run-${_default_build_type}.py" "run.py"
+  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "bench-${_default_build_type}.py" "bench.py"
                   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
   execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "verify-${_default_build_type}.py" "verify.py"
                   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
@@ -563,5 +561,5 @@ message("Search for new benchmarks: cmake .")
 message("")
 message("Probe max problemsize:     ./probe.py --limit-walltime=5s")
 message("Verify correctness:        ./verify.py [--problemsizefile PATH]")
-message("Run benchmarks:            ./run.py [--problemsizefile PATH]")
+message("Run benchmarks:            ./bench.py [--problemsizefile PATH]")
 message("Analyze previous runs:     ?")

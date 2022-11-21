@@ -76,15 +76,12 @@ function (add_format_target)
       DEPENDS "${file}"
       COMMAND cmake-format -i --line-width 120 --separate-ctrl-name-with-space true --line-ending unix "${file}"
       COMMAND "${CMAKE_COMMAND}" -E touch "${_stamp}"
-      COMMAND "${CMAKE_COMMAND}" -E echo "${file}" "${_stamp}"
       VERBATIM
       COMMENT "Update format of ${file}")
-    # message("file: ${file} ${_stamp}")
 
     math(EXPR i ${i}+1)
   endforeach ()
 
-  # message("update_format_depends: ${update_format_depends}")
   add_custom_target(check-format DEPENDS ${check_format_depends})
   add_custom_target(update-format DEPENDS ${update_format_depends})
   set_target_properties("check-format" PROPERTIES FOLDER "Maintanance")
