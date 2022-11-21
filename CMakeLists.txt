@@ -4,11 +4,12 @@ project(
   VERSION 0.0.2
   LANGUAGES CXX)
 
-list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
-
 include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
+
+list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
+include(Formatting)
 
 # Use Folders in Visual Studio IDE
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -330,75 +331,18 @@ add_subdirectory(benchmarks)
 
 # Maintanance #################################################################
 
-# TODO: Introspect availability of clang-format TODO: Also format CMake files: https://pypi.org/project/cmake-format/
-add_custom_target(check-format)
-set_target_properties("check-format" PROPERTIES FOLDER "Check format")
-
-set(update_format_depends)
-file(
-  GLOB_RECURSE
-  format_files
+add_format_target(
+  CLANG_RGLOB
   benchmarks/*.cxx
   benchmarks/*.cu
   benchmarks/*.h
   rosetta/*.h
-  rosetta/*.cpp)
-set(i 0)
-foreach (file IN LISTS format_files)
-  add_custom_target(
-    check-format${i}
-    COMMAND clang-format ${file} --dry-run --color=1 -Werror # | diff -u --color=always ${file} -
-    VERBATIM
-    COMMENT "Checking format of ${file}...")
-  set_target_properties("check-format${i}" PROPERTIES FOLDER "Check format")
-  add_dependencies(check-format "check-format${i}")
-
-  set(_stamp "stamps/update-format-stamp${i}")
-  add_custom_command(
-    # check-format${i}
-    OUTPUT ${_stamp}
-    DEPENDS .clang-format ${file}
-    COMMAND clang-format -i ${file}
-    # COMMAND ${CMAKE_COMMAND} -E echo "Would format ${file}"
-    COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
-    VERBATIM
-    COMMENT "Updating format of ${file}...")
-  # add_dependencies(update-format "update-format${i}")
-  list(APPEND update_format_depends "${_stamp}")
-
-  math(EXPR i ${i}+1)
-endforeach ()
-
-file(GLOB_RECURSE format_py_files rosetta/src/*.py)
-foreach (file IN LISTS format_py_files)
-  set(_stamp "stamps/update-py-format-stamp${i}")
-  add_custom_command(
-    OUTPUT ${_stamp}
-    COMMAND autopep8 --max-line-length 120 -i -a "${file}"
-    COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
-    VERBATIM
-    COMMENT "Updating format of ${file}...")
-  list(APPEND update_format_depends "${_stamp}")
-
-  math(EXPR i ${i}+1)
-endforeach ()
-
-file(GLOB_RECURSE format_cmake_files CMakeLists.txt *.cmake)
-foreach (file IN LISTS format_cmake_files)
-  message("file: ${file}")
-  set(_stamp "stamps/update-cmake-format-stamp${i}")
-  add_custom_command(
-    OUTPUT ${_stamp}
-    COMMAND cmake-format -i --line-width 120 --separate-ctrl-name-with-space true --line-ending unix "${file}"
-    COMMAND ${CMAKE_COMMAND} -E touch ${_stamp}
-    VERBATIM
-    COMMENT "Updating format of ${file}...")
-  list(APPEND update_format_depends "${_stamp}")
-
-  math(EXPR i ${i}+1)
-endforeach ()
-
-add_custom_target(update-format DEPENDS ${update_format_depends})
+  rosetta/*.cpp
+  PY_RGLOB
+  rosetta/src/*.py
+  CMAKE_RGLOB
+  CMakeLists.txt
+  *.cmake)
 
 # Run #########################################################################
 
@@ -415,7 +359,7 @@ if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
-from rosetta import runner_main_run, load_register_file
+from rosetta.runner import runner_main_probe, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent
 
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
@@ -449,7 +393,7 @@ if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
-from rosetta import runner_main_verify, load_register_file
+from rosetta.runner import runner_main_probe, load_register_file, runner_main_verify
 thisscriptdir = pathlib.Path(__file__).parent
 
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
@@ -483,7 +427,7 @@ if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 import pathlib
-from rosetta import runner_main_probe, load_register_file
+from rosetta.runner import runner_main_probe, load_register_file
 thisscriptdir = pathlib.Path(__file__).parent
 
 load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')

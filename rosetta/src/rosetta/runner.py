@@ -1,39 +1,40 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from audioop import mul
-from cmath import exp
-from itertools import count
-import sys
-import argparse
-import subprocess
-import pathlib
-import os
-import datetime
-import json
-from typing import Iterable
-import xml.etree.ElementTree as et
-import colorama
-import math
-import argparse
-from collections import defaultdict
-import io
-import configparser
-import typing
-import contextlib
-import importlib
+from .util.cmdtool import *
+from .util.orderedset import OrderedSet
+from .util.support import *
+from .util import invoke
+import cwcwidth
 import importlib.util
+import importlib
+import contextlib
+import typing
+import configparser
+import io
+from collections import defaultdict
+import math
+import colorama
+import xml.etree.ElementTree as et
+from typing import Iterable
+import json
+import datetime
+import os
+import pathlib
+import subprocess
+import argparse
+import sys
+from itertools import count
+from cmath import exp
+print("Executing runner.py")
 
 
 # Not included batteries
-import cwcwidth
 # import tqdm # progress meter
 
 # Rosetta-provided
-from .util import invoke
-from .util.support import *
-from .util.orderedset import OrderedSet
-from .util.cmdtool import *
+
+print("Done importing into runner.py")
 
 
 # FIXME: Hack

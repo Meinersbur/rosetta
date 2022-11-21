@@ -7,7 +7,7 @@
 #from . import runner
 #from .util import invoke
 #from .util.cmdtool import *
-print("__init__.py executed")
+print("rosetta.__init__.py executed")
 
 
 # TODO: Clenaup file separation
