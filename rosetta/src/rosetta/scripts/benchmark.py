@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from rosetta.util import support
-import rosetta
-from rosetta import *
 import sys
 from collections import defaultdict
 import sys
@@ -13,25 +11,31 @@ from pathlib import Path
 import shutil
 import re
 import importlib
+import rosetta
+from rosetta import *
+import rosetta.runner as runner
+from rosetta.util.support import *
+from rosetta.util.cmdtool import *
+from rosetta.util.orderedset import OrderedSet
+import  rosetta.util.invoke as invoke
 
 
 script = Path(sys.argv[0]).absolute()
 thisscript = Path(__file__)
 thisscriptdir = thisscript.parent
 
-#sys.path.insert(0,str( (thisscript.parent / 'rosetta' /  'lib').absolute() ))
 
-runner = rosetta.runner
 
 
 class BuildConfig:
-    def __init__(self, name, ppm, cmake_arg, cmake_def, compiler_arg, compiler_def):
+    def __init__(self, name, ppm, cmake_arg, cmake_def, compiler_arg, compiler_def, is_predefined=False):
         self.name = name
         self.ppm = set(ppm)
         self.cmake_arg = cmake_arg
         self.cmake_def = cmake_def
         self.compiler_arg = compiler_arg
         self.compiler_def = compiler_def
+        self.is_predefined = is_predefined
 
         # TODO: select compiler executable
 
@@ -118,17 +122,28 @@ def parse_build_configs(args, implicit_reference):
     keys |= compiler_def.keys()
     keys |= ppm.keys()
 
+
     configs = []
     for k in keys:
         if not k:
             continue
         # TODO: Handle duplicate defs (specific override general)
-        configs.append(BuildConfig(k, ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] |
+        configs.append(BuildConfig(name=k, ppm=ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] |
                        cmake_def[k], compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k]))
-    # Use single config if not "CONFIG:" is specified
+
+
+    # Add additional configurations that are stored in RosettaCache.txt files.
+    for k in first_defined( args.config, []):
+            if k not in keys:
+                configs.append(BuildConfig(name=k,is_predefined=True, ppm=None,cmake_arg=None,cmake_def=None, compiler_arg=None,compiler_def=None))
+
+    # Use single config if no "CONFIG:" is specified
     if not configs:
-        configs.append(BuildConfig(None, ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
+        configs.append(BuildConfig(ppm=ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
                        compiler_arg=compiler_arg[''], compiler_def=compiler_def['']))
+
+
+
     return configs
 
 
@@ -148,9 +163,9 @@ def main(argv, rootdir=None):
     global verbose
     parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
 
+
     # Used by launcher which is itself in the repository root directory
-    if not rootdir:
-        parser.add_argument('--rootdir', type=pathlib.Path, default=rootdir, help=argparse.SUPPRESS)
+    parser.add_argument('--rootdir', type=pathlib.Path, default=rootdir, help=argparse.SUPPRESS)
 
     # Clean step
     add_boolean_argument(parser, 'clean', default=False, help="Start from scratch")
@@ -158,7 +173,7 @@ def main(argv, rootdir=None):
     # Configure step
     add_boolean_argument(parser, 'configure', default=True, help="Enable configure (CMake) step")
     # TODO: Add switches that parse multiple arguments using shsplit
-    parser.add_argument('--config', metavar="CONFIG", action='append')
+    parser.add_argument('--config', metavar="CONFIG", action='append', help="Configuration selection (must exist from previous invocations)",default=None)
     parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
     parser.add_argument('--cmake-arg', metavar="CONFIG:ARG", action='append')
     parser.add_argument('--cmake-def', metavar="CONFIG:DEF[=VAL]", action='append')
@@ -179,8 +194,8 @@ def main(argv, rootdir=None):
         # TODO: If not specified, just reuse existing configs
         configs = parse_build_configs(args, implicit_reference=args.verify)
 
-        srcdir = first_defined(args.rootdir, rootdir, pathlib.Path.cwd())
-        builddir = srcdir / 'build'
+        rootdir = mkpath(first_defined(args.rootdir,pathlib.Path.cwd()))
+        builddir = rootdir / 'build'
         resultdir = builddir / 'results'
 
         # if builddir.exists():
@@ -212,13 +227,16 @@ def main(argv, rootdir=None):
             configdescfile = builddir / 'RosettaCache.txt'
 
             # TODO: Support other generators as well
-            opts = ['cmake', srcdir, '-GNinja Multi-Config',
-                    '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
+            opts = ['cmake', rootdir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
             opts += config.gen_cmake_args()
             expectedopts = shjoin(opts).rstrip()
 
             reusebuilddir = False
-            if not args.clean and configdescfile.is_file() and (builddir / 'build.ninja').exists():
+            if config.is_predefined:
+              # Without cmake options, reuse whatever is in the builddir if it is already configured
+              reusebuilddir = (builddir / 'build.ninja').exists()
+            else:
+              if not args.clean and configdescfile.is_file() and (builddir / 'build.ninja').exists():
                 existingopts = readfile(configdescfile).rstrip()
                 if existingopts == expectedopts:
                     reusebuilddir = True
@@ -238,7 +256,7 @@ def main(argv, rootdir=None):
         # Load all available benchmarks
         if args.verify or args.bench or args.probe or (not args.verify and args.bench is None and not args.probe):
             for config in configs:
-                load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
+                runner.load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
 
         def only_REF(bench):
             return bench.configname == 'REF'
@@ -251,7 +269,7 @@ def main(argv, rootdir=None):
         except BaseException:
             refconfig = None
         runner.subcommand_run(None, args,
-                              srcdir=thisscriptdir,
+                              srcdir=rootdir,
                               buildondemand=not args.build,
                               builddirs=[config.builddir for config in configs],
                               refbuilddir=refconfig.builddir if refconfig else None,
