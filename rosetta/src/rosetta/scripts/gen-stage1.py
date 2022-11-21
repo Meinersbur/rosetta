@@ -9,10 +9,7 @@ import types
 import sys
 import re
 import importlib.util
-
-
-#print(pathlib.Path(__file__).parent.absolute() / 'lib')
-#sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.absolute() / 'lib'))
+from io import StringIO
 from rosetta.util.support import *
 import rosetta.runner as runner
 from rosetta import generator
@@ -50,7 +47,6 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
     buildfiles = []
     for path in benchdir.rglob('*'):
-        # if path.name =='pointwise.cxx':
         if not path.suffix.lower() in {'.cxx', '.cu', '.build'}:
             continue
         if filter and not filter in path.name:
@@ -72,7 +68,6 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     s = m.group('script')
                     script.append(s)
             if script:
-                #print("Processing:", buildfile)
                 configdepfiles.append(buildfile)
                 script = global_unintent(script)
                 script = '\n'.join(script)
@@ -117,32 +112,32 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 globals['omp_task'] = 'omp_task'
                 globals['omp_target'] = 'omp_target'
                 globals['__file__'] = relbuildfile
-                # print("Executing:")
-                # print(script)
                 exec(script, module.__dict__)
 
-    with outfile.open("w+") as out:
-        if configdepfiles:
-            print("set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
-            print('"' + ';'.join(pyescape(s) for s in configdepfiles) + '")', file=out)
-            print(file=out)
+    out = StringIO()
+    if configdepfiles:
+        print("set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
+        print('"' + ';'.join(pyescape(s) for s in configdepfiles) + '")', file=out)
+        print(file=out)
 
-        for bench in benchs:
-            if bench.ppm == 'serial':
-                print(f"add_benchmark_serial({bench.basename}", file=out)
-            elif bench.ppm == 'omp_parallel':
-                print(f"add_benchmark_openmp_parallel({bench.basename}", file=out)
-            elif bench.ppm == 'omp_task':
-                print(f"add_benchmark_openmp_task({bench.basename}", file=out)
-            elif bench.ppm == 'omp_target':
-                print(f"add_benchmark_openmp_target({bench.basename}", file=out)
-            elif bench.ppm == 'cuda':
-                print(f"add_benchmark_cuda({bench.basename}", file=out)
-            else:
-                die("Unhandled ppm")
-            print("    PBSIZE", bench. pbsize, file=out)
-            print("    SOURCES", *(bs.as_posix() for bs in bench.sources), file=out)
-            print("  )", file=out)
+    for bench in benchs:
+        if bench.ppm == 'serial':
+            print(f"add_benchmark_serial({bench.basename}", file=out)
+        elif bench.ppm == 'omp_parallel':
+            print(f"add_benchmark_openmp_parallel({bench.basename}", file=out)
+        elif bench.ppm == 'omp_task':
+            print(f"add_benchmark_openmp_task({bench.basename}", file=out)
+        elif bench.ppm == 'omp_target':
+            print(f"add_benchmark_openmp_target({bench.basename}", file=out)
+        elif bench.ppm == 'cuda':
+            print(f"add_benchmark_cuda({bench.basename}", file=out)
+        else:
+            die("Unhandled ppm")
+        print("    PBSIZE", bench. pbsize, file=out)
+        print("    SOURCES", *(bs.as_posix() for bs in bench.sources), file=out)
+        print("  )", file=out)
+
+    updatefile(outfile, out.getvalue())
 
 
 def main():

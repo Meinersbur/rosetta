@@ -303,8 +303,23 @@ def createfile(filename, contents):
     if isinstance(filename, Path):
         with filename.open(mode='w+') as f:
             print(contents, file=f)
-    with open(filename, 'w+')as f:
-        print(contents, file=f)
+    else:
+        with open(filename, 'w+')as f:
+            print(contents, file=f)
+
+
+def updatefile(filename, contents):
+    """Only write files if it has changed.
+Useful for build tools that determine state using file times."""
+    filename = mkpath(filename)
+    try:
+        old_content = readfile(filename)
+        if old_content == contents:
+            return False
+    except BaseException:
+        pass
+    with filename.open(mode='w+') as f:
+        print(contents, file=f, end='')
 
 
 def program_exists(cmd):
