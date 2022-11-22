@@ -28,7 +28,7 @@ from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
-
+from .evaluator import subcommand_evaluate
 
 # Not included batteries
 # import tqdm # progress meter

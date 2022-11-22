@@ -294,20 +294,28 @@ def load_resultfiles(resultfiles, filterfunc=None):
 
 
 
-def results_compare(resultfiles: list, compare_by, group_by=None, compare_val=None, show_groups=None):
+def results_compare(resultfiles: list, compare_by, group_by=None, compare_val=None, show_groups=None,always_columns=["program"]):
     results = load_resultfiles(resultfiles)
 
     # Categorical groupings
     if group_by is None:
-        group_by = ["program", "ppm", "buildtype", "configname"]
-        group_by.remove(compare_by)
+        group_by = []
+    group_by = [g for g in group_by if g != compare_by]
 
     grouped_results, all_cmpvals, div_groups = grouping(results, compare_by=compare_by, group_by=group_by)
 
+    common_columns= show_groups or div_groups
+    compare_columns = compare_val
+    more_columns = []
+    for c in always_columns:
+        if c not in common_columns and c not in compare_columns:
+         more_columns.append(c)
+    common_columns = more_columns + common_columns
+
     print_comparison(groups_of_results=grouped_results,
                     list_of_resultnames=all_cmpvals,
-                     common_columns=show_groups or div_groups,
-                     compare_columns=compare_val)
+                     common_columns=common_columns,
+                     compare_columns=compare_columns)
 
 
 
@@ -322,6 +330,27 @@ def compareby(results: Iterable[BenchResult], compare_by: str):
 
 
 def grouping(results: Iterable[BenchResult], compare_by: str, group_by=None):
+    """
+Group benchmarks by propery
+
+Parameters
+----------
+results
+    List of results
+compare_by
+    Second order grouping categories
+group_by
+    First order grouping categories
+
+Returns
+-------
+(grouped_results,all_cmpvals,show_groups)
+
+grouped_results
+all_cmpvals
+show_groups
+"""
+
     # TODO: allow compare_by multiple columns
     # TODO: allow each benchmark to be its own group; find description for each such "group"
     results_by_group = defaultdict(lambda: defaultdict(lambda: []))
@@ -351,6 +380,8 @@ def grouping(results: Iterable[BenchResult], compare_by: str, group_by=None):
     show_groups = divergent_fields(group_by, results)
 
     return grouped_results, list(all_cmpvals), show_groups
+
+
 
 
 def divergent_fields(group_by, results):
@@ -421,7 +452,7 @@ def get_column_data(result: BenchResult, colname: str):
     if colname == "buildtype":
         return result.buildtype
     if colname == "configname":
-        return result.configname
+        return first_defined(result.configname, "") #FIXME: "defaultbuild" is just placeholder
     if colname == "walltime":
         return result.durations.get("walltime")
     assert False, "TODO: Add to switch of use getattr"
