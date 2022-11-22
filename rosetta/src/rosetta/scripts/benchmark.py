@@ -18,7 +18,7 @@ from rosetta.util.support import *
 from rosetta.util.cmdtool import *
 from rosetta.util.orderedset import OrderedSet
 import  rosetta.util.invoke as invoke
-
+from rosetta.evaluator import subcommand_evaluate
 
 script = Path(sys.argv[0]).absolute()
 thisscript = Path(__file__)
@@ -183,6 +183,8 @@ def main(argv, rootdir=None):
     # Build step
     add_boolean_argument(parser, 'build', default=True, help="Enable build step")
 
+    subcommand_evaluate(parser,None,resultfiles=None)
+
     # Run/verify/evaluate steps
     runner.subcommand_run(parser, None, srcdir=thisscriptdir)
 
@@ -262,50 +264,26 @@ def main(argv, rootdir=None):
             return bench.configname == 'REF'
 
         def no_ref(bench):
-            return bench.configname != 'REF'
+            return bench.configname != 'REF' and bench.ppm in config.ppm
 
         try:
             [refconfig] = (c for c in configs if c.name == 'REF')
         except BaseException:
             refconfig = None
-        runner.subcommand_run(None, args,
+        resultfiles = runner.subcommand_run(None, args,
                               srcdir=rootdir,
                               buildondemand=not args.build,
                               builddirs=[config.builddir for config in configs],
                               refbuilddir=refconfig.builddir if refconfig else None,
                               filterfunc=no_ref,
-                              resultdir=resultdir
-                              )
+                              resultdir=resultdir)
 
-        # if args.verify:
-        #   def only_REF(bench):
-        #       return bench.configname =='REF'
-        #   [refconfig] = (c for c in configs if c.name == 'REF')
-        #   refdir = refconfig.builddir / 'refout'
-        #   refdir.mkdir(exist_ok=True,parents=True)
-        #   runner.ensure_reffiles(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
-        #   runner.run_verify(problemsizefile=args.problemsizefile,filterfunc=only_REF,srcdir=srcdir,refdir=refdir)
+        # If not evaluating the just-executed, search for previously saved result files.
+        if resultfiles is None:
+            die("Not yet implemented")
 
-        #resultfiles = None
-        # if args.run:
-        #    # TODO: Filter way 'REF' config
-        #    resultfiles = runner.run_bench(srcdir=thisscriptdir, problemsizefile=args.problemsizefile)
-        #    #invoke_verbose('cmake', '--build', '.',  '--config','Release', '--target','run', cwd=config.builddir)
+        subcommand_evaluate(None,args,resultfiles=resultfiles)
 
-        # if args.evaluate:
-        #   if not resultfiles:
-        #        assert False, "TODO: Lookup last (successful) results dir"
-        #    if len(configs) == 1:
-        #        runner.evaluate(resultfiles)
-        #    else:
-        #        runner.results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
-
-        # if args.boxplot:
-        #    def no_ref(bench):
-        #       return bench.configname !='REF'
-        #    fig = runner.results_boxplot(resultfiles, compare_by="configname", filterfunc=no_ref)
-        #    fig.savefig(fname=args.boxplot)
-        #    fig.canvas.draw_idle()
 
 
 if __name__ == '__main__':
