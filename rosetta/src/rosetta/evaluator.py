@@ -20,6 +20,10 @@ import subprocess
 import argparse
 import sys
 from itertools import count
+import base64
+import matplotlib.pyplot as plt # TODO: Only depend on matplotlib when really needed
+import matplotlib.colors as mcolors
+from cycler import cycler
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
@@ -27,6 +31,7 @@ from .util import invoke
 from .table import *
 from .stat import *
 from .common import *
+
 
 
 
@@ -47,21 +52,25 @@ resultfiles
     if parser:
         add_boolean_argument(parser, 'evaluate', default=None, help="Evaluate result")
 
-        parser.add_argument('--boxplot', type=pathlib.Path, help="Save as boxplot to FILENAME")
-
+        parser.add_argument('--boxplot', type=pathlib.Path, metavar="FILENAME", help="Save as boxplot to FILENAME")
+        parser.add_argument('--report', type=pathlib.Path, metavar="FILENAME",  help="Save a html reportfile")
 
 
     if args:
+            results = load_resultfiles(resultfiles)
+
             #if len(builddirs) > 1:
-            results_compare(resultfiles, compare_by="configname", compare_val=["walltime"])
+            results_compare(results, compare_by="configname", compare_val=["walltime"])
             #else:
             #    evaluate(resultfiles)
 
             if args.boxplot:
-                fig = results_boxplot(resultfiles)
+                fig = results_boxplot(results)
                 fig.savefig(fname=args.boxplot)
                 fig.canvas.draw_idle()
 
+            if args.report is not None:
+                save_report(results,filename= args.report)
 
 
 
@@ -168,13 +177,13 @@ def duration_formatter(best=None, worst=None):
 
 
 
-def results_boxplot(resultfiles: list, group_by=None, compare_by=None, filterfunc=None):
+def results_boxplot(results, group_by=None, compare_by=None):
     r"""Produce a boxplot for benchmark results
 
     :param group_by:   Summerize all results that have the same value for these properties. No summerization if None.
     :param compare_by: Which property to compare side-by-side in a group of plots. Implicitly enables grouping.
     """
-    results = load_resultfiles(resultfiles, filterfunc=filterfunc)
+
 
     if group_by or compare_by:
         if group_by is None:
@@ -195,9 +204,6 @@ def results_boxplot(resultfiles: list, group_by=None, compare_by=None, filterfun
         return ', '.join(get_column_data(first, k) for k in div_groups)
     labels = [make_label(g) for g in grouped_results]
 
-    import matplotlib.colors as mcolors
-    from cycler import cycler
-    import matplotlib.pyplot as plt
 
     left = 1
     right = 0.5
@@ -294,8 +300,8 @@ def load_resultfiles(resultfiles, filterfunc=None):
 
 
 
-def results_compare(resultfiles: list, compare_by, group_by=None, compare_val=None, show_groups=None,always_columns=["program"]):
-    results = load_resultfiles(resultfiles)
+def results_compare(results, compare_by, group_by=None, compare_val=None, show_groups=None,always_columns=["program"]):
+
 
     # Categorical groupings
     if group_by is None:
@@ -518,3 +524,152 @@ compare_columns
     table.print()
 
 
+
+
+class HtmlWriter:
+    def __init__(self,fd):
+        self.indent = 0
+        self.fd = fd
+        self.nest = []
+
+    def print(self,*args):
+        print(' ' * (2* self.indent),end='', file=self.fd)
+        print(*args,file=self.fd)
+
+
+
+    def enter(self,tag,**props):
+        proplist = (f' {k}="{v}"' for k,v in props.items())
+        self.print(f"<{tag}{''.join(proplist)}>")
+        self.nest.append(tag)
+        self.indent += 1
+
+    def leave(self):
+        tag = self.nest.pop()
+        self.indent -= 1
+        self.print(f"</{tag}>")
+
+    def tag(self,tag):
+        class TagContextmanager:
+            def __init__(self,html,tag):
+                    self.html=html
+                    self.tag=tag
+            def __enter__(self):
+                self.html.enter(self.tag)
+            def __exit__(self, exc_type, exc_value, exc_traceback):
+                self.html.leave()
+            def print(self,*args):
+                self.html.print(*args)
+            def tag(self,tag,**props):
+                return self.html.tag(tag,**props)
+        return TagContextmanager(self,tag)
+
+
+
+def save_report(results,filename):
+    filename = mkpath(filename)
+
+    with filename.open("w+") as f:
+        html = HtmlWriter(f)
+        make_report(html,results)
+
+
+
+
+
+def results_speedupplot(results, group_by=None, compare_by=None):
+    if group_by or compare_by:
+        if group_by is None:
+            group_by = ["program", "ppm", "buildtype", "configname"]
+        if compare_by:
+            group_by.remove(compare_by)
+
+        grouped_results, all_cmpvals, div_groups = grouping(results, compare_by='configname', group_by=group_by)
+        groupdata = [[b.durations['walltime'].samples for b in group] for group in grouped_results]
+    else:
+        # Each result in its own group
+        grouped_results = [[r] for r in results]
+        div_groups = divergent_fields(["program", "ppm", "buildtype", "configname"], results)
+        all_cmpvals = [""]
+
+    def make_label(g: tuple):
+        first = g[0]
+        return ', '.join(get_column_data(first, k) for k in div_groups)
+    labels = [make_label(g) for g in grouped_results]
+
+
+    left = 1
+    right = 0.5
+    numgroups = len(grouped_results)
+    benchs_per_group = len(all_cmpvals)
+    barwidth = 0.3
+    groupwidth = 0.2 + benchs_per_group * barwidth
+    width = left + right + groupwidth * numgroups
+    fig, ax = plt.subplots(figsize=(width, 10))
+    prop_cycle = plt.rcParams['axes.prop_cycle']
+    colors = [c['color'] for j, c in zip(range(benchs_per_group), prop_cycle)]  # TODO: Consider seaborn palettes
+
+    fig.subplots_adjust(left=left / width, right=1 - right / width, top=0.95, bottom=0.25)
+
+    for i, group in enumerate(grouped_results):
+        benchs_this_group = len(group)
+        for j, benchstat in enumerate(group):  # TODO: ensure grouped_results non-jagged so colors match
+            data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
+            rel = (j - benchs_this_group / 2.0 + 0.5) * barwidth
+            box = ax.boxplot(data, positions=[i * groupwidth + rel],
+                             notch=True, showmeans=False, showfliers=True, sym='+',
+                             widths=barwidth,
+                             patch_artist=True,  # fill with color
+                             )
+            for b in box['boxes']:
+                b.set_facecolor(colors[j])
+    ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+
+    for j, (c, label) in enumerate(zip(colors, all_cmpvals)):
+        # Dummy item to add a legend handle; like seaborn does
+        rect = plt.Rectangle([0, 0], 0, 0,
+                             # linewidth=self.linewidth / 2,
+                             # edgecolor=self.gray,
+                             facecolor=c,
+                             label=label)
+        ax.add_patch(rect)
+
+    # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
+    # x.grid(linestyle='--',axis='y')
+    ax.set(
+        axisbelow=True,  # Hide the grid behind plot objects
+        xlabel='Benchmark',
+        ylabel='Walltime [s]',
+    )
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ax.set_xticks([groupwidth * i for i in range(len(labels))])
+    ax.set_xticklabels(labels, rotation=20, ha="right", rotation_mode="anchor")
+
+    plt.legend()
+
+
+
+    fig =  plt.gcf()
+    tmpfile = request_tempfilename(subdir='report',prefix='speedupplot',suffix='.png')
+    fig.savefig(fname=tmpfile)
+    fig.canvas.draw_idle()
+
+    with tmpfile.open('rb' ) as f:
+        data = f.read()
+    baseenc = base64.b64encode(data)
+    baseenc = baseenc.decode("ascii")
+    return baseenc
+
+
+def make_report(html,results):
+    html.print("<!DOCTYPE html>")
+    with html.tag("html"):
+        with html.tag("head"):
+            html.print("<title>Benchmark Report</title>")
+        with html.tag("body"):
+            html.print("<h1>Benchmark Report</h1>")
+            html.print("<h2>Speedup Relative to ?</h2>")
+            figdata = results_speedupplot(results)
+            html.print(f'<img src="data:image/jpeg;base64,{figdata}" />?')
