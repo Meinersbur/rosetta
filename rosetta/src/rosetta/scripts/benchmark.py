@@ -19,6 +19,7 @@ from rosetta.util.cmdtool import *
 from rosetta.util.orderedset import OrderedSet
 import  rosetta.util.invoke as invoke
 from rosetta.evaluator import subcommand_evaluate
+from rosetta.common import *
 
 script = Path(sys.argv[0]).absolute()
 thisscript = Path(__file__)
@@ -160,6 +161,7 @@ def invoke_verbose(*args, **kwargs):
 
 
 def main(argv, rootdir=None):
+  with globalctxmgr:
     global verbose
     parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
 

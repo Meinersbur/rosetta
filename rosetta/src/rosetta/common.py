@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import tempfile
+import contextlib
+from .util.support import mkpath
+
 # TODO: enough precision for nanoseconds?
 # TODO: Use alternative duration class
 def parse_time(s: str):
@@ -29,3 +33,28 @@ def parse_memsize(s: str):
     return int(s)
 
 
+
+
+mytempdir = None
+globalctxmgr = contextlib.ExitStack()
+
+
+
+def request_tempdir(subdir=None):
+    global mytempdir
+    if mytempdir:
+        return mytempdir
+    x = tempfile.TemporaryDirectory(prefix=f'rosetta-')  # TODO: Option to not delete / keep in current directory
+    mytempdir = mkpath(globalctxmgr.enter_context(x))
+    return mytempdir
+
+
+def request_tempfilename(prefix=None, suffix=None, subdir=None):
+    tmpdir = request_tempdir(subdir=subdir)
+    candidate = tmpdir / f'{prefix}{suffix}'
+    i = 0
+    while candidate.exists():
+        candidate = tmpdir / f'{prefix}-{i}{suffix}'
+        i += 1
+
+    return candidate

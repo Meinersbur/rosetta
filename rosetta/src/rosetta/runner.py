@@ -332,28 +332,7 @@ def custom_bisect_left(lb, ub, func):
         return mid
 
 
-mytempdir = None
-globalctxmgr = contextlib. ExitStack()
 
-
-def request_tempdir(subdir=None):
-    global mytempdir
-    if mytempdir:
-        return mytempdir
-    x = tempfile.TemporaryDirectory(prefix=f'rosetta-')  # TODO: Option to not delete / keep in current directory
-    mytempdir = mkpath(globalctxmgr.enter_context(x))
-    return mytempdir
-
-
-def request_tempfilename(prefix=None, suffix=None, subdir=None):
-    tmpdir = request_tempdir(subdir=subdir)
-    candidate = tmpdir / f'{prefix}{suffix}'
-    i = 0
-    while candidate.exists():
-        candidate = tmpdir / f'{prefix}-{i}{suffix}'
-        i += 1
-
-    return candidate
 
 # TODO: merge with run_gbench
 # TODO: repeats for stability
