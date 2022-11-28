@@ -36,7 +36,7 @@ from .common import *
 
 
 
-def subcommand_evaluate(parser,args,resultfiles):
+def subcommand_evaluate(parser,args,resultfiles,resultsdir):
     """
 Evaluate a set of results. This can be from just executed benchmarks or reading from xml files.
 
@@ -54,8 +54,8 @@ resultfiles
         add_boolean_argument(parser, 'evaluate', default=None, help="Evaluate result")
 
         parser.add_argument('--boxplot', type=pathlib.Path, metavar="FILENAME", help="Save as boxplot to FILENAME")
-        parser.add_argument('--report', type=pathlib.Path, metavar="FILENAME",  help="Save a html reportfile")
-
+        #parser.add_argument('--report', type=pathlib.Path, metavar="FILENAME",  help="Save a html reportfile")
+        #add_boolean_argument(parser, 'report', default=None, help="Write rem result")
 
     if args:
             results = load_resultfiles(resultfiles)
@@ -70,8 +70,11 @@ resultfiles
                 fig.savefig(fname=args.boxplot)
                 fig.canvas.draw_idle()
 
-            if args.report is not None:
-                save_report(results,filename= args.report)
+            now = datetime.datetime.now() # TODO: Use runner.make_resultssubdir
+            reportfile = resultsdir /  f"report_{now:%Y%m%d_%H%M}.html"
+
+            # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
+            save_report(results,filename=reportfile)
 
 
 
@@ -695,9 +698,7 @@ def results_speedupplot(results, baseline, group_by=None, compare_by=None,value_
             rel = (i - benchs_this_group / 2.0 + 0.5) * barwidth
             bar = ax.bar(x=group_idx * groupwidth + rel, height=speedup,width=barwidth,color = colors[j],yerr=stat.abserr()/baseline_mean,bottom=1)
 
-            #for b in box['boxes']:
-            #    b.set_facecolor(colors[j])
-            #ax.errorbar(x, y, interval, fmt='ro', capsize=4, ecolor='black')
+
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
 
     for j, (c, label) in enumerate(zip(colors, compare_tuples_without_baseline)):
