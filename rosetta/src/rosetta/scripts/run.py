@@ -185,7 +185,7 @@ def main(argv, rootdir=None):
     # Build step
     add_boolean_argument(parser, 'build', default=True, help="Enable build step")
 
-    subcommand_evaluate(parser,None,resultfiles=None)
+    subcommand_evaluate(parser,None,resultfiles=None,resultsdir=None)
 
     # Run/verify/evaluate steps
     runner.subcommand_run(parser, None, srcdir=thisscriptdir)
@@ -194,7 +194,6 @@ def main(argv, rootdir=None):
     verbose = args.verbose
 
     with runner.globalctxmgr:
-
         # TODO: If not specified, just reuse existing configs
         configs = parse_build_configs(args, implicit_reference=args.verify)
 
@@ -284,7 +283,7 @@ def main(argv, rootdir=None):
         if resultfiles is None:
             die("Not yet implemented")
 
-        subcommand_evaluate(None,args,resultfiles=resultfiles)
+        subcommand_evaluate(None,args,resultfiles=resultfiles,resultsdir=resultdir)
 
 
 
