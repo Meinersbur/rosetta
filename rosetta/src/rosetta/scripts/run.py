@@ -19,6 +19,7 @@ from rosetta.util.cmdtool import *
 from rosetta.util.orderedset import OrderedSet
 import  rosetta.util.invoke as invoke
 from rosetta.evaluator import subcommand_evaluate
+from rosetta.runner import subcommand_run
 from rosetta.common import *
 
 script = Path(sys.argv[0]).absolute()
@@ -185,10 +186,11 @@ def main(argv, rootdir=None):
     # Build step
     add_boolean_argument(parser, 'build', default=True, help="Enable build step")
 
-    subcommand_evaluate(parser,None,resultfiles=None,resultsdir=None)
 
     # Run/verify/evaluate steps
-    runner.subcommand_run(parser, None, srcdir=thisscriptdir)
+    subcommand_run(parser, None, srcdir=thisscriptdir)
+    subcommand_evaluate(parser,None,resultfiles=None,resultsdir=None)
+
 
     args = parser.parse_args(argv[1:])
     verbose = args.verbose

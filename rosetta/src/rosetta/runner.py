@@ -450,13 +450,13 @@ resultdir:
         parser.add_argument('--verbose', '-v', action='count')
 
         # Command
-        add_boolean_argument(parser, 'probe', default=False, help="Enable probing")
+        add_boolean_argument(parser, 'probe', default=None, help="Enable probing")
         parser.add_argument('--limit-walltime', type=parse_time)
         parser.add_argument('--limit-rss', type=parse_memsize)
         parser.add_argument('--limit-alloc', type=parse_memsize)
 
         # Verify step
-        add_boolean_argument(parser, 'verify', default=False, help="Enable check step")
+        add_boolean_argument(parser, 'verify', default=None, help="Enable check step")
 
         # Run step
         add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
@@ -467,7 +467,6 @@ resultdir:
         probe = args.probe
         verify = args.verify
         bench = args.bench
-        eval = args.evaluate
         if bench is None and not verify and not probe:
             bench = True
 
