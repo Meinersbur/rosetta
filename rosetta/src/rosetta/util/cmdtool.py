@@ -13,7 +13,7 @@ def _str_to_bool(s):
             'n': False, 'yes': True, 'no': False, 'on': True, 'of': False}[s.lower()]
 
 
-def add_boolean_argument(parser, name, default=False, dest=None, help=None):
+def add_boolean_argument(parser, name, default=None, dest=None, help=None):
     """Add a boolean argument to an ArgumentParser instance."""
 
     try:
@@ -28,8 +28,12 @@ def add_boolean_argument(parser, name, default=False, dest=None, help=None):
     onhelptext = None
     offhelptext = None
     if help is not None:
-        onhepltext = help + (" (default)" if default else "")
-        offhelptext = "Disable " + help + (" (default)" if default else "")
+        onhelptext = "Enable " + help
+        offhelptext = "Disable " + help
+        if default is True:
+            onhelptext+= " (default)"
+        if default is False:
+            offhelptext+= " (default)"
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--' + name, dest=destname, action='store_true', help=onhelptext)
