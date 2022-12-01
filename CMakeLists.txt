@@ -327,6 +327,7 @@ endif ()
 
 add_subdirectory(benchmarks)
 
+
 # Maintanance #################################################################
 
 add_format_target(
@@ -338,9 +339,11 @@ add_format_target(
   rosetta/*.cpp
   PY_RGLOB
   rosetta/src/*.py
+  rosetta/tests/*.py
   CMAKE_RGLOB
   CMakeLists.txt
   *.cmake)
+
 
 # Run #########################################################################
 

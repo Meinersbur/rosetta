@@ -58,7 +58,11 @@ resultfiles
         #add_boolean_argument(parser, 'report', default=None, help="Write rem result")
 
     if args:
+        if args.evaluate:
             results = load_resultfiles(resultfiles)
+
+            # Remove bogus entries
+            # results = [r for r in results if   r.durations.get('walltime', statistic([]) ).count >= 1 ]
 
             #if len(builddirs) > 1:
             results_compare(results, compare_by="configname", compare_val=["walltime"])
@@ -96,6 +100,8 @@ def name_or_list(data):
 
 #TODO: dataclass
 class BenchResult:
+    categorical_cols = ['program', 'ppm', 'buildtype', 'configname']
+    numerical_cols = ['walltime']
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         # self.bench=bench
@@ -114,6 +120,21 @@ class BenchResult:
         self.peak_alloc = peak_alloc
 
 
+# TODO: Member of BenchResult
+def get_column_data(result: BenchResult, colname: str):
+    if result is None:
+        return None
+    if colname == "program":
+        return result.name
+    if colname == "ppm":
+        return result.ppm
+    if colname == "buildtype":
+        return result.buildtype
+    if colname == "configname":
+        return first_defined(result.configname, "") #FIXME: "defaultbuild" is just placeholder
+    if colname == "walltime":
+        return result.durations.get("walltime")
+    assert False, "TODO: Add to switch of use getattr"
 
 
 
@@ -121,6 +142,12 @@ def path_formatter(v: pathlib.Path):
     if v is None:
         return None
     return StrColor(pathlib.Path(v).name, colorama.Fore.GREEN)
+
+
+def program_formatter(v: pathlib.Path):
+    if v is None:
+        return None
+    return StrColor(v, colorama.Fore.GREEN)
 
 
 def duration_formatter(best=None, worst=None):
@@ -294,7 +321,7 @@ def load_resultfiles(resultfiles, filterfunc=None):
 
 
 def results_compare(results, compare_by, group_by=None, compare_val=None, show_groups=None,always_columns=["program"]):
-
+    groups = GroupedBenches(data=results,group_by=group_by,compare_by=[compare_by])
 
     # Categorical groupings
     if group_by is None:
@@ -339,7 +366,7 @@ class BenchResultGroup:
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
         measures = unique(k for r in results for k in r.durations.keys())
-        self.durations = {m: statistic(v for r in results for v in r.durations[m]._samples) for m in measures}
+        self.durations = {m: statistic(v for r in results if m in r.durations for v in r.durations[m]._samples ) for m in measures}
 
 
 
@@ -348,8 +375,8 @@ class GroupedBenches:
         all_compare_keys = OrderedSet(first_defined(compare_by,['program']))
         if group_by is None:
             # Use all non-compare keys for grouping
-            group_by = ["program", "ppm", "buildtype", "configname"] # TODO: complete list
-        all_group_keys = OrderedSet(group_by) .difference( all_compare_keys)
+            group_by = BenchResult.categorical_cols # ["program", "ppm", "buildtype", "configname"]
+        all_group_keys = OrderedSet(group_by) .difference(all_compare_keys)
 
         all_compare_tuples = OrderedSet( tuple(get_column_data(result, col) for col in all_compare_keys) for result in data)
         all_group_tuples = OrderedSet( tuple(get_column_data(result, col) for col in all_group_keys) for result in data)
@@ -518,20 +545,7 @@ def evaluate(resultfiles):
 
 
 
-def get_column_data(result: BenchResult, colname: str):
-    if result is None:
-        return None
-    if colname == "program":
-        return result.name
-    if colname == "ppm":
-        return result.ppm
-    if colname == "buildtype":
-        return result.buildtype
-    if colname == "configname":
-        return first_defined(result.configname, "") #FIXME: "defaultbuild" is just placeholder
-    if colname == "walltime":
-        return result.durations.get("walltime")
-    assert False, "TODO: Add to switch of use getattr"
+
 
 def getMeasureDisplayStr(s: str):
     return {'walltime': "Wall", 'usertime': "User", 'kerneltime': "Kernel",
@@ -566,7 +580,7 @@ compare_columns
     for col in common_columns:
         if col == "program":
             table.add_column(col, title=StrAlign(StrColor("Benchmark", colorama.Fore.BWHITE),
-                             pos=StrAlign.CENTER), formatter=path_formatter)
+                             pos=StrAlign.CENTER), formatter=program_formatter)
         else:  # TODO: proper column name
             table.add_column(col, title=StrAlign(StrColor(col, colorama.Fore.BWHITE), pos=StrAlign.CENTER))
 
@@ -692,11 +706,18 @@ def results_speedupplot(results, baseline, group_by=None, compare_by=None,value_
 
         for i,( j, benchstat )in enumerate(nonempty_results):
             stat = get_column_data(benchstat,value_key)
-            mean = stat.mean
-            speedup = baseline_mean / mean
 
-            rel = (i - benchs_this_group / 2.0 + 0.5) * barwidth
-            bar = ax.bar(x=group_idx * groupwidth + rel, height=speedup,width=barwidth,color = colors[j],yerr=stat.abserr()/baseline_mean,bottom=1)
+            # Skip bar if there is no statistic
+            if stat:
+                mean = stat.mean
+                speedup = baseline_mean / mean
+
+                rel = (i - benchs_this_group / 2.0 + 0.5) * barwidth
+                abserr = stat.abserr()
+                kwargs = {}
+                if abserr is not None:
+                    kwargs['yerr'] = abserr/baseline_mean
+                bar = ax.bar(x=group_idx * groupwidth + rel, height=speedup,width=barwidth,color = colors[j],bottom=1,**kwargs)
 
 
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
@@ -745,7 +766,7 @@ def make_report(html,results):
         with html.tag("body"):
             html.print("<h1>Benchmark Report</h1>")
 
-            html.print("<h2>Speedup Relative to ?</h2>")
+            html.print("<h2>Speedup Relative to serial</h2>")
             figdata = results_speedupplot(results,baseline=('serial',),compare_by=['ppm'])
             html.print(figdata)
 

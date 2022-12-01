@@ -286,7 +286,7 @@ def statistic(data):
             prod *= v
         n += 1
 
-    if hasnonpos:
+    if hasnonpos or n == 0:
         geomean = None
         sumreciproc = None
     else:

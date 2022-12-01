@@ -394,19 +394,52 @@ def runner_main(builddir):
     runner_main_run()
 
 
+
+
 def runner_main_run(srcdir, builddir):
     with globalctxmgr:
         parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
         add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-data")
         resultdir = builddir / 'results'
         subcommand_run(parser, None, srcdir, builddirs=[builddir], refbuilddir=builddir, resultdir=resultdir)
-        subcommand_evaluate(parser,None,resultfiles=None)
+        subcommand_evaluate(parser,None,resultfiles=None,resultsdir=resultdir)
+
         args = parser.parse_args(sys.argv[1:])
+        args.configure = False
+        args.build = False
+        subcommand_default_actions(args)
 
         resultfiles=  subcommand_run(None, args, srcdir, builddirs=[
                        builddir], buildondemand=args.buildondemand, refbuilddir=builddir, resultdir=resultdir)
         subcommand_evaluate(None,args,resultfiles)
 
+
+
+
+def subcommand_default_actions(args):
+    # Determine actions
+    any_explicit_action =  args.configure or args.build or args.probe or args.verify or args.bench or args.evaluate
+    if not any_explicit_action:
+        # No explicit action selected: Use default (configure -> build -> bench -> evaluate)
+        args.bench =  first_defined(  args.bench, True )
+    #else:
+    #    # Don't execute by default when some other action was explicitly defined
+    #    args.bench = first_defined(args.bench , False)
+
+    # If at least one primary action taken, explictly switch off the others
+    if  args.probe or args.verify or  args.bench:
+        args.probe = first_defined(args.probe , False)
+        args.verify = first_defined(args.verify , False)
+        args.bench = first_defined(args.bench , False)
+
+    # Build by default of required by a later step
+    args.build = first_defined( args.build , args.probe or args.verify or  args.bench, False)
+
+    # Configure by default when building
+    args.configure = first_defined(args.configure , args.build ,False )
+
+    # When benching, also evaluate that result by default
+    args.evaluate = first_defined(args.evaluate, args.bench, False)
 
 
 
@@ -467,8 +500,8 @@ resultdir:
         probe = args.probe
         verify = args.verify
         bench = args.bench
-        if bench is None and not verify and not probe:
-            bench = True
+        #if bench is None and not verify and not probe:
+        #    bench = True
 
         if probe:
             assert args.problemsizefile, "Requires to set a problemsizefile to set"

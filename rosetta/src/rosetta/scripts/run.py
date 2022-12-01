@@ -174,7 +174,7 @@ def main(argv, rootdir=None):
     add_boolean_argument(parser, 'clean', default=False, help="Start from scratch")
 
     # Configure step
-    add_boolean_argument(parser, 'configure', default=True, help="Enable configure (CMake) step")
+    add_boolean_argument(parser, 'configure', default=None, help="Enable configure (CMake) step")
     # TODO: Add switches that parse multiple arguments using shsplit
     parser.add_argument('--config', metavar="CONFIG", action='append', help="Configuration selection (must exist from previous invocations)",default=None)
     parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
@@ -184,16 +184,18 @@ def main(argv, rootdir=None):
     parser.add_argument('--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
 
     # Build step
-    add_boolean_argument(parser, 'build', default=True, help="Enable build step")
+    add_boolean_argument(parser, 'build', default=None, help="Enable build step")
 
 
     # Run/verify/evaluate steps
     subcommand_run(parser, None, srcdir=thisscriptdir)
     subcommand_evaluate(parser,None,resultfiles=None,resultsdir=None)
 
-
     args = parser.parse_args(argv[1:])
     verbose = args.verbose
+
+    runner.subcommand_default_actions(args)
+
 
     with runner.globalctxmgr:
         # TODO: If not specified, just reuse existing configs
@@ -226,8 +228,8 @@ def main(argv, rootdir=None):
 
         # TODO: Recognize "module" system
         # TODO: Recognize famous environments (JLSE, Theta, Summit, Frontier, Aurora, ...)
-
-        for config in configs:
+        if args.configure:
+          for config in configs:
             builddir = config.builddir
             configdescfile = builddir / 'RosettaCache.txt'
 
@@ -253,13 +255,13 @@ def main(argv, rootdir=None):
                 invoke_verbose(*opts, cwd=config.builddir)
                 createfile(configdescfile, expectedopts)
 
-        for config in configs:
-            if args.build:
+        if args.build:
+            for config in configs:
                 # TODO: Select subset to be build
                 invoke_verbose('ninja', cwd=config.builddir)
 
         # Load all available benchmarks
-        if args.verify or args.bench or args.probe or (not args.verify and args.bench is None and not args.probe):
+        if args.verify or args.bench or args.probe :
             for config in configs:
                 runner.load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
 
@@ -268,22 +270,25 @@ def main(argv, rootdir=None):
 
         def no_ref(bench):
             return bench.configname != 'REF' and bench.ppm in config.ppm
+        if args.bench:
+            try:
+                [refconfig] = (c for c in configs if c.name == 'REF')
+            except BaseException:
+                refconfig = None
+            resultfiles = runner.subcommand_run(None, args,
+                                srcdir=rootdir,
+                                buildondemand=not args.build,
+                                builddirs=[config.builddir for config in configs],
+                                refbuilddir=refconfig.builddir if refconfig else None,
+                                filterfunc=no_ref,
+                                resultdir=resultdir)
+        else:
+            # If not evaluating the just-executed, search for previously saved result files.
 
-        try:
-            [refconfig] = (c for c in configs if c.name == 'REF')
-        except BaseException:
-            refconfig = None
-        resultfiles = runner.subcommand_run(None, args,
-                              srcdir=rootdir,
-                              buildondemand=not args.build,
-                              builddirs=[config.builddir for config in configs],
-                              refbuilddir=refconfig.builddir if refconfig else None,
-                              filterfunc=no_ref,
-                              resultdir=resultdir)
-
-        # If not evaluating the just-executed, search for previously saved result files.
-        if resultfiles is None:
-            die("Not yet implemented")
+            # TODO: Filter result files
+            resultfiles = []
+            for xmlfile in  resultdir .rglob("*.xml"):
+                resultfiles.append(xmlfile)
 
         subcommand_evaluate(None,args,resultfiles=resultfiles,resultsdir=resultdir)
 
