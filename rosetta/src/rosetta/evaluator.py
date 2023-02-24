@@ -69,7 +69,6 @@ resultfiles
                 reportfile = resultsdir /  reportfile
 
 
-
             # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
             save_report(results,filename=reportfile)
 
@@ -313,7 +312,7 @@ def load_resultfiles(resultfiles, filterfunc=None):
 
 
 
-def results_compare(results, compare_by, group_by=None, compare_val=None, show_groups=None,always_columns=["program"]):
+def results_compare(results, compare_by, group_by=None, compare_val=None, show_groups=None, always_columns=["program"]):
     groups = GroupedBenches(data=results,group_by=group_by,compare_by=[compare_by])
 
     # Categorical groupings
@@ -332,7 +331,7 @@ def results_compare(results, compare_by, group_by=None, compare_val=None, show_g
     common_columns = more_columns + common_columns
 
     print_comparison(groups_of_results=grouped_results,
-                    list_of_resultnames=all_cmpvals,
+                     list_of_resultnames=all_cmpvals,
                      common_columns=common_columns,
                      compare_columns=compare_columns)
 

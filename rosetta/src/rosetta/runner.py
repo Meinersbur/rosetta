@@ -34,6 +34,7 @@ from .evaluator import subcommand_evaluate
 # import tqdm # progress meter
 
 
+
 class BenchVariants:
     def __init__(self, default_size, serial=None, cuda=None):
         None
@@ -394,9 +395,11 @@ def runner_main(builddir):
     runner_main_run()
 
 
+def runner_main_run( srcdir, builddir):
+    runner_main_run_argv(sys.argv[1:], srcdir, builddir)
 
 
-def runner_main_run(srcdir, builddir):
+def runner_main_run_argv(argv, srcdir, builddir):
     with globalctxmgr:
         parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
         add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-data")
@@ -404,14 +407,13 @@ def runner_main_run(srcdir, builddir):
         subcommand_run(parser, None, srcdir, builddirs=[builddir], refbuilddir=builddir, resultdir=resultdir)
         subcommand_evaluate(parser,None,resultfiles=None,resultsdir=resultdir)
 
-        args = parser.parse_args(sys.argv[1:])
+        args = parser.parse_args(argv)
         args.configure = False
         args.build = False
         subcommand_default_actions(args)
 
-        resultfiles = subcommand_run(None, args, srcdir, builddirs=[
-                       builddir], buildondemand=args.buildondemand, refbuilddir=builddir, resultdir=resultdir)
-        subcommand_evaluate(None, args,resultfiles)
+        resultfiles = subcommand_run(None, args, srcdir, builddirs=[builddir], buildondemand=args.buildondemand, refbuilddir=builddir, resultdir=resultdir)
+        subcommand_evaluate(None, args, resultfiles)
 
 
 
@@ -550,7 +552,7 @@ def rosetta_config(resultsdir):
 
 benchlistfile = None
 import_is_ref = None
-benchmarks: typing .List[Benchmark] = []
+benchmarks: typing.List[Benchmark] = []
 
 
 def register_benchmark(basename, target, exepath, buildtype, ppm, configname,

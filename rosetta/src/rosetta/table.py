@@ -173,6 +173,7 @@ class Table:
             self.column_formatters[name] = formatter
 
     def make_supercolumn(self, name, subcolumns):
+        assert subcolumns, "Supercolumn exists of at least one column"
         assert name in self.columns, "add column first before making it a supercolumn"
         assert name not in self.supercolumns, "already is a supercolumn"
         self.supercolumns[name] = subcolumns

@@ -374,7 +374,7 @@ class Invoke:
 
     def diag(self, onerror=None, print_stdout=False, print_stderr=False,
              print_prefixed=True, print_command=True, print_exitcode=True, **kwargs):
-        return self.execute(onerror=first_defined(onerror, Invoke.IGNORE), print_stdout=print_stdout,
+        return self.execute(onerror=first_defined(onerror, Invoke.IGNORE), print_command=print_command, print_stdout=print_stdout,
                             print_stderr=print_stderr, print_prefixed=print_prefixed, print_exitcode=print_exitcode, **kwargs)
 
     # Execute to get the command's result

@@ -136,12 +136,12 @@ def parse_build_configs(args, implicit_reference):
 
     # Add additional configurations that are stored in RosettaCache.txt files.
     for k in first_defined( args.config, []):
-            if k not in keys:
-                configs.append(BuildConfig(name=k,is_predefined=True, ppm=None,cmake_arg=None,cmake_def=None, compiler_arg=None,compiler_def=None))
+        if k not in keys:
+            configs.append(BuildConfig(name=k,is_predefined=True, ppm=None,cmake_arg=None,cmake_def=None, compiler_arg=None,compiler_def=None))
 
     # Use single config if no "CONFIG:" is specified
     if not configs:
-        configs.append(BuildConfig(ppm=ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
+        configs.append(BuildConfig(name=None, ppm=ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
                        compiler_arg=compiler_arg[''], compiler_def=compiler_def['']))
 
 
