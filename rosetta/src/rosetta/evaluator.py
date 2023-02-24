@@ -1,34 +1,23 @@
 # -*- coding: utf-8 -*-
 
 
-import importlib.util
+
 import importlib
-import contextlib
-import typing
-import configparser
 import io
 from collections import defaultdict
-import math
 import colorama
 import xml.etree.ElementTree as et
 from typing import Iterable
-import json
 import datetime
-import os
 import html
 import pathlib
-import subprocess
-import argparse
-import sys
 from itertools import count
-import base64
 import matplotlib.pyplot as plt # TODO: Only depend on matplotlib when really needed
 import matplotlib.colors as mcolors
 from cycler import cycler
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
-from .util import invoke
 from .table import *
 from .stat import *
 from .common import *
@@ -36,7 +25,7 @@ from .common import *
 
 
 
-def subcommand_evaluate(parser,args,resultfiles,resultsdir):
+def subcommand_evaluate(parser,args,resultfiles,resultsdir=None):
     """
 Evaluate a set of results. This can be from just executed benchmarks or reading from xml files.
 
@@ -75,7 +64,11 @@ resultfiles
                 fig.canvas.draw_idle()
 
             now = datetime.datetime.now() # TODO: Use runner.make_resultssubdir
-            reportfile = resultsdir /  f"report_{now:%Y%m%d_%H%M}.html"
+            reportfile = mkpath( f"report_{now:%Y%m%d_%H%M}.html")
+            if resultsdir:
+                reportfile = resultsdir /  reportfile
+
+
 
             # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
             save_report(results,filename=reportfile)

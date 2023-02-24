@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-import cwcwidth
+
 import importlib.util
 import importlib
 import contextlib
@@ -409,9 +409,9 @@ def runner_main_run(srcdir, builddir):
         args.build = False
         subcommand_default_actions(args)
 
-        resultfiles=  subcommand_run(None, args, srcdir, builddirs=[
+        resultfiles = subcommand_run(None, args, srcdir, builddirs=[
                        builddir], buildondemand=args.buildondemand, refbuilddir=builddir, resultdir=resultdir)
-        subcommand_evaluate(None,args,resultfiles)
+        subcommand_evaluate(None, args,resultfiles)
 
 
 

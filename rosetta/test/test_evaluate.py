@@ -1,10 +1,16 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 import unittest
-import rosetta.evaluate
+import os
+import sys
 
+print("test_evalute executing")
+#sys.path.insert(0,  os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
+
+import rosetta
+from rosetta.scripts.run import main
+import rosetta.runner
 
 
 class TestStringMethods(unittest.TestCase):
