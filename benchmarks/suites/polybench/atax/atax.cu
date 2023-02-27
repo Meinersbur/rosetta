@@ -16,7 +16,6 @@ __global__ void kernel3(int m, int n, real *A, real *x, real *y, real *tmp) {
 __global__ void kernel4(int m, int n, real *A, real *x, real *y, real *tmp) {
   idx_t j = blockDim.x * blockIdx.x + threadIdx.x;
 
-
   if (j < n) {
     for (idx_t i = 0; i < m; i++)
       y[j] += A[i * n + j] * tmp[i];

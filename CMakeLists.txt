@@ -26,7 +26,7 @@ if (CMAKE_CONFIGURATION_TYPES)
 elseif (CMAKE_BUILD_TYPE)
   set(_build_types "${CMAKE_BUILD_TYPE}")
 else ()
-  message(FATAL_ERROR "Cannot determine the build types")
+  message(FATAL_ERROR "Cannot determine the build type(s). Try -DCMAKE_BUILD_TYPE=Release")
 endif ()
 
 if (CMAKE_BUILD_TYPE)
