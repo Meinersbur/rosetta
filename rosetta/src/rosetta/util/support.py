@@ -13,6 +13,8 @@ import shutil
 import sys
 import stat
 from pathlib import Path
+import logging as log 
+
 
 
 shsplit = shlex.split
@@ -172,12 +174,18 @@ def mkpath(path):
         return None
     if isinstance(path, pathlib.Path):
         return path
+    if isinstance(path,tempfile.TemporaryDirectory):
+        return pathlib.Path(path.name)
     return pathlib.Path(path)
 
 
 def mkpurepath(path):
+    if isinstance(path, pathlib.Path):
+            return pathlib.PurePath(path)
     if isinstance(path, pathlib.PurePath):
         return path
+    if isinstance(path,tempfile.TemporaryDirectory):
+        return pathlib.PurePath(path.name)
     return pathlib.PurePath(path)
 
 
@@ -335,8 +343,9 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
+
 def die(msg):
-    eprint(msg)
+    log.critical(msg)
     sys.exit(1)
 
 

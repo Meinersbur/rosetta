@@ -175,6 +175,7 @@ if (_default_build_type)
                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 endif ()
 
+
 # Stage 2 #######################################################################################################
 
 set(_benchpropfiles)
@@ -185,6 +186,7 @@ foreach (_benchmark IN LISTS _benchmarks)
     PROPERTY ROSETTA_BENCHPROPFILE)
   list(APPEND _benchpropfiles "${_benchpropfile}")
 endforeach ()
+message("Stage2 _benchpropfiles: ${_benchpropfiles}")
 
 set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage2.py")
 set(_stage2args
