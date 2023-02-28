@@ -55,7 +55,12 @@ class ManagedBuilddirTests(unittest.TestCase):
 
     def test_bench(self):
         rosetta.driver.driver_main( [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
- 
+        results = list((self.rootdir /'results').glob('**/*.xml'))
+        self.assertTrue(len(results)>=1)
+        for r in results:
+            self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+
+
 
 
 if __name__ == '__main__':

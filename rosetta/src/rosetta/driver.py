@@ -464,11 +464,11 @@ def driver_main(
 
             if probe:
                 assert args.problemsizefile, "Requires to set a problemsizefile to set"
-                run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+                runner.run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
             if verify:
-                refdir = refbuilddir / 'refout'
-                run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
+                refdir = builddir / 'refout'
+                runner.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
 
             resultfiles = None
             if bench:

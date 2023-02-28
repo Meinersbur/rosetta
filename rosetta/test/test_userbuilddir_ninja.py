@@ -40,6 +40,10 @@ class UserBuilddirNinja(unittest.TestCase):
         self.assertTrue((self.builddir / 'benchmarks' / 'suites.polybench.cholesky.serial').exists())
 
 
+    def test_verify(self):
+        rosetta.driver.driver_main( [None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
+
+
     def test_bench(self):
         rosetta.driver.driver_main([None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)     
         results = list((self.builddir /'results').glob('**/*.xml'))
