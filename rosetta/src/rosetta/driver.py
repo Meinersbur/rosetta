@@ -189,6 +189,7 @@ verbose = None
 class DriverMode:
     MANAGEDBUILDDIR = NamedSentinel('managed builddir(s)')
     USERBUILDDIR = NamedSentinel('user builddir')
+    FROMCMAKE = NamedSentinel('called by cmake')
 
 
 
@@ -209,19 +210,22 @@ def driver_main(
         argv: typing.List[str],
         mode: DriverMode,
         default_action: DefaultAction = None,
-        srcdir=None,
-        builddir=None,
-        rootdir=None):
+        benchlistfile:pathlib.Path = None,
+        srcdir:pathlib.Path=None,
+        builddir:pathlib.Path=None,
+        rootdir:pathlib.Path=None):
     assert argv is not None
     assert mode in {DriverMode.USERBUILDDIR, DriverMode.MANAGEDBUILDDIR}
-    assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD,
-                              DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
+    assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD, DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
 
     if mode == DriverMode.USERBUILDDIR:
+        assert benchlistfile is not None
         assert rootdir is None
         assert builddir is not None
 
+
     if mode == DriverMode.MANAGEDBUILDDIR:
+        assert benchlistfile is  None
         assert builddir is None
 
     # TODO: Description according default_action
@@ -306,10 +310,10 @@ def driver_main(
     if mode == DriverMode.USERBUILDDIR:
         args.configure = False
 
-    default_action = default_action or determine_default_action(args)
-    if not default_action:
+    main_action = default_action or determine_default_action(args)
+    if not main_action:
         die("No action to take")
-    apply_default_action(default_action, args)
+    apply_default_action(main_action, args)
 
     with globalctxmgr:
         if mode == DriverMode.MANAGEDBUILDDIR:
@@ -335,7 +339,7 @@ def driver_main(
 
             # If only cleaning, clean everything
             # TODO: If specific config specified, clean only those
-            if default_action == DefaultAction.CLEAN:
+            if main_action == DefaultAction.CLEAN:
                 for b in builddir.iterdir():
                     shutil.rmtree(b)
                 return 
@@ -439,13 +443,28 @@ def driver_main(
             # if bench is None and not verify and not probe:
             #    bench = True
 
+            resultdir = builddir / 'results'
+            configure_uptodate =False
+
             if args.build:
+                # TODO: Build only filtered executables
                 invoke_verbose('cmake', '--build', builddir, cwd=builddir)
+                configure_uptodate=True
+
+            if main_action == DefaultAction.BUILD:
+                return 
+
+
+            
+            if not configure_uptodate:
+                invoke_verbose('cmake', '--build',builddir,  '--target', 'build.ninja',  cwd=builddir)
+
+            # Discover available benchmarks
+            runner.load_register_file(benchlistfile)
 
             if probe:
                 assert args.problemsizefile, "Requires to set a problemsizefile to set"
-                run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime,
-                          limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+                run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
             if verify:
                 refdir = refbuilddir / 'refout'
@@ -453,8 +472,7 @@ def driver_main(
 
             resultfiles = None
             if bench:
-                resultfiles = runner.run_bench(
-                    srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+                resultfiles = runner.run_bench(srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
 
             return resultfiles
 

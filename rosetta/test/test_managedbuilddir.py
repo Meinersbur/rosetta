@@ -34,6 +34,7 @@ class ManagedBuilddirTests(unittest.TestCase):
         builds = list((self.rootdir / 'build' ).iterdir())
         self.assertEquals(  len( builds), 0 )
 
+
     def test_configure(self):
         rosetta.driver.driver_main( [None, '--configure', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
         builds = list((self.rootdir / 'build' ).iterdir())
@@ -41,19 +42,20 @@ class ManagedBuilddirTests(unittest.TestCase):
         for build in builds:
             self.assertTrue((build / 'CMakeCache.txt').exists())
 
+
     def test_build(self):
         rosetta.driver.driver_main( [None, '--build', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3", "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
         for build in (self.rootdir / 'build' ).iterdir():
             self.assertTrue((build / 'benchmarks' / 'Release' / 'suites.polybench.cholesky.serial').exists())
 
-    #def test_probe(self):
-    #    rosetta.driver.driver_main( [None, '--probe',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3",   "--limit-walltime=1s"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
 
     def test_verify(self):
         rosetta.driver.driver_main( [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
 
+
     def test_bench(self):
         rosetta.driver.driver_main( [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+ 
 
 
 if __name__ == '__main__':
