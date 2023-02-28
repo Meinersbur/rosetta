@@ -2,7 +2,6 @@
 cmake_path(CONVERT "$ENV{PYTHONPATH}" TO_CMAKE_PATH_LIST _pythonpath)
 list(APPEND _pythonpath "${CMAKE_SOURCE_DIR}/rosetta/src")
 cmake_path(CONVERT "${_pythonpath}" TO_NATIVE_PATH_LIST _pythonpath)
-message("_pythonpath: ${_pythonpath}")
 set(ENV{PYTHONPATH} "${_pythonpath}")
 
 # Stage 1 #######################################################################################################
@@ -86,7 +85,6 @@ if (ROSETTA_CONFIGNAME)
   list(APPEND "--configname=${ROSETTA_CONFIGNAME}")
 endif ()
 list(APPEND _stage1args ${ROSETTA_BENCH_FILTER})
-# message("Executing: ${Python_EXECUTABLE} -m rosetta.scripts.gen-stage1 ${_stage1args}")
 execute_process(COMMAND "${Python_EXECUTABLE}" -m rosetta.scripts.gen-stage1 ${_stage1args} COMMAND_ERROR_IS_FATAL ANY)
 list(APPEND CMAKE_CONFIGURE_DEPENDS ${_stage1generator})
 
@@ -186,7 +184,7 @@ foreach (_benchmark IN LISTS _benchmarks)
     PROPERTY ROSETTA_BENCHPROPFILE)
   list(APPEND _benchpropfiles "${_benchpropfile}")
 endforeach ()
-message("Stage2 _benchpropfiles: ${_benchpropfiles}")
+
 
 set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage2.py")
 set(_stage2args

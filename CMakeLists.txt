@@ -356,17 +356,20 @@ file(
     "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-if __name__ == '__main__':
-  import sys
-  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
+import sys
+sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
+
 import pathlib
-from rosetta.runner import runner_main_run, load_register_file
+import rosetta.driver 
+
 thisscriptdir = pathlib.Path(__file__).parent
-
-load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
-
-if __name__ == '__main__':
-  runner_main_run(srcdir='${CMAKE_SOURCE_DIR}',builddir=thisscriptdir)
+rosetta.driver.driver_main(
+    mode=rosetta.driver.DriverMode.USERBUILDDIR,
+    default_action=rosetta.driver.DefaultAction.BENCH,
+    benchlistfile=thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py',
+    srcdir='${CMAKE_SOURCE_DIR}',
+    builddir=thisscriptdir
+  )
 "
     FILE_PERMISSIONS
     OWNER_READ
@@ -390,17 +393,20 @@ file(
     "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-if __name__ == '__main__':
-  import sys
-  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
+import sys
+sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
+
 import pathlib
-from rosetta.runner import runner_main_probe, load_register_file, runner_main_verify
+import rosetta.driver 
+
 thisscriptdir = pathlib.Path(__file__).parent
-
-load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
-
-if __name__ == '__main__':
-  runner_main_verify(srcdir='${CMAKE_SOURCE_DIR}',builddir=thisscriptdir)
+rosetta.driver.driver_main(
+    mode=rosetta.driver.DriverMode.USERBUILDDIR,
+    default_action=rosetta.driver.DefaultAction.VERIFY,
+    benchlistfile=thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py',
+    srcdir='${CMAKE_SOURCE_DIR}',
+    builddir=thisscriptdir
+  )
 "
     FILE_PERMISSIONS
     OWNER_READ
@@ -424,17 +430,20 @@ file(
     "#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-if __name__ == '__main__':
-  import sys
-  sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
+import sys
+sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
+
 import pathlib
-from rosetta.runner import runner_main_probe, load_register_file
+import rosetta.driver 
+
 thisscriptdir = pathlib.Path(__file__).parent
-
-load_register_file(thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py')
-
-if __name__ == '__main__':
-  runner_main_probe(srcdir='${CMAKE_SOURCE_DIR}',builddir=thisscriptdir)
+rosetta.driver.driver_main(
+    mode=rosetta.driver.DriverMode.USERBUILDDIR,
+    default_action=rosetta.driver.DefaultAction.PROBE,
+    benchlistfile=thisscriptdir / 'benchmarks' / 'benchlist-$<CONFIG>.py',
+    srcdir='${CMAKE_SOURCE_DIR}',
+    builddir=thisscriptdir
+  )
 "
     FILE_PERMISSIONS
     OWNER_READ
@@ -462,6 +471,7 @@ if (_default_build_type)
   # add_custom_target(verify COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
   # COMMENT "Verify all benchmarks ..." USES_TERMINAL VERBATIM ) add_dependencies(verify build ${_references})
 endif ()
+
 
 # Summary #########################################################################
 

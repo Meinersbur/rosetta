@@ -37,16 +37,16 @@ class UserBuilddirMulticonfig(unittest.TestCase):
 
 
     def test_build(self):
-        rosetta.driver.driver_main( [None, '--build'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
+        rosetta.driver.driver_main(  argv=[None, '--build'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
         self.assertTrue((self.builddir / 'benchmarks' / 'Release' / 'suites.polybench.cholesky.serial').exists())
 
 
     def test_verify(self):
-        rosetta.driver.driver_main( [None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
+        rosetta.driver.driver_main(  argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
 
 
     def test_bench(self):
-        rosetta.driver.driver_main([None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)     
+        rosetta.driver.driver_main( argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)     
         results = list((self.builddir /'results').glob('**/*.xml'))
         self.assertTrue(len(results)>=1)
         for r in results:

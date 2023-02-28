@@ -207,14 +207,13 @@ class DefaultAction:
 
 
 def driver_main(
-        argv: typing.List[str],
         mode: DriverMode,
+        argv: typing.List[str]=None,
         default_action: DefaultAction = None,
         benchlistfile:pathlib.Path = None,
         srcdir:pathlib.Path=None,
         builddir:pathlib.Path=None,
         rootdir:pathlib.Path=None):
-    assert argv is not None
     assert mode in {DriverMode.USERBUILDDIR, DriverMode.MANAGEDBUILDDIR}
     assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD, DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
 
@@ -293,7 +292,7 @@ def driver_main(
     add_boolean_argument(parser, 'compare', default=None, help="Compare two or more benchmark runs")
 
 
-    args = parser.parse_args(argv[1:])
+    args = parser.parse_args(None if argv is None else argv[1:] )
     global verbose
     verbose = args.verbose
 
