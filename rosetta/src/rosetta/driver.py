@@ -190,8 +190,13 @@ verbose = None
 
 
 class DriverMode:
+    """Multiple builddirs managed by rosetta.py. May create+deleta builddirs as needed."""
     MANAGEDBUILDDIR = NamedSentinel('managed builddir(s)')
+
+    """Running from a user-created cmake builddir. Must not change any CMakeCache settings."""
     USERBUILDDIR = NamedSentinel('user builddir')
+
+    """Invoked by cmake/make itself (e.g. `ninja bench`). Should not trigger any re=configure or build, assume this has already been done."""
     FROMCMAKE = NamedSentinel('called by cmake')
 
 

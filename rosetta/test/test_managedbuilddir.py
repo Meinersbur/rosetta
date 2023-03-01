@@ -52,10 +52,13 @@ class ManagedBuilddirTests(unittest.TestCase):
     def test_verify(self):
         rosetta.driver.driver_main( argv= [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
 
+     
+
 
     def test_bench(self):
         rosetta.driver.driver_main( argv= [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
-        
+ 
+    
         # Check benchmarking results
         results = list((self.rootdir /'results').glob('**/*.xml'))
         self.assertTrue(len(results)>=1)
@@ -67,7 +70,22 @@ class ManagedBuilddirTests(unittest.TestCase):
         self.assertEqual(len(reports),1)
 
 
+    def test_compare(self):
+        rosetta.driver.driver_main( argv= [None, '--bench', '--compare',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky",  "--compiler-arg=O2:-O2", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+        
+        # Check result dir content
+        resultlist = list((self.rootdir / 'build' ).iterdir())
+        self.assertTrue(len(resultlist)== 2, "resultdir for xml files and the html report")
 
+        # Check result files
+        results = list((self.rootdir /'results').glob('**/*.xml'))
+        self.assertTrue(len(results)>=2, "At least one serial result per optimization level")
+        for r in results:
+            self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+
+        # Check report
+        reports = list((self.rootdir /'results').glob('report_*.html'))
+        self.assertEqual(len(reports),1)
 
 
 if __name__ == '__main__':

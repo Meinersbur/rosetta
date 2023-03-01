@@ -41,8 +41,14 @@ class UserBuilddirMulticonfig(unittest.TestCase):
 
 
     def test_verify(self):
-        rosetta.driver.driver_main(  argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main(  argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )       
 
+        s = f.getvalue()
+        self.assertTrue(re.search(r'^Output of .* considered correct$',s, re.MULTILINE ))
+        self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
+        
 
     def test_bench(self):
         rosetta.driver.driver_main( argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)    
