@@ -41,19 +41,21 @@ static real sqr(real v) { return v * v; }
 static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A, multarray<real, 2> R, multarray<real, 2> Q) {
 
+    //A.dump();
+    //R.dump();
+    //Q.dump();
 
   for (idx_t k = 0; k < n; k++) {
-
     real sum = 0;
-    // FIXME: For some reason OpenMP-reduction numericall destabilizes this
+    // FIXME: For some reason OpenMP-reduction numerically destabilizes this
     // Possibly inherent to Gram-Schmidt numeric instability
     // https://en.wikipedia.org/wiki/Gram–Schmidt_process#Numerical_stability
-    // Generate fakedata that a not that similat to each other
-#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A) reduction(+ \
-                                                                                        : sum)
+    // Generate fakedata that is not that similar to each other
+#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A) \
+                     reduction(+: sum)
     for (int i = 0; i < m; i++) {
       //#pragma omp critical
-      //                                   printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
+      // printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
       sum += sqr(A[i][k]);
     }
 
@@ -83,13 +85,14 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 void run(State &state, pbsize_t pbsize) {
-  pbsize_t m = pbsize - pbsize / 6; // 1000
-  pbsize_t n = pbsize;              // 1200
-
+    pbsize_t m = pbsize;              // 1200
+    pbsize_t n = pbsize - pbsize / 6; // 1000
+  
 
   auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
   auto R = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ true, "R");
   auto Q = state.allocate_array<real>({m, n}, /*fakedata*/ false, /*verify*/ true, "Q");
+
 
   for (auto &&_ : state.manual()) {
     condition(m, n, A);

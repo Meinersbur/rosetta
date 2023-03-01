@@ -11,6 +11,7 @@
 #include <string>
 #include <type_traits>
 #include <variant>
+#include <iomanip>
 
 
 // TODO: ROSETTA_PLATFORM_NVIDIA
@@ -367,6 +368,41 @@ public:
 
 
 
+static const char * indent(int amount) {
+    static const char *whitespace =
+"                                                                                "; // 80 spaces
+ assert(amount >= 0);
+    assert (amount <= 80);
+    return &whitespace[80 - amount];
+}
+
+template<typename T>
+void dumpArray(T *data,std::tuple<int64_t,int64_t> DimLengths, const char *d) {
+    int dlen = strlen(d);
+    for (int i = 0; i < std::get<0>(DimLengths); i += 1) {
+        if (i == 0) {
+            if (d)
+                std::cerr << d << " = [ ";
+            else
+                std::cerr << "[ ";
+        }
+        else { 
+            if (d)
+                std::cerr << indent(dlen) << "     ";
+            else 
+                std::cerr << "  ";
+        }
+        for (int j = 0; j < std::get<1>(DimLengths); j += 1) {
+                if (j > 0) std::cerr << " ";
+                std::cerr <<  std::setw(4)  << data[i *std::get<1>(DimLengths) + j ] ;
+        }
+        if (i!=std::get<0>(DimLengths)-1)
+        std::cerr << "\n"; else 
+        std::cerr << " ]" << std::endl;
+    }
+}
+
+
 template <typename T, int DIMS>
 class multarray {
   typedef T ElementType;
@@ -382,14 +418,6 @@ private:
 public:
   multarray(T *data, TupleTy lengths) : data(data), DimLengths(lengths) {}
 
-
-#if 0
-    /* constexpr */ int length(int d) const { 
-        return DimLengths[d];
-    }
-#endif
-
-
   template <typename Dummy = void>
   typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS == 1), T &>::type
   operator[](int64_t i) {
@@ -398,8 +426,6 @@ public:
     assert(i < len);
     return data[i];
   }
-
-
 
   template <typename Dummy = void>
   typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS > 1), _multarray_partial_subscript<T, DIMS - 1>>::type
@@ -415,69 +441,14 @@ public:
 
 
 
-#if 0
-    /// Overload for length(int) for !D
-    template<typename Dummy = void>
-    typename std::enable_if<(sizeof...(__L)==1), typename std::conditional<true, int, Dummy>::type >::type
-        /* constexpr */  length() { 
-        return length(0);
-    }
-#endif
+  void dump() const {
+    dumpArray(data, DimLengths, nullptr);
+  }
 
-
-
-#if 0
-    T *ptr( std::array<size_t, DIMS> coords)  { 
-        ssize_t flatindex = coords[0];
-        for (int i = 1; i < DIMS; ++i) {
-            flatindex *= DimLengths[i];
-            flatindex += coords[i];
-        }
-        return localdata + flatindex;
-    }
-
-
-    T *ptr(size_t coords[DIMS])  { 
-        ssize_t flatindex = coords[0];
-        for (int i = 1; i < DIMS; ++i) {
-            flatindex *= DimLengths[i];
-            flatindex += coords[i];
-        }
-        return localdata + flatindex;
-    }
-
-
-
-
-    T *ptr(typename _make_tuple<__L>::type coords)  { 
-        ssize_t flatindex = coords[0];
-        for (int i = 1; i < DIMS; ++i) {
-            flatindex *= DimLengths[i];
-            flatindex +=  coords[i];
-        }
-        return localdata + flatindex;
-    }
-#endif
-
-
-#if 0
-    template<typename Dummy = void>
-    typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS==1), T&>::type
-        operator[](int64_t i)  { 
-        return *ptr(i);
-    }
-
-    typedef _multarray_partial_subscript<T, typename _unqueue<__L...>::first, typename _unqueue<__L...>::rest> subty;
-
-
-    template<typename Dummy = void>
-    typename std::enable_if<std::is_same<Dummy, void>::value && (DIMS>1), subty>::type
-        operator[](int64_t i) {
-        return subty(this, i);
-    }
-#endif
+  void dump(const char *d) const {
+      dumpArray(data, DimLengths, d);
+  }
 }; // class multarray
-
 
 
 // TODO: Make extensible depending on PPM.

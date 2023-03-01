@@ -144,8 +144,8 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 void run(State &state, pbsize_t pbsize) {
-  pbsize_t m = pbsize - pbsize / 6; // 1000
-  pbsize_t n = pbsize;              // 1200
+    pbsize_t m = pbsize;              // 1200
+    pbsize_t n = pbsize - pbsize / 6; // 1000
 
 
   auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
