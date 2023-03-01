@@ -30,26 +30,31 @@ class UserBuilddirNinja(unittest.TestCase):
         invoke.diag('cmake', '-S', self.srcdir, '-B',self. builddir,  '-GNinja',  '-DCMAKE_BUILD_TYPE=Release','-DROSETTA_BENCH_FILTER=--filter=cholesky', cwd= self.builddir,onerror=invoke.Invoke.EXCEPTION)
         self.benchlistfile = self.builddir / 'benchmarks' / 'benchlist.py'
 
-
     def tearDown(self):
         self.test_dir.cleanup()
 
 
     def test_build(self):
-        rosetta.driver.driver_main( [None, '--build'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
+        rosetta.driver.driver_main(argv= [None, '--build'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
         self.assertTrue((self.builddir / 'benchmarks' / 'suites.polybench.cholesky.serial').exists())
 
 
     def test_verify(self):
-        rosetta.driver.driver_main( [None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
+        rosetta.driver.driver_main( argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )     
 
 
     def test_bench(self):
-        rosetta.driver.driver_main([None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)     
+        rosetta.driver.driver_main(argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)     
+
+        # Check benchmark results 
         results = list((self.builddir /'results').glob('**/*.xml'))
         self.assertTrue(len(results)>=1)
         for r in results:
             self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+
+        # Check report
+        reports = list((self.builddir /'results').glob('report_*.html'))
+        self.assertEqual(len(reports),1)
 
 
 

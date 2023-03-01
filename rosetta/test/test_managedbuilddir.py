@@ -14,7 +14,7 @@ from rosetta.util.support import *
 class ManagedBuilddirTests(unittest.TestCase):
     def setUp(self):
         self.srcdir = mkpath(__file__ ).parent.parent.parent
-        self.test_dir = tempfile.TemporaryDirectory('managed-')
+        self.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
         self.rootdir = mkpath( self.test_dir)
         print("srcdir: " , self.srcdir)
         print("rootdir: " , self.rootdir)
@@ -55,10 +55,17 @@ class ManagedBuilddirTests(unittest.TestCase):
 
     def test_bench(self):
         rosetta.driver.driver_main( argv= [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+        
+        # Check benchmarking results
         results = list((self.rootdir /'results').glob('**/*.xml'))
         self.assertTrue(len(results)>=1)
         for r in results:
             self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+
+        # Check report
+        reports = list((self.rootdir /'results').glob('report_*.html'))
+        self.assertEqual(len(reports),1)
+
 
 
 

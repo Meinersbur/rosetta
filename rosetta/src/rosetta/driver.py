@@ -31,6 +31,9 @@ import logging as log
 import typing
 from . import runner
 from .builder import *
+from .  import  evaluator
+
+
 
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
@@ -177,8 +180,8 @@ def apply_default_action(default_action, args):
     args.bench = first_defined(args.bench, default_action in {
                                DefaultAction.BENCH, DefaultAction.VERIFY_THEN_BENCH})
     args.evaluate = first_defined(args.evaluate, default_action in {
-                                  DefaultAction.EVALUATE})
-    args.report = first_defined(args.evaluate, default_action in { DefaultAction.BENCH, DefaultAction.REPORT})
+                                  DefaultAction.EVALUATE,       DefaultAction.BENCH,   DefaultAction.VERIFY_THEN_BENCH})
+    args.report = first_defined(args.evaluate, default_action in { DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
     args.compare = first_defined(args.compare, default_action in { DefaultAction.COMPARE})
 
 
@@ -408,11 +411,12 @@ def driver_main(
 
             def no_ref(bench):
                 return bench.configname != 'REF' and bench.ppm in config.ppm
-            if args.bench:
-                try:
-                    [refconfig] = (c for c in configs if c.name == 'REF')
-                except BaseException:
-                    refconfig = None
+            if args.bench:                
+                refconfigs = list(c for c in configs if c.name == 'REF')
+                refconfig = None
+                if len(refconfigs) == 1:
+                    [refconfig] = refconfigs
+
                 resultfiles = runner.subcommand_run(None, args,
                                                     srcdir=rootdir,
                                                     buildondemand=not args.build,
@@ -429,8 +433,32 @@ def driver_main(
                 for xmlfile in resultdir .rglob("*.xml"):
                     resultfiles.append(xmlfile)
 
-            subcommand_evaluate(
-                None, args, resultfiles=resultfiles, resultsdir=resultdir)
+            #subcommand_evaluate( None, args, resultfiles=resultfiles, resultsdir=resultdir)
+            if args.evaluate:
+                resultsdir= resultdir
+                results = evaluator.load_resultfiles(resultfiles)
+
+                # Remove bogus entries
+                # results = [r for r in results if   r.durations.get('walltime', statistic([]) ).count >= 1 ]
+
+                #if len(builddirs) > 1:
+                evaluator.results_compare(results, compare_by="configname", compare_val=["walltime"])
+                #else:
+                #    evaluate(resultfiles)
+
+                if args.boxplot:
+                    fig = evaluator. results_boxplot(results)
+                    fig.savefig(fname=args.boxplot)
+                    fig.canvas.draw_idle()
+
+                now = datetime.datetime.now() # TODO: Use runner.make_resultssubdir
+                reportfile = mkpath( f"report_{now:%Y%m%d_%H%M}.html")
+                if resultsdir:
+                    reportfile = resultsdir /  reportfile
+
+
+                # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
+                evaluator.save_report(results,filename=reportfile)
 
 
 
