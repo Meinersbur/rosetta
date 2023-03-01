@@ -3,7 +3,6 @@
 
 from context import rosetta
 import unittest
-import os
 import sys
 import tempfile
 from  rosetta.driver import *
@@ -50,7 +49,13 @@ class ManagedBuilddirTests(unittest.TestCase):
 
 
     def test_verify(self):
-        rosetta.driver.driver_main( argv= [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main( argv= [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+
+        s = f.getvalue()
+        self.assertTrue(re.search(r'^Output of .*\.cholesky\.* considered correct$',s, re.MULTILINE ))
+        self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
 
      
 

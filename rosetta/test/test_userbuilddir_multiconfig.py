@@ -46,7 +46,7 @@ class UserBuilddirMulticonfig(unittest.TestCase):
             rosetta.driver.driver_main(  argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )       
 
         s = f.getvalue()
-        self.assertTrue(re.search(r'^Output of .* considered correct$',s, re.MULTILINE ))
+        self.assertTrue(re.search(r'^Output of .*\.cholesky\..* considered correct$',s, re.MULTILINE ))
         self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
         
 
