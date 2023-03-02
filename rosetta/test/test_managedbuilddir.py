@@ -10,8 +10,12 @@ from rosetta.util.support import *
 
 
 
+
+
 class ManagedBuilddirTests(unittest.TestCase):
     def setUp(self):
+        rosetta.runner.reset_registered_benchmarks()
+
         self.srcdir = mkpath(__file__ ).parent.parent.parent
         self.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
         self.rootdir = mkpath( self.test_dir)
@@ -51,18 +55,24 @@ class ManagedBuilddirTests(unittest.TestCase):
     def test_verify(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main( argv= [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+            rosetta.driver.driver_main( argv= [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
 
         s = f.getvalue()
-        self.assertTrue(re.search(r'^Output of .*\.cholesky\.* considered correct$',s, re.MULTILINE ))
+        self.assertTrue(re.search(r'^Output of idioms\.assign\..* considered correct$',s, re.MULTILINE ))
         self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
 
      
 
 
     def test_bench(self):
-        rosetta.driver.driver_main( argv= [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
- 
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main( argv= [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+    
+        # Evaluate output
+        s=f.getvalue()
+        self. assertTrue(re.search(r'Benchmark.+Wall', s, re.MULTILINE), "Evaluation table Header")
+        self. assertTrue(re.search(r'suites\.polybench\.cholesky', s, re.MULTILINE), "Benchmark entry")
     
         # Check benchmarking results
         results = list((self.rootdir /'results').glob('**/*.xml'))

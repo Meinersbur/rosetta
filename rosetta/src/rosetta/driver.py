@@ -416,7 +416,7 @@ def driver_main(
 
             def no_ref(bench):
                 return bench.configname != 'REF' and bench.ppm in config.ppm
-            if args.bench:                
+            if args.bench or args.verify or args.probe:                
                 refconfigs = list(c for c in configs if c.name == 'REF')
                 refconfig = None
                 if len(refconfigs) == 1:
@@ -505,6 +505,14 @@ def driver_main(
             resultfiles = None
             if bench:
                 resultfiles = runner.run_bench(srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+
+            if args.report and resultfiles:
+                results = evaluator.load_resultfiles(resultfiles)
+                now = datetime.datetime.now()
+                reportfile = mkpath( f"report_{now:%Y%m%d_%H%M}.html")
+                if resultdir:
+                    reportfile = resultdir /  reportfile
+                evaluator.save_report(results,filename=reportfile)
 
             return resultfiles
 

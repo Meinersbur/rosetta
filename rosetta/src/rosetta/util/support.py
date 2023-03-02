@@ -386,9 +386,6 @@ def removesuffix(s: str, suffix: str):
     return s
 
 
-# Testing
-assert removesuffix("mysuffix", "suffix") == "my"
-assert removesuffix("mynofix", "suffix") == "mynofix"
 
 
 

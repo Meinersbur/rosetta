@@ -578,6 +578,16 @@ def load_register_file(filename, is_ref=False):
         import_is_ref = None
 
 
+def reset_registered_benchmarks():
+    """
+Reset loaded benchmarks for unittsts
+    
+A better approach would be if load_register_file returns the availailable benchmarks and the caller to pass them on
+    """
+    global benchmarks
+    benchmarks=[]
+
+
 def gen_reference(exepath, refpath, problemsizefile):
     args = [exepath, f'--verify', f'--problemsizefile={problemsizefile}']
     invoke.call(*args, stdout=refpath, print_stderr=True, print_command=True)

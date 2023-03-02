@@ -22,6 +22,8 @@ import re
 
 class UserBuilddirNinja(unittest.TestCase):
     def setUp(self):
+        rosetta.runner.reset_registered_benchmarks()
+
         self.srcdir = mkpath(__file__ ).parent.parent.parent
         self.test_dir = tempfile.TemporaryDirectory(prefix='userninja-')
         self.builddir = mkpath(self.test_dir)

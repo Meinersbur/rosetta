@@ -17,11 +17,26 @@ import tempfile
 from  rosetta.driver import *
 from rosetta.util.support import *
 
+def setUpModule():
+    print("Enter module tests")
 
+def tearDownModule():
+    print("Exit module tests")
 
 
 class UserBuilddirMulticonfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        print("Enter class tests")
+
+    @classmethod
+    def tearDownClass(cls):
+        print("Exit class tests")
+
+
     def setUp(self):
+        rosetta.runner.reset_registered_benchmarks()
+
         self.srcdir = mkpath(__file__ ).parent.parent.parent
         self.test_dir = tempfile.TemporaryDirectory(prefix='userninja-')
         self.builddir = mkpath(self.test_dir)
@@ -43,7 +58,7 @@ class UserBuilddirMulticonfig(unittest.TestCase):
     def test_verify(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main(  argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )       
+            rosetta.driver.driver_main(  argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR, benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )       
 
         s = f.getvalue()
         self.assertTrue(re.search(r'^Output of .*\.cholesky\..* considered correct$',s, re.MULTILINE ))
