@@ -14,6 +14,9 @@ class BuildConfig:
         self.compiler_arg = compiler_arg
         self.compiler_def = compiler_def
         self.is_predefined = is_predefined
+        
+        # Use the previous configuration instead of defining a new one
+        self.usecur = False
 
         # TODO: select compiler executable
 

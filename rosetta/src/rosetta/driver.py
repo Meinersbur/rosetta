@@ -100,9 +100,16 @@ def parse_build_configs(args, implicit_reference):
                            cmake_arg=None, cmake_def=None, compiler_arg=None, compiler_def=None))
 
     # Use single config if no "CONFIG:" is specified
-    if not configs:
-        configs.append(BuildConfig(name=None, ppm=ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
-                       compiler_arg=compiler_arg[''], compiler_def=compiler_def['']))
+    if not configs or implicit_reference and (len(configs)==1):
+        defaultconf = BuildConfig(name=None, ppm=ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
+                       compiler_arg=compiler_arg[''], compiler_def=compiler_def[''])
+        configs.append(defaultconf)
+        #TODO: Not just for default config
+        if defaultconf.ppm or defaultconf.cmake_arg or defaultconf.cmake_def or defaultconf. compiler_arg or defaultconf.compiler_def:
+            pass
+        else:
+            defaultconf.usecur = True
+
 
     return configs
 
@@ -153,8 +160,12 @@ def determine_default_action(args):
         return DefaultAction.BENCH
     if args.verify:
         return DefaultAction.VERIFY
+    if args.probe and args.tune:
+        return DefaultAction.PROBE_TUNED
     if args.probe:
         return DefaultAction.PROBE
+    if args.tune:
+        return DefaultAction.TUNE
     if args.build:
         return DefaultAction.BUILD
     if args.configure:
@@ -163,6 +174,10 @@ def determine_default_action(args):
         return DefaultAction.CLEAN
     if args.evaluate:
         return DefaultAction.EVALUATE
+    if args.report:
+        return DefaultAction.REPORT
+    if args.compare:
+        return DefaultAction.COMPARE
     return DefaultAction.VERIFY_THEN_BENCH
 
 
@@ -173,8 +188,8 @@ def apply_default_action(default_action, args):
                                    DefaultAction.CONFIGURE} or None)
     args.build = first_defined(args.build, default_action in {
                                DefaultAction.BUILD,       DefaultAction.BENCH, DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH })
-    args.probe = first_defined(
-        args.probe, default_action in {DefaultAction.PROBE})
+    args.probe = first_defined(args.probe, default_action in {DefaultAction.PROBE})
+    args.tune = first_defined(args.tune, default_action in {DefaultAction.TUNE, DefaultAction.PROBE_TUNED})
     args.verify = first_defined(args.verify, default_action in {
                                 DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
     args.bench = first_defined(args.bench, default_action in {
@@ -206,6 +221,8 @@ class DefaultAction:
     CONFIGURE = NamedSentinel('configure')
     BUILD = NamedSentinel('build')
     PROBE = NamedSentinel('probe')
+    TUNE = NamedSentinel('tune')
+    PROBE_TUNED = NamedSentinel('probe_tuned') # Before probing a problem size, tune the benchmark with that problem size 
     VERIFY = NamedSentinel('verify')
     BENCH = NamedSentinel('bench')
     VERIFY_THEN_BENCH = NamedSentinel('verify_then_bench')
@@ -277,6 +294,9 @@ def driver_main(
     parser.add_argument('--limit-walltime', type=parse_time)
     parser.add_argument('--limit-rss', type=parse_memsize)
     parser.add_argument('--limit-alloc', type=parse_memsize)
+
+    # Tune step
+    add_boolean_argument(parser, 'tune', default=None, help="Benchmark performance tuning")
 
     # Verify step
     add_boolean_argument(parser, 'verify', default=None,
@@ -385,6 +405,8 @@ def driver_main(
                             pass
                         elif args.configure is False:
                             reusebuilddir = True
+                        elif config.usecur:
+                            reusebuilddir= True
                         elif configdescfile.is_file() and (builddir / 'build.ninja').exists():
                             existingopts = readfile(configdescfile).rstrip()
                             if existingopts == expectedopts:

@@ -1,53 +1,47 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import unittest
 
 from context import rosetta
-import unittest
+import rosetta.runner
 import tempfile
 import  rosetta.util.invoke as invoke
-import pathlib
 from rosetta.util.support import *
-import rosetta.runner
-from context import rosetta
 import unittest
-import os
 import sys
 import tempfile
 from  rosetta.driver import *
 from rosetta.util.support import *
+import shutil
 
-def setUpModule():
-    print("Enter module tests")
 
-def tearDownModule():
-    print("Exit module tests")
 
 
 class UserBuilddirMulticonfig(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print("Enter class tests")
+        cls.srcdir = mkpath(__file__ ).parent.parent.parent
+        cls.test_dir = tempfile.TemporaryDirectory(prefix='userninja-')
+        cls.builddir = mkpath(cls.test_dir)
+        print("srcdir: " , cls.srcdir)
+        print("builddir: " , cls.builddir)
+        invoke.diag('cmake', '-S', cls.srcdir, '-B',cls. builddir,  '-GNinja Multi-Config',  '-DROSETTA_BENCH_FILTER=--filter=cholesky', cwd= cls.builddir,onerror=invoke.Invoke.EXCEPTION)
+
+        cls.resultsdir= cls.builddir / 'results'
+        cls.benchlistfile = cls.builddir / 'benchmarks' / 'benchlist.py'
+
 
     @classmethod
     def tearDownClass(cls):
-        print("Exit class tests")
+        cls.test_dir.cleanup()
 
 
     def setUp(self):
         rosetta.runner.reset_registered_benchmarks()
-
-        self.srcdir = mkpath(__file__ ).parent.parent.parent
-        self.test_dir = tempfile.TemporaryDirectory(prefix='userninja-')
-        self.builddir = mkpath(self.test_dir)
-        print("srcdir: " , self.srcdir)
-        print("builddir: " , self.builddir)
-        invoke.diag('cmake', '-S', self.srcdir, '-B',self. builddir,  '-GNinja Multi-Config',  '-DROSETTA_BENCH_FILTER=--filter=cholesky', cwd= self.builddir,onerror=invoke.Invoke.EXCEPTION)
-
-        self.benchlistfile = self.builddir / 'benchmarks' / 'benchlist.py'
-
-    def tearDown(self):
-        self.test_dir.cleanup()
+        if self.resultsdir.exists():
+            shutil.rmtree(self.resultsdir)
+        #self.resultsdir.mkdir(parents=True)
 
 
     def test_build(self):

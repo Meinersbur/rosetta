@@ -49,8 +49,17 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
     for path in benchdir.rglob('*'):
         if not path.suffix.lower() in {'.cxx', '.cu', '.build'}:
             continue
-        if filter and not filter in path.name:
+
+        # Predict basename
+        # TODO: Separate filter path/basename
+        rel = path.parent.parent.relative_to(benchdir)
+        basename = path.stem
+        basename = '.'.join(list(rel.parts) + [basename])
+        
+        if filter and not filter in basename:
+            log.info(f"Benchmark {basename} does not match --filter={filter}")
             continue
+        log.info(f"Adding benchmark {path}")
         buildfiles.append(path)
 
     benchs = []
@@ -106,12 +115,16 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     benchs.append(bench)
 
                 globals['add_benchmark'] = add_benchmark
+                globals['__file__'] = relbuildfile
+
+                # Common PPMs for convenience
                 globals['serial'] = 'serial'
                 globals['cuda'] = 'cuda'
                 globals['omp_parallel'] = 'omp_parallel'
                 globals['omp_task'] = 'omp_task'
                 globals['omp_target'] = 'omp_target'
-                globals['__file__'] = relbuildfile
+                globals['mpi'] = 'mpi'
+
                 exec(script, module.__dict__)
 
     out = StringIO()

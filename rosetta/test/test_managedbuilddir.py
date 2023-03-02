@@ -9,6 +9,48 @@ from  rosetta.driver import *
 from rosetta.util.support import *
 
 
+def setUpModule():
+    print("Enter module tests")
+
+def tearDownModule():
+    print("Exit module tests")
+
+
+
+class ManagedBuilddirDefaultconfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.srcdir = mkpath(__file__ ).parent.parent.parent
+        cls.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
+        cls.rootdir = mkpath( cls.test_dir)
+        print("srcdir: " , cls.srcdir)
+        print("rootdir: " , cls.rootdir)
+
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
+
+        cls.resultsdir= cls.rootdir / 'results'
+
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.test_dir.cleanup()
+
+
+    def setUp(self):
+        rosetta.runner.reset_registered_benchmarks()
+        if self.resultsdir.exists():
+            shutil.rmtree(self.resultsdir)
+
+
+    def test_verify(self):
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main( argv= [None, '--verify'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+
+        s = f.getvalue()
+        self.assertTrue(re.search(r'^Output of .*idioms\.assign\..* considered correct$',s, re.MULTILINE ))
+        self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
+
 
 
 
@@ -52,14 +94,6 @@ class ManagedBuilddirTests(unittest.TestCase):
             self.assertTrue((build / 'benchmarks' / 'Release' / 'suites.polybench.cholesky.serial').exists())
 
 
-    def test_verify(self):
-        f = io.StringIO()
-        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main( argv= [None, '--verify',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
-
-        s = f.getvalue()
-        self.assertTrue(re.search(r'^Output of idioms\.assign\..* considered correct$',s, re.MULTILINE ))
-        self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
 
      
 

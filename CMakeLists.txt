@@ -121,12 +121,22 @@ if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL
   endif ()
 endif ()
 
+
 # OpenACC
 if (NOT DEFINED ROSETTA_PPM_OPENACC)
   find_package(OpenACC)
 elseif (ROSETTA_PPM_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
+
+
+# MPI
+if (NOT DEFINED ROSETTA_PPM_MPI)
+  find_package(MPI)
+elseif (ROSETTA_PPM_MPI)
+  find_package(MPI REQUIRED)
+endif ()
+
 
 # Introspection ################################################################
 
@@ -243,9 +253,16 @@ if (OpenACC_CXX_FOUND)
 endif ()
 option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
+set(_mpi_enabled_default OFF)
+if (MPI_CXX_FOUND)
+  set(_mpi _enabled_default ON)
+endif ()
+option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
+
+
 set(ROSETTA_REALTYPE
     "double"
-    CACHE STRING "Which type to prefer for floating-point values ('float' or 'double')")
+    CACHE STRING "Which type to prefer for floating-point values ('float', 'double', or 'long double')")
 
 set(ROSETTA_PROBLEMSIZE
     "medium"
@@ -268,6 +285,7 @@ endif ()
 if (NOT _problemsizefile)
   message(SEND_ERROR "Problem sizes required")
 endif ()
+
 
 # Build #######################################################################
 
@@ -554,6 +572,13 @@ if (ROSETTA_PPM_OPENACC)
 else ()
   list(APPEND _disabled_ppm "OpenACC")
 endif ()
+if (ROSETTA_PPM_MPI)
+  message(
+    "  MPI:         ${MPI_CXX_COMPILER} ${MPI_CXX_COMPILE_OPTIONS} ${MPI_CXX_COMPILE_DEFINITIONS} ${MPI_CXX_INLCUDE_DIRS} ${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBRARIES} (${MPI_CXX_VERSION})"
+  )
+else ()
+  list(APPEND _disabled_ppm "MPI")
+endif ()
 list(JOIN _disabled_ppm " " _disabled_ppm_str)
 message("Disabled PPMs: ${_disabled_ppm_str}")
 message("Enabled Platforms:")
@@ -573,7 +598,7 @@ message("Build:                     ninja (implicit for every command)")
 message("Search for new benchmarks: cmake .")
 message("")
 message("Probe max problemsize:     ./probe.py --limit-walltime=5s")
-message("Performance tuning:        ./tune.py [--problemsizefile PATH]")
+message("Performance tuning:        <TODO>")
 message("Verify correctness:        ./verify.py [--problemsizefile PATH]")
 message("Run benchmarks:            ./bench.py [--problemsizefile PATH]")
-message("Analyze previous runs:     ?")
+message("Analyze previous runs:     <TODO>")

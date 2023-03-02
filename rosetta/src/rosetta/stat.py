@@ -106,16 +106,22 @@ class Statistic:
 
     @property
     def minimum(self):
+        if not self._samples:
+            return None
         return self._samples[0]
 
     @property
     def maximum(self):
+        if not self._samples:
+            return None
         return self._samples[-1]
 
     # Location
 
     @property
     def mean(self):
+        if not self._samples:
+            return None
         return self._sum / self.count
 
     @property
@@ -134,26 +140,33 @@ class Statistic:
         assert d >= 1
         assert k >= 0 <= d
 
-        if not self._vals:
+        if not self._samples:
             return None
 
-        if k == 0:
-            return self._vals[0]
-        if k == n:
-            return self._vals[-1]
-
         n = self.count
+        if k == 0:
+            return self._samples[0]
+        if k == n:
+            return self._samples[-1]
+
         if (k * n - 1) % d == 0:
-            return self._vals[(k * n - 1) // d]
+            return self._samples[(k * n - 1) // d]
+        i1 = (k * n - 1) // d
+        i2 = i1+1
+        return (self._samples[i1] + self._samples[i2])/2
+
 
     def quartile(self, k: int):
         return self.quantile(k, 4)
 
+
     def decile(self, k: int):
         return self.quantile(k, 10)
 
+
     def percentile(self, k: int):
         return self.quantile(k, 100)
+
 
     @property
     def midrange(self):
@@ -189,6 +202,8 @@ class Statistic:
         def sqr(x):
             return x * x
         n = self.count
+        if n == 0:
+            return 0
         return self._sumsqr / n - sqr(self.mean)
 
     @property
