@@ -435,14 +435,40 @@ def driver_main(
                 if len(refconfigs) == 1:
                     [refconfig] = refconfigs
 
-                resultfiles = runner.subcommand_run(None, args,
-                                                    srcdir=rootdir,
-                                                    buildondemand=not args.build,
-                                                    builddirs=[
-                                                        config.builddir for config in configs],
-                                                    refbuilddir=refconfig.builddir if refconfig else None,
-                                                    filterfunc=no_ref,
-                                                    resultdir=resultdir)
+                refbuilddir=refconfig.builddir if refconfig else None
+                builddirs=[config.builddir for config in configs]
+                buildondemand=not args.build
+                
+                probe = args.probe  
+                verify = args.verify
+                bench = args.bench
+                #if bench is None and not verify and not probe:
+                #    bench = True
+
+                if probe:
+                    assert args.problemsizefile, "Requires to set a problemsizefile to set"
+                    runner.run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime,
+                            limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+
+                if verify:
+                    refdir = refbuilddir / 'refout'
+                    runner.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
+
+                resultfiles=None
+                if bench:
+                    resultfiles = runner.run_bench(srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+
+               
+
+
+                #resultfiles = runner.subcommand_run(None, args,
+                #                                    srcdir=rootdir,
+                #                                    buildondemand=not args.build,
+                #                                    builddirs=[
+                #                                        config.builddir for config in configs],
+                #                                    refbuilddir=refconfig.builddir if refconfig else None,
+                #                                    filterfunc=no_ref,
+                #                                    resultdir=resultdir)
             else:
                 # If not evaluating the just-executed, search for previously saved result files.
 
@@ -477,6 +503,7 @@ def driver_main(
 
                 # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
                 evaluator.save_report(results, filename=reportfile)
+
 
         if mode == DriverMode.USERBUILDDIR:
             # If neither no action is specified, enable --bench implicitly unless --no-bench
@@ -516,8 +543,7 @@ def driver_main(
 
             resultfiles = None
             if bench:
-                resultfiles = runner.run_bench(
-                    srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+                resultfiles = runner.run_bench(srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
 
             if args.report and resultfiles:
                 results = evaluator.load_resultfiles(resultfiles)
