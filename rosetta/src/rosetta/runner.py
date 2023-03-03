@@ -1,45 +1,28 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
-
-import importlib.util
-import importlib
-import contextlib
 import typing
 import configparser
-import io
-from collections import defaultdict
 import math
 import colorama
-import xml.etree.ElementTree as et
-from typing import Iterable
-import json
 import datetime
 import os
 import pathlib
 import subprocess
-import argparse
 import sys
-from itertools import count
-from cmath import exp
 from .util.cmdtool import *
-from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
-from .evaluator import subcommand_evaluate
+
 
 # Not included batteries
 # import tqdm # progress meter
 
 
-
 class BenchVariants:
     def __init__(self, default_size, serial=None, cuda=None):
         None
-
-
 
 
 def same_or_none(data):
@@ -55,11 +38,6 @@ def same_or_none(data):
                 return None
     except StopIteration:
         return common_value
-
-
-
-
-
 
 
 def do_run(bench, args, resultfile):
@@ -86,22 +64,11 @@ def do_run(bench, args, resultfile):
     return resultfile
 
 
-
-
-
-
-
-
-
-
 def run_gbench(bench, problemsizefile, resultfile):
     args = []
     if problemsizefile:
         args.append(f'--problemsizefile={problemsizefile}')
     return do_run(bench=bench, args=args, resultfile=resultfile)
-
-
-
 
 
 class Benchmark:
@@ -130,7 +97,8 @@ def get_problemsizefile(srcdir=None, problemsizefile=None):
     if problemsizefile:
         if not problemsizefile.is_file():
             # TODO: Embed default sizes
-            die(f"Problemsize file {problemsizefile} does not exist.", file=sys.stderr)
+            die(f"Problemsize file {problemsizefile} does not exist.",
+                file=sys.stderr)
         return problemsizefile
 
     # Default, embedded into executable
@@ -155,14 +123,16 @@ def get_refpath(bench, refdir, problemsizefile):
 
 
 def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
-    refpath = get_refpath(bench, refdir=refdir, problemsizefile=problemsizefile)
+    refpath = get_refpath(bench, refdir=refdir,
+                          problemsizefile=problemsizefile)
 
     if refpath.exists():
         # Reference output already exists; check that it is the latest
         benchstat = bench.exepath.stat()
         refstat = refpath.stat()
         if benchstat.st_mtime < refstat.st_mtime:
-            print(f"Reference output of {bench.name} already exists at {refpath} an is up-to-date")
+            print(
+                f"Reference output of {bench.name} already exists at {refpath} an is up-to-date")
             return
         print(f"Reference output {refpath} an is out-of-date")
         refpath.unlink()
@@ -180,7 +150,8 @@ def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
 
 
 def ensure_reffiles(refdir, problemsizefile, filterfunc=None, srcdir=None):
-    problemsizefile = get_problemsizefile(srcdir=srcdir, problemsizefile=problemsizefile)
+    problemsizefile = get_problemsizefile(
+        srcdir=srcdir, problemsizefile=problemsizefile)
     for bench in benchmarks:
         if filterfunc and not filterfunc(bench):
             continue
@@ -196,7 +167,8 @@ def prod(iter):
 
 
 def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
-    problemsizefile = get_problemsizefile(srcdir=srcdir, problemsizefile=problemsizefile)
+    problemsizefile = get_problemsizefile(
+        srcdir=srcdir, problemsizefile=problemsizefile)
 
     #x = request_tempdir(prefix=f'verify')
     #tmpdir = mkpath(x.name)
@@ -209,10 +181,12 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
         ensure_reffile(e, refdir=refdir, problemsizefile=problemsizefile)
 
         exepath = e.exepath
-        refpath = get_refpath(e, refdir=refdir, problemsizefile=problemsizefile)
+        refpath = get_refpath(
+            e, refdir=refdir, problemsizefile=problemsizefile)
         pbsize = get_problemsize(e, problemsizefile=problemsizefile)
 
-        testoutpath = request_tempfilename(subdir='verify', prefix=f'{e.name}_{e.ppm}_{pbsize}', suffix='.testout')
+        testoutpath = request_tempfilename(
+            subdir='verify', prefix=f'{e.name}_{e.ppm}_{pbsize}', suffix='.testout')
         # tmpdir / f'{e.name}_{e.ppm}_{pbsize}.testout'
 
         args = [exepath, f'--verify', f'--verifyfile={testoutpath}']
@@ -235,12 +209,14 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                 refformat = refspec[1]
                 refdim = int(refspec[2])
                 refshape = [int(i) for i in refspec[3:3 + refdim]]
-                refname = refspec[3 + refdim] if len(refspec) > 3 + refdim else None
+                refname = refspec[3 +
+                                  refdim] if len(refspec) > 3 + refdim else None
                 refcount = prod(refshape)
 
                 refdata = [float(v) for v in refdata.split()]
                 if refcount != len(refdata):
-                    die(f"Unexpected array items in {refname}: {refcount} vs {len(refdata)}")
+                    die(
+                        f"Unexpected array items in {refname}: {refcount} vs {len(refdata)}")
 
                 testspec, testdata = testline.split(':', maxsplit=1)
                 testspec = testspec.split()
@@ -248,27 +224,33 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                 testformat = testspec[1]
                 testdim = int(testspec[2])
                 testshape = [int(i) for i in testspec[3:3 + testdim]]
-                testname = testspec[3 + testdim] if len(testspec) > 3 + testdim else None
+                testname = testspec[3 +
+                                    testdim] if len(testspec) > 3 + testdim else None
                 testcount = prod(testshape)
 
                 testdata = [float(v) for v in testdata.split()]
                 if testcount != len(testdata):
-                    die(f"Unexpected array items in {testname}: {testcount} vs {len(testdata)}")
+                    die(
+                        f"Unexpected array items in {testname}: {testcount} vs {len(testdata)}")
 
                 if refname is not None and testname is not None and refname != testname:
                     die(f"Array names {refname} and {testname} disagree")
 
                 for i, (refv, testv) in enumerate(zip(refdata, testdata)):
-                    coord = [str((i // prod(refshape[0:j])) % refshape[j]) for j in range(0, refdim)]
+                    coord = [str((i // prod(refshape[0:j])) % refshape[j])
+                             for j in range(0, refdim)]
                     coord = '[' + ']['.join(coord) + ']'
 
                     if math.isnan(refv) and math.isnan(testv):
-                        print(f"WARNING: NaN in both outputs at {refname}{coord}")
+                        print(
+                            f"WARNING: NaN in both outputs at {refname}{coord}")
                         continue
                     if math.isnan(refv):
-                        die(f"Array data mismatch: Ref contains NaN at {refname}{coord}")
+                        die(
+                            f"Array data mismatch: Ref contains NaN at {refname}{coord}")
                     if math.isnan(testv):
-                        die(f"Array data mismatch: Output contains NaN at {testname}{coord}")
+                        die(
+                            f"Array data mismatch: Output contains NaN at {testname}{coord}")
 
                     mid = (abs(refv) + abs(testv)) / 2
                     absd = abs(refv - testv)
@@ -278,14 +260,15 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                         reld = absd / mid
                     if reld > 1e-4:  # TODO: Don't hardcode difference
                         print(f"While comparing {refpath} and {testoutpath}:")
-                        die(f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
+                        die(
+                            f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
 
         print(f"Output of {e.exepath} considered correct")
 
 
-def make_resultssubdir(within=None):
-    global resultsdir
-    within = within or resultsdir
+def make_resultssubdir(within):
+    #global resultsdir
+    #within = within or resultsdir
     assert within
     now = datetime.datetime.now()
     i = 0
@@ -310,7 +293,8 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
         if configname:
             thisresultdir /= configname
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
-        results .append(run_gbench(e, problemsizefile=problemsizefile, resultfile=thisresultdir))
+        results .append(run_gbench(
+            e, problemsizefile=problemsizefile, resultfile=thisresultdir))
     return results
 
 
@@ -331,8 +315,6 @@ def custom_bisect_left(lb, ub, func):
             continue
         # exact match?
         return mid
-
-
 
 
 # TODO: merge with run_gbench
@@ -358,8 +340,10 @@ def probe_bench(bench: Benchmark, limit_walltime, limit_rss, limit_alloc):
     # Bisect between lower_n and n
 
     def func(n):
-        resultfile = request_tempfilename(subdir='probe', prefix=f'{bench.target}-pbsize{n}', suffix='.xml')
-        do_run(bench, args=[f'--pbsize={n}', '--repeats=1'], resultfile=resultfile)
+        resultfile = request_tempfilename(
+            subdir='probe', prefix=f'{bench.target}-pbsize{n}', suffix='.xml')
+        do_run(bench, args=[f'--pbsize={n}',
+               '--repeats=1'], resultfile=resultfile)
         [result] = load_resultfiles([resultfile])
         if is_too_large(result):
             return -1
@@ -378,7 +362,8 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
 
     problemsizecontent = []
     for bench in benchmarks:
-        n = probe_bench(bench=bench, limit_walltime=limit_walltime, limit_rss=limit_rss, limit_alloc=limit_alloc)
+        n = probe_bench(bench=bench, limit_walltime=limit_walltime,
+                        limit_rss=limit_rss, limit_alloc=limit_alloc)
 
         problemsizecontent.extend(
             [f"[{bench.name}]",
@@ -389,165 +374,6 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
     with problemsizefile.open(mode='w+') as f:
         for line in problemsizecontent:
             print(line, file=f)
-
-
-def runner_main(builddir):
-    runner_main_run()
-
-
-def runner_main_run( srcdir, builddir):
-    runner_main_run_argv(sys.argv[1:], srcdir, builddir)
-
-
-def runner_main_run_argv(argv, srcdir, builddir):
-    with globalctxmgr:
-        parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-        add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-data")
-        resultdir = builddir / 'results'
-        subcommand_run(parser, None, srcdir, builddirs=[builddir], refbuilddir=builddir, resultdir=resultdir)
-        subcommand_evaluate(parser,None,resultfiles=None,resultsdir=resultdir)
-
-        args = parser.parse_args(argv)
-        args.configure = False
-        args.build = False
-        subcommand_default_actions(args)
-
-        resultfiles = subcommand_run(None, args, srcdir, builddirs=[builddir], buildondemand=args.buildondemand, refbuilddir=builddir, resultdir=resultdir)
-        subcommand_evaluate(None, args, resultfiles)
-
-
-
-
-def subcommand_default_actions(args):
-    # Determine actions
-    any_explicit_action =  args.configure or args.build or args.probe or args.verify or args.bench or args.evaluate
-    if not any_explicit_action:
-        # No explicit action selected: Use default (configure -> build -> bench -> evaluate)
-        args.bench =  first_defined(  args.bench, True )
-    #else:
-    #    # Don't execute by default when some other action was explicitly defined
-    #    args.bench = first_defined(args.bench , False)
-
-    # If at least one primary action taken, explictly switch off the others
-    if  args.probe or args.verify or  args.bench:
-        args.probe = first_defined(args.probe , False)
-        args.verify = first_defined(args.verify , False)
-        args.bench = first_defined(args.bench , False)
-
-    # Build by default of required by a later step
-    args.build = first_defined( args.build , args.probe or args.verify or  args.bench, False)
-
-    # Configure by default when building
-    args.configure = first_defined(args.configure , args.build ,False )
-
-    # When benching, also evaluate that result by default
-    args.evaluate = first_defined(args.evaluate, args.bench, False)
-
-
-
-def subcommand_run(parser, args, srcdir, buildondemand: bool = False, builddirs=None,
-                   refbuilddir=None, filterfunc=None, resultdir=None):
-    """
-The common functionality of the probe/verify/bench per-builddir scripts and the benchmark.py multi-builddir driver.
-
-General pipeline:
-1. configure (handled by benchmark.py; per-builddir setup is pre-configured)
-2. build
-3. probe (reconfigure/rebuild required after probing)
-4. verify
-5. bench
-6. evaluate
-
-Parameters
-----------
-parser : ArgumentParser
-    ArgumentParser from argparse for adding arguments
-args
-    Parsed command line from argparse
-srcdir
-    Root of the source repository (where the benchmarks and rosetta folders are in);
-    FIXME: Should be the benchmarks folder
-buildondemand
-    False: Called from make/ninja, targets already built
-    True: Called from script, executables may need to be rebuilt
-builddirs:
-    per-builddir: The root of CMake's binary dir
-    multi-builddor: List of builddires that have been configured
-refbuilddir:
-    CMake binary root dir that creates the reference outputs, but is itself not benchmarked
-filterfunc:
-    Run/evaluate only those benchmarks for which this function returns true
-resultdir:
-    Where to put the benchmark results xml files.
-"""
-    if parser:
-        parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
-        parser.add_argument('--verbose', '-v', action='count')
-
-        # Command
-        add_boolean_argument(parser, 'probe', default=None, help="Enable probing")
-        parser.add_argument('--limit-walltime', type=parse_time)
-        parser.add_argument('--limit-rss', type=parse_memsize)
-        parser.add_argument('--limit-alloc', type=parse_memsize)
-
-        # Verify step
-        add_boolean_argument(parser, 'verify', default=None, help="Enable check step")
-
-        # Run step
-        add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
-
-
-    if args:
-        # If neither no action is specified, enable --bench implicitly unless --no-bench
-        probe = args.probe
-        verify = args.verify
-        bench = args.bench
-        #if bench is None and not verify and not probe:
-        #    bench = True
-
-        if probe:
-            assert args.problemsizefile, "Requires to set a problemsizefile to set"
-            run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime,
-                      limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
-
-        if verify:
-            refdir = refbuilddir / 'refout'
-            run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
-
-        resultfiles=None
-        if bench:
-            resultfiles = run_bench(srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
-
-        return resultfiles
-
-
-
-
-# TODO: Integrate into subcommand_run
-def runner_main_verify(builddir, srcdir):
-    parser = argparse.ArgumentParser(description="Benchmark verification", allow_abbrev=False)
-    parser.add_argument('--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)")
-    add_boolean_argument(parser, 'buildondemand', default=True)  # TODO: implement
-
-    args = parser.parse_args()
-
-    refdir = builddir / 'refout'
-    return run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
-
-
-def runner_main_probe(builddir):
-    die("Not yet implemented")
-
-
-resultsdir = None
-
-
-def rosetta_config(resultsdir):
-    def set_global(dir):
-        global resultsdir
-        resultsdir = mkpath(dir)
-    # TODO: Check if already set and different
-    set_global(resultsdir)
 
 
 benchlistfile = None
@@ -570,7 +396,8 @@ def load_register_file(filename, is_ref=False):
     benchlistfile = filename
     import_is_ref = is_ref
     try:
-        spec = importlib.util.spec_from_file_location(filename.stem, str(filename))
+        spec = importlib.util.spec_from_file_location(
+            filename.stem, str(filename))
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     finally:
@@ -581,11 +408,11 @@ def load_register_file(filename, is_ref=False):
 def reset_registered_benchmarks():
     """
 Reset loaded benchmarks for unittsts
-    
+
 A better approach would be if load_register_file returns the availailable benchmarks and the caller to pass them on
     """
     global benchmarks
-    benchmarks=[]
+    benchmarks = []
 
 
 def gen_reference(exepath, refpath, problemsizefile):
@@ -595,14 +422,16 @@ def gen_reference(exepath, refpath, problemsizefile):
 
 def main(argv):
     colorama.init()
-    parser = argparse.ArgumentParser(description="Benchmark runner", allow_abbrev=False)
-    parser.add_argument('--gen-reference', nargs=2, type=pathlib.Path, help="Write reference output file")
+    parser = argparse.ArgumentParser(
+        description="Benchmark runner", allow_abbrev=False)
+    parser.add_argument('--gen-reference', nargs=2,
+                        type=pathlib.Path, help="Write reference output file")
     parser.add_argument('--problemsizefile', type=pathlib.Path)
     args = parser.parse_args(argv[1:])
 
     if args.gen_reference:
-        gen_reference(*args.gen_reference, problemsizefile=args.problemsizefile)
-
+        gen_reference(*args.gen_reference,
+                      problemsizefile=args.problemsizefile)
 
 
 if __name__ == '__main__':

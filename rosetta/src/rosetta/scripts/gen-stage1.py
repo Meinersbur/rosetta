@@ -5,8 +5,6 @@ import argparse
 import configparser
 import importlib
 import pathlib
-import types
-import sys
 import re
 import importlib.util
 from io import StringIO
@@ -41,7 +39,8 @@ def global_unintent(slist):
 
 
 def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, filter=None):
-    problemsizefile = runner.get_problemsizefile(problemsizefile=problemsizefile)
+    problemsizefile = runner.get_problemsizefile(
+        problemsizefile=problemsizefile)
     config = configparser.ConfigParser()
     config.read(problemsizefile)
 
@@ -55,7 +54,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
         rel = path.parent.parent.relative_to(benchdir)
         basename = path.stem
         basename = '.'.join(list(rel.parts) + [basename])
-        
+
         if filter and not filter in basename:
             log.info(f"Benchmark {basename} does not match --filter={filter}")
             continue
@@ -80,7 +79,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 configdepfiles.append(buildfile)
                 script = global_unintent(script)
                 script = '\n'.join(script)
-                spec = importlib.util.spec_from_loader('rosetta.build', loader=None, origin=buildfile)
+                spec = importlib.util.spec_from_loader(
+                    'rosetta.build', loader=None, origin=buildfile)
                 module = importlib.util.module_from_spec(spec)
                 globals = module.__dict__
                 scriptdir = buildfile.parent
@@ -129,8 +129,10 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
     out = StringIO()
     if configdepfiles:
-        print("set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
-        print('"' + ';'.join(pyescape(s) for s in configdepfiles) + '")', file=out)
+        print(
+            "set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
+        print('"' + ';'.join(pyescape(s)
+              for s in configdepfiles) + '")', file=out)
         print(file=out)
 
     for bench in benchs:
@@ -147,7 +149,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
         else:
             die("Unhandled ppm")
         print("    PBSIZE", bench. pbsize, file=out)
-        print("    SOURCES", *(bs.as_posix() for bs in bench.sources), file=out)
+        print("    SOURCES", *(bs.as_posix()
+              for bs in bench.sources), file=out)
         print("  )", file=out)
 
     updatefile(outfile, out.getvalue())
@@ -155,14 +158,16 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
 def main():
     #print("stage1 argv", sys.argv)
-    parser = argparse.ArgumentParser(description="Generate CMakeLists.txt include file", allow_abbrev=False)
+    parser = argparse.ArgumentParser(
+        description="Generate CMakeLists.txt include file", allow_abbrev=False)
     parser.add_argument('--output', type=pathlib.Path)
     parser.add_argument('--problemsizefile', type=pathlib.Path)
     parser.add_argument('--benchdir', type=pathlib.Path)
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--configname')
     # TODO: More extensive filter mechanisms
-    parser.add_argument('--filter', help="Only look into filenames that contain this substring")
+    parser.add_argument(
+        '--filter', help="Only look into filenames that contain this substring")
     args = parser.parse_args()
 
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir,

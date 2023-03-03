@@ -15,7 +15,7 @@ import importlib
 from io import StringIO
 import rosetta.runner as runner
 import rosetta.generator as generator
-from rosetta.runner import register_benchmark, runner_main
+from rosetta.runner import register_benchmark
 from rosetta.util.support import *
 
 
@@ -96,7 +96,8 @@ def gen_stage2(builddir, benchdir, benchlistfile, config, resultsdir):
 
 def main():
     #print("stage2 argv", sys.argv)
-    parser = argparse.ArgumentParser(description="Generate make-time files", allow_abbrev=False)
+    parser = argparse.ArgumentParser(
+        description="Generate make-time files", allow_abbrev=False)
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--benchdir', type=pathlib.Path)
     parser.add_argument('--resultsdir', type=pathlib.Path)
@@ -109,7 +110,8 @@ def main():
     benchfile = args.benchfile
     config = args.config
 
-    gen_stage2(builddir=builddir, benchdir=benchdir, benchlistfile=benchfile, config=config, resultsdir=args.resultsdir)
+    gen_stage2(builddir=builddir, benchdir=benchdir,
+               benchlistfile=benchfile, config=config, resultsdir=args.resultsdir)
 
 
 if __name__ == '__main__':
