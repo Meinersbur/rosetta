@@ -31,9 +31,7 @@ import logging as log
 import typing
 from . import runner
 from .builder import *
-from .  import  evaluator
-
-
+from . import evaluator
 
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
@@ -70,9 +68,8 @@ def parse_build_configs(args, implicit_reference):
             raw[configname][defname] = defvalue
         return raw
 
-
     cmake_arg = parse_arglists(args.cmake_arg)
-    cmake_def = parse_deflists(args.cmake_def,valrequired=True)
+    cmake_def = parse_deflists(args.cmake_def, valrequired=True)
     compiler_arg = parse_arglists(args.compiler_arg)
     compiler_def = parse_deflists(args.compiler_def, valrequired=False)
     ppm = parse_arglists(args.ppm)
@@ -84,31 +81,28 @@ def parse_build_configs(args, implicit_reference):
     specified_keys |= compiler_def.keys()
     specified_keys |= ppm.keys()
 
-
-    selected_keys=OrderedSet()
+    selected_keys = OrderedSet()
     selected_keys |= [k for k in specified_keys if k]
     selected_keys |= (args.config or [])
 
-     # Use single config if no "CONFIG:" is specified
+    # Use single config if no "CONFIG:" is specified
     if not selected_keys:
         selected_keys.add('')
         specified_keys.add('')
     if implicit_reference:
-        #TODO: Reference configuration (only reference PPM)
+        # TODO: Reference configuration (only reference PPM)
         selected_keys.add("REF")
         specified_keys.add('REF')
     # If no config selected explicitly, use all preconfigured ons
-    #if selected_keys.empty():
+    # if selected_keys.empty():
     #    for b in builddir.glob('build-*/CMakeCache.txt'):
     #        selected_keys.add(  removeprefix( b.parent.name, 'build-') )
 
     configs = []
     for k in selected_keys:
-            # TODO: Handle duplicate defs (specific override general)
-            configs.append(BuildConfig(name=k, ppm=ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] | cmake_def[k], compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k], usecur=not k in specified_keys))
-
-
-
+        # TODO: Handle duplicate defs (specific override general)
+        configs.append(BuildConfig(name=k, ppm=ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] | cmake_def[k],
+                       compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k], usecur=not k in specified_keys))
 
     return configs
 
@@ -186,21 +180,24 @@ def apply_default_action(default_action, args):
     args.configure = first_defined(args.configure, default_action in {
                                    DefaultAction.CONFIGURE} or None)
     args.build = first_defined(args.build, default_action in {
-                               DefaultAction.BUILD,       DefaultAction.BENCH, DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH })
-    args.probe = first_defined(args.probe, default_action in {DefaultAction.PROBE})
-    args.tune = first_defined(args.tune, default_action in {DefaultAction.TUNE, DefaultAction.PROBE_TUNED})
+                               DefaultAction.BUILD,       DefaultAction.BENCH, DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
+    args.probe = first_defined(
+        args.probe, default_action in {DefaultAction.PROBE})
+    args.tune = first_defined(args.tune, default_action in {
+                              DefaultAction.TUNE, DefaultAction.PROBE_TUNED})
     args.verify = first_defined(args.verify, default_action in {
                                 DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
     args.bench = first_defined(args.bench, default_action in {
                                DefaultAction.BENCH, DefaultAction.VERIFY_THEN_BENCH})
     args.evaluate = first_defined(args.evaluate, default_action in {
                                   DefaultAction.EVALUATE,       DefaultAction.BENCH,   DefaultAction.VERIFY_THEN_BENCH})
-    args.report = first_defined(args.evaluate, default_action in { DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
-    args.compare = first_defined(args.compare, default_action in { DefaultAction.COMPARE})
+    args.report = first_defined(args.evaluate, default_action in {
+                                DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
+    args.compare = first_defined(args.compare, default_action in {
+                                 DefaultAction.COMPARE})
 
 
 verbose = None
-
 
 
 class DriverMode:
@@ -214,14 +211,14 @@ class DriverMode:
     FROMCMAKE = NamedSentinel('called by cmake')
 
 
-
 class DefaultAction:
     CLEAN = NamedSentinel('clean')
     CONFIGURE = NamedSentinel('configure')
     BUILD = NamedSentinel('build')
     PROBE = NamedSentinel('probe')
     TUNE = NamedSentinel('tune')
-    PROBE_TUNED = NamedSentinel('probe_tuned') # Before probing a problem size, tune the benchmark with that problem size 
+    # Before probing a problem size, tune the benchmark with that problem size
+    PROBE_TUNED = NamedSentinel('probe_tuned')
     VERIFY = NamedSentinel('verify')
     BENCH = NamedSentinel('bench')
     VERIFY_THEN_BENCH = NamedSentinel('verify_then_bench')
@@ -232,23 +229,23 @@ class DefaultAction:
 
 def driver_main(
         mode: DriverMode,
-        argv: typing.List[str]=None,
+        argv: typing.List[str] = None,
         default_action: DefaultAction = None,
-        benchlistfile:pathlib.Path = None,
-        srcdir:pathlib.Path=None,
-        builddir:pathlib.Path=None,
-        rootdir:pathlib.Path=None):
+        benchlistfile: pathlib.Path = None,
+        srcdir: pathlib.Path = None,
+        builddir: pathlib.Path = None,
+        rootdir: pathlib.Path = None):
     assert mode in {DriverMode.USERBUILDDIR, DriverMode.MANAGEDBUILDDIR}
-    assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD, DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
+    assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD,
+                              DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
 
     if mode == DriverMode.USERBUILDDIR:
         assert benchlistfile is not None
         assert rootdir is None
         assert builddir is not None
 
-
     if mode == DriverMode.MANAGEDBUILDDIR:
-        assert benchlistfile is  None
+        assert benchlistfile is None
         assert builddir is None
 
     # TODO: Description according default_action
@@ -270,7 +267,8 @@ def driver_main(
         add_boolean_argument(parser, 'configure', default=None,
                              help="Enable configure (CMake) step (Default: if necessary)")
         # TODO: Add switches that parse multiple arguments using shsplit
-        parser.add_argument('--config', metavar="CONFIG", action='append', help="Configuration selection (must exist from previous invocations)", default=None)
+        parser.add_argument('--config', metavar="CONFIG", action='append',
+                            help="Configuration selection (must exist from previous invocations)", default=None)
         parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
         parser.add_argument(
             '--cmake-arg', metavar="CONFIG:ARG", action='append')
@@ -280,7 +278,6 @@ def driver_main(
             '--compiler-arg', metavar="CONFIG:ARG", action='append')
         parser.add_argument(
             '--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
-        
 
     # Build step
     add_boolean_argument(parser, 'build', default=None,
@@ -295,7 +292,8 @@ def driver_main(
     parser.add_argument('--limit-alloc', type=parse_memsize)
 
     # Tune step
-    add_boolean_argument(parser, 'tune', default=None, help="Benchmark performance tuning")
+    add_boolean_argument(parser, 'tune', default=None,
+                         help="Benchmark performance tuning")
 
     # Verify step
     add_boolean_argument(parser, 'verify', default=None,
@@ -313,13 +311,14 @@ def driver_main(
                         metavar="FILENAME", help="Save as boxplot to FILENAME")
 
     # Report step
-    add_boolean_argument(parser, 'report', default=None, help="Create HTML report")
+    add_boolean_argument(parser, 'report', default=None,
+                         help="Create HTML report")
 
     # Compare step
-    add_boolean_argument(parser, 'compare', default=None, help="Compare two or more benchmark runs")
+    add_boolean_argument(parser, 'compare', default=None,
+                         help="Compare two or more benchmark runs")
 
-
-    args = parser.parse_args(None if argv is None else argv[1:] )
+    args = parser.parse_args(None if argv is None else argv[1:])
     global verbose
     verbose = args.verbose
 
@@ -349,8 +348,6 @@ def driver_main(
             builddir = rootdir / 'build'
             resultdir = rootdir / 'results'
 
-
-
             # if builddir.exists():
             #    if args.clean:
             #        # TODO: Do this automatically when necessary (hash the CMakeLists.txt)
@@ -368,8 +365,7 @@ def driver_main(
             if main_action == DefaultAction.CLEAN:
                 for b in builddir.iterdir():
                     shutil.rmtree(b)
-                return 
-
+                return
 
             for config in configs:
                 if not config.name:
@@ -380,51 +376,47 @@ def driver_main(
                 else:
                     config.builddir = builddir / f'build-{config.name}'
 
-
-
             # Configure step
             # TODO: Recognize "module" system
             # TODO: Recognize famous environments (JLSE, Theta, Summit, Frontier, Aurora, ...)
             for config in configs:
-                    builddir = config.builddir
-                    configdescfile = builddir / 'RosettaCache.txt'
+                builddir = config.builddir
+                configdescfile = builddir / 'RosettaCache.txt'
 
-                    # TODO: Support other generators as well
-                    opts = ['cmake', '-S', srcdir,  '-B', builddir, '-GNinja Multi-Config',
-                            '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
-                    opts += config.gen_cmake_args()
-                    expectedopts = shjoin(opts).rstrip()
+                # TODO: Support other generators as well
+                opts = ['cmake', '-S', srcdir,  '-B', builddir, '-GNinja Multi-Config',
+                        '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
+                opts += config.gen_cmake_args()
+                expectedopts = shjoin(opts).rstrip()
 
-                    reusebuilddir = False
-                    if config.is_predefined:
-                        # Without cmake options, reuse whatever is in the builddir if it is already configured
-                        reusebuilddir = (builddir / 'build.ninja').exists()
-                    else:
-                        if args.configure or args.clean:
-                            pass
-                        elif args.configure is False:
+                reusebuilddir = False
+                if config.is_predefined:
+                    # Without cmake options, reuse whatever is in the builddir if it is already configured
+                    reusebuilddir = (builddir / 'build.ninja').exists()
+                else:
+                    if args.configure or args.clean:
+                        pass
+                    elif args.configure is False:
+                        reusebuilddir = True
+                    elif config.usecur and (builddir / 'build.ninja').exists():
+                        reusebuilddir = True
+                    elif configdescfile.is_file() and (builddir / 'build.ninja').exists():
+                        existingopts = readfile(configdescfile).rstrip()
+                        if existingopts == expectedopts:
                             reusebuilddir = True
-                        elif config.usecur and (builddir / 'build.ninja').exists():
-                            reusebuilddir= True
-                        elif configdescfile.is_file() and (builddir / 'build.ninja').exists():
-                            existingopts = readfile(configdescfile).rstrip()
-                            if existingopts == expectedopts:
-                                reusebuilddir = True
 
-                    if not reusebuilddir:
-                        if builddir.exists() and args.clean:
-                            shutil.rmtree(builddir)
-                        if args.configure or (args.configure is  None and (args.build or args.verify or args.probe)):
-                            builddir.mkdir(exist_ok=True, parents=True)
-                            invoke_verbose(*opts, cwd=config.builddir)
-                            createfile(configdescfile, expectedopts)
-
+                if not reusebuilddir:
+                    if builddir.exists() and args.clean:
+                        shutil.rmtree(builddir)
+                    if args.configure or (args.configure is None and (args.build or args.verify or args.probe)):
+                        builddir.mkdir(exist_ok=True, parents=True)
+                        invoke_verbose(*opts, cwd=config.builddir)
+                        createfile(configdescfile, expectedopts)
 
             if args.build:
                 for config in configs:
                     # TODO: Select subset to be build
                     invoke_verbose('ninja', cwd=config.builddir)
-
 
             # Load all available benchmarks
             if args.verify or args.bench or args.probe:
@@ -437,7 +429,7 @@ def driver_main(
 
             def no_ref(bench):
                 return bench.configname != 'REF' and bench.ppm in config.ppm
-            if args.bench or args.verify or args.probe:                
+            if args.bench or args.verify or args.probe:
                 refconfigs = list(c for c in configs if c.name == 'REF')
                 refconfig = None
                 if len(refconfigs) == 1:
@@ -461,15 +453,16 @@ def driver_main(
 
             #subcommand_evaluate( None, args, resultfiles=resultfiles, resultsdir=resultdir)
             if args.evaluate:
-                resultsdir= resultdir
+                resultsdir = resultdir
                 results = evaluator.load_resultfiles(resultfiles)
 
                 # Remove bogus entries
                 # results = [r for r in results if   r.durations.get('walltime', statistic([]) ).count >= 1 ]
 
-                #if len(builddirs) > 1:
-                evaluator.results_compare(results, compare_by="configname", compare_val=["walltime"])
-                #else:
+                # if len(builddirs) > 1:
+                evaluator.results_compare(
+                    results, compare_by="configname", compare_val=["walltime"])
+                # else:
                 #    evaluate(resultfiles)
 
                 if args.boxplot:
@@ -477,16 +470,13 @@ def driver_main(
                     fig.savefig(fname=args.boxplot)
                     fig.canvas.draw_idle()
 
-                now = datetime.datetime.now() # TODO: Use runner.make_resultssubdir
-                reportfile = mkpath( f"report_{now:%Y%m%d_%H%M}.html")
+                now = datetime.datetime.now()  # TODO: Use runner.make_resultssubdir
+                reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
                 if resultsdir:
-                    reportfile = resultsdir /  reportfile
-
+                    reportfile = resultsdir / reportfile
 
                 # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
-                evaluator.save_report(results,filename=reportfile)
-
-
+                evaluator.save_report(results, filename=reportfile)
 
         if mode == DriverMode.USERBUILDDIR:
             # If neither no action is specified, enable --bench implicitly unless --no-bench
@@ -497,44 +487,44 @@ def driver_main(
             #    bench = True
 
             resultdir = builddir / 'results'
-            configure_uptodate =False
+            configure_uptodate = False
 
             if args.build:
                 # TODO: Build only filtered executables
                 invoke_verbose('cmake', '--build', builddir, cwd=builddir)
-                configure_uptodate=True
+                configure_uptodate = True
 
             if main_action == DefaultAction.BUILD:
-                return 
+                return
 
-
-            
             if not configure_uptodate:
-                invoke_verbose('cmake', '--build',builddir,  '--target', 'build.ninja',  cwd=builddir)
+                invoke_verbose('cmake', '--build', builddir,
+                               '--target', 'build.ninja',  cwd=builddir)
 
             # Discover available benchmarks
             runner.load_register_file(benchlistfile)
 
             if probe:
                 assert args.problemsizefile, "Requires to set a problemsizefile to set"
-                runner.run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime, limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+                runner.run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime,
+                                 limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
             if verify:
                 refdir = builddir / 'refout'
-                runner.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
+                runner.run_verify(
+                    problemsizefile=args.problemsizefile, refdir=refdir)
 
             resultfiles = None
             if bench:
-                resultfiles = runner.run_bench(srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+                resultfiles = runner.run_bench(
+                    srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
 
             if args.report and resultfiles:
                 results = evaluator.load_resultfiles(resultfiles)
                 now = datetime.datetime.now()
-                reportfile = mkpath( f"report_{now:%Y%m%d_%H%M}.html")
+                reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
                 if resultdir:
-                    reportfile = resultdir /  reportfile
-                evaluator.save_report(results,filename=reportfile)
+                    reportfile = resultdir / reportfile
+                evaluator.save_report(results, filename=reportfile)
 
             return resultfiles
-
-

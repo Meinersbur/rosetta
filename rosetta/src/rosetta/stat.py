@@ -225,6 +225,8 @@ class Statistic:
 
     @property
     def range(self):
+        if self.count==0:
+            return 0
         return self.maximum - self.minimum
 
     # Mean squared error/deviation
@@ -250,13 +252,15 @@ class Statistic:
         median = self.median
         return sum(abs(x - median) for x in self._vals) / self.count
 
+
     # Symmetric confidence interval around mean, assuming normal distributed samples
     # TODO: Asymetric confidence interval
+    # See also: Central limit theorem
     def abserr(self, ratio=0.95):
-        assert ratio == 0.95, r"Only supporting two-sided 95% confidence interval"
+        assert ratio == 0.95, r"Only two-sided 95% confidence interval supported atm"
         n = self.count
         if n < 2:
-            return None
+            return 0
 
         # Table lookup
         # TODO: bisect
@@ -270,10 +274,11 @@ class Statistic:
         if c is None:
             c = Statistic.studentt_density_95[-1][1]
 
-        return c * self.corrected_variance / math.sqrt(n)
+        return c * self.corrected_variance  / math.sqrt(n)
+
 
     def relerr(self, ratio=0.95):
-        mean = self.mean
+        mean = self.mean # Mean is actually unknown
         if not mean:
             return None
         return self.abserr(ratio=ratio) / self.mean
