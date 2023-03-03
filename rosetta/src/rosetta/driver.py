@@ -57,7 +57,7 @@ def parse_build_configs(args, implicit_reference):
             raw[configname].append(value)
         return raw
 
-    def parse_deflists(l, valrequired):
+    def parse_deflists(l,  valrequired):
         raw = defaultdict(lambda: dict())
         if l is None:
             return raw
@@ -70,45 +70,44 @@ def parse_build_configs(args, implicit_reference):
             raw[configname][defname] = defvalue
         return raw
 
+
     cmake_arg = parse_arglists(args.cmake_arg)
-    cmake_def = parse_deflists(args.cmake_def, valrequired=True)
+    cmake_def = parse_deflists(args.cmake_def,valrequired=True)
     compiler_arg = parse_arglists(args.compiler_arg)
     compiler_def = parse_deflists(args.compiler_def, valrequired=False)
     ppm = parse_arglists(args.ppm)
 
-    keys = OrderedSet()
+    specified_keys = OrderedSet()
+    specified_keys |= cmake_arg.keys()
+    specified_keys |= cmake_def.keys()
+    specified_keys |= compiler_arg.keys()
+    specified_keys |= compiler_def.keys()
+    specified_keys |= ppm.keys()
+
+
+    selected_keys=OrderedSet()
+    selected_keys |= [k for k in specified_keys if k]
+    selected_keys |= (args.config or [])
+
+     # Use single config if no "CONFIG:" is specified
+    if not selected_keys:
+        selected_keys.add('')
+        specified_keys.add('')
     if implicit_reference:
-        keys.add("REF")
-    keys |= cmake_arg.keys()
-    keys |= cmake_def.keys()
-    keys |= compiler_arg.keys()
-    keys |= compiler_def.keys()
-    keys |= ppm.keys()
+        #TODO: Reference configuration (only reference PPM)
+        selected_keys.add("REF")
+        specified_keys.add('REF')
+    # If no config selected explicitly, use all preconfigured ons
+    #if selected_keys.empty():
+    #    for b in builddir.glob('build-*/CMakeCache.txt'):
+    #        selected_keys.add(  removeprefix( b.parent.name, 'build-') )
 
     configs = []
-    for k in keys:
-        if not k:
-            continue
-        # TODO: Handle duplicate defs (specific override general)
-        configs.append(BuildConfig(name=k, ppm=ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] |
-                       cmake_def[k], compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k]))
+    for k in selected_keys:
+            # TODO: Handle duplicate defs (specific override general)
+            configs.append(BuildConfig(name=k, ppm=ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] | cmake_def[k], compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k], usecur=not k in specified_keys))
 
-    # Add additional configurations that are stored in RosettaCache.txt files.
-    for k in first_defined(args.config, []):
-        if k not in keys:
-            configs.append(BuildConfig(name=k, is_predefined=True, ppm=None,
-                           cmake_arg=None, cmake_def=None, compiler_arg=None, compiler_def=None))
 
-    # Use single config if no "CONFIG:" is specified
-    if not configs or implicit_reference and (len(configs)==1):
-        defaultconf = BuildConfig(name=None, ppm=ppm[''], cmake_arg=cmake_arg[''], cmake_def=cmake_def[''],
-                       compiler_arg=compiler_arg[''], compiler_def=compiler_def[''])
-        configs.append(defaultconf)
-        #TODO: Not just for default config
-        if defaultconf.ppm or defaultconf.cmake_arg or defaultconf.cmake_def or defaultconf. compiler_arg or defaultconf.compiler_def:
-            pass
-        else:
-            defaultconf.usecur = True
 
 
     return configs
@@ -271,8 +270,7 @@ def driver_main(
         add_boolean_argument(parser, 'configure', default=None,
                              help="Enable configure (CMake) step (Default: if necessary)")
         # TODO: Add switches that parse multiple arguments using shsplit
-        parser.add_argument('--config', metavar="CONFIG", action='append',
-                            help="Configuration selection (must exist from previous invocations)", default=None)
+        parser.add_argument('--config', metavar="CONFIG", action='append', help="Configuration selection (must exist from previous invocations)", default=None)
         parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
         parser.add_argument(
             '--cmake-arg', metavar="CONFIG:ARG", action='append')
@@ -282,6 +280,7 @@ def driver_main(
             '--compiler-arg', metavar="CONFIG:ARG", action='append')
         parser.add_argument(
             '--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
+        
 
     # Build step
     add_boolean_argument(parser, 'build', default=None,
@@ -405,7 +404,7 @@ def driver_main(
                             pass
                         elif args.configure is False:
                             reusebuilddir = True
-                        elif config.usecur:
+                        elif config.usecur and (builddir / 'build.ninja').exists():
                             reusebuilddir= True
                         elif configdescfile.is_file() and (builddir / 'build.ninja').exists():
                             existingopts = readfile(configdescfile).rstrip()

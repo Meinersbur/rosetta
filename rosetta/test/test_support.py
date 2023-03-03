@@ -26,10 +26,15 @@ class SupportTests(unittest.TestCase):
     def tearDown(self):
         print("Exit test")
 
+    def test_removeprefix(self):
+        self.assertEqual( removeprefix("prefixmy", "prefix") , "my")
+        self.assertEqual(removeprefix("mynofix", "prefix"), "mynofix")
 
     def test_removesuffix(self):
         self.assertEqual( removesuffix("mysuffix", "suffix") , "my")
         self.assertEqual(removesuffix("mynofix", "suffix"), "mynofix")
+
+
 
 
 

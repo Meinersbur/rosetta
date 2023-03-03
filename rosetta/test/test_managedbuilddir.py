@@ -9,47 +9,9 @@ from  rosetta.driver import *
 from rosetta.util.support import *
 
 
-def setUpModule():
-    print("Enter module tests")
-
-def tearDownModule():
-    print("Exit module tests")
 
 
 
-class ManagedBuilddirDefaultconfig(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.srcdir = mkpath(__file__ ).parent.parent.parent
-        cls.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
-        cls.rootdir = mkpath( cls.test_dir)
-        print("srcdir: " , cls.srcdir)
-        print("rootdir: " , cls.rootdir)
-
-        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
-
-        cls.resultsdir= cls.rootdir / 'results'
-
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.test_dir.cleanup()
-
-
-    def setUp(self):
-        rosetta.runner.reset_registered_benchmarks()
-        if self.resultsdir.exists():
-            shutil.rmtree(self.resultsdir)
-
-
-    def test_verify(self):
-        f = io.StringIO()
-        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main( argv= [None, '--verify'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
-
-        s = f.getvalue()
-        self.assertTrue(re.search(r'^Output of .*idioms\.assign\..* considered correct$',s, re.MULTILINE ))
-        self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
 
 
 
@@ -80,61 +42,158 @@ class ManagedBuilddirTests(unittest.TestCase):
         self.assertEquals(  len( builds), 0 )
 
 
+
+
+
+
+
+
+
+
+
+
+class ManagedBuilddirDefaultconfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.srcdir = mkpath(__file__ ).parent.parent.parent
+        cls.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
+        cls.rootdir = mkpath( cls.test_dir)
+        print("srcdir: " , cls.srcdir)
+        print("rootdir: " , cls.rootdir)
+
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
+
+        cls.resultsdir= cls.rootdir / 'results'
+
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.test_dir.cleanup()
+
+
+    def setUp(self):
+        rosetta.runner.reset_registered_benchmarks()
+        if self.resultsdir.exists():
+            shutil.rmtree(self.resultsdir)
+
+
+
     def test_configure(self):
-        rosetta.driver.driver_main(  argv=[None, '--configure', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
         builds = list((self.rootdir / 'build' ).iterdir())
-        self.assertEquals({ b.name for b in builds }, {'build-O2', 'build-O3'}  )
-        for build in builds:
-            self.assertTrue((build / 'CMakeCache.txt').exists())
+        self.assertSetEqual({ b.name for b in builds }, {'defaultbuild'}  )
+        self.assertTrue((self.rootdir / 'build' / 'defaultbuild' / 'CMakeCache.txt').exists())
 
 
     def test_build(self):
-        rosetta.driver.driver_main(  argv=[None, '--build', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3", "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
-        for build in (self.rootdir / 'build' ).iterdir():
-            self.assertTrue((build / 'benchmarks' / 'Release' / 'suites.polybench.cholesky.serial').exists())
+        rosetta.driver.driver_main(  argv=[None, '--build'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )   
+        buildlist = list( (self.rootdir / 'build' ).iterdir())
+        self.assertEquals(len(buildlist),1)  
+        self.assertTrue((self.rootdir / 'build' / 'defaultbuild' / 'benchmarks' / 'Release' / 'idioms.assign.serial').exists())
 
 
+    def test_verify(self):
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main( argv= [None, '--verify'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
 
-     
+        s = f.getvalue()
+        self.assertTrue(re.search(r'^Output of .*idioms\.assign\..* considered correct$',s, re.MULTILINE ))
+        self.assertFalse(re.search(r'^Array data mismatch\:',s, re.MULTILINE));
 
 
     def test_bench(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main( argv= [None, '--bench',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+            rosetta.driver.driver_main(argv= [None, '--bench'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
     
         # Evaluate output
         s=f.getvalue()
         self. assertTrue(re.search(r'Benchmark.+Wall', s, re.MULTILINE), "Evaluation table Header")
-        self. assertTrue(re.search(r'suites\.polybench\.cholesky', s, re.MULTILINE), "Benchmark entry")
+        self. assertTrue(re.search(r'idioms\.assign', s, re.MULTILINE), "Benchmark entry")
     
         # Check benchmarking results
         results = list((self.rootdir /'results').glob('**/*.xml'))
         self.assertTrue(len(results)>=1)
         for r in results:
-            self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+            self.assertTrue(r.name.startswith('idioms.assign.'), "Must only run filtered tests" )
 
         # Check report
         reports = list((self.rootdir /'results').glob('report_*.html'))
         self.assertEqual(len(reports),1)
 
 
-    def test_compare(self):
-        rosetta.driver.driver_main( argv= [None, '--bench', '--compare',  "--cmake-def=ROSETTA_BENCH_FILTER=--filter=cholesky",  "--compiler-arg=O2:-O2", "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
-        
-        # Check result dir content
-        resultlist = list((self.rootdir / 'build' ).iterdir())
-        self.assertTrue(len(resultlist)== 2, "resultdir for xml files and the html report")
 
-        # Check result files
+
+class ManagedBuilddirMulticonfig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.srcdir = mkpath(__file__ ).parent.parent.parent
+        cls.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
+        cls.rootdir = mkpath( cls.test_dir)
+        print("srcdir: " , cls.srcdir)
+        print("rootdir: " , cls.rootdir)
+
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign',  "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
+
+        cls.resultsdir= cls.rootdir / 'results'
+
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.test_dir.cleanup()
+
+
+    def setUp(self):
+        rosetta.runner.reset_registered_benchmarks()
+        if self.resultsdir.exists():
+            shutil.rmtree(self.resultsdir)
+
+
+
+
+    def test_configure(self):
+        builds = list((self.rootdir / 'build' ).iterdir())
+        self.assertSetEqual({ b.name for b in builds }, {'build-O2', 'build-O3'}  )
+        for build in builds:
+            self.assertTrue((build / 'CMakeCache.txt').exists())
+
+
+
+    def test_build(self):
+        rosetta.driver.driver_main(  argv=[None, '--build', '--config=O2', '--config=O3'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+        buildlist = list((self.rootdir / 'build' ).iterdir())
+        self.assertEquals(len(buildlist),2)
+        for build in buildlist:
+            self.assertTrue((build / 'benchmarks' / 'Release' / 'idioms.assign.serial').exists())
+
+
+    def test_bench(self):
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main(argv= [None, '--bench', '--config=O2', '--config=O3'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
+    
+        # Evaluate output
+        s=f.getvalue()
+        self. assertTrue(re.search(r'Benchmark.+Wall', s, re.MULTILINE), "Evaluation table Header")
+        self. assertTrue(re.search(r'O2.+O3', s, re.MULTILINE), "Comparison table Header")
+        self. assertTrue(re.search(r'idioms\.assign', s, re.MULTILINE), "Benchmark entry")
+    
+        # Check benchmarking results
         results = list((self.rootdir /'results').glob('**/*.xml'))
-        self.assertTrue(len(results)>=2, "At least one serial result per optimization level")
+        self.assertTrue(len(results)>=2)
         for r in results:
-            self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+            self.assertTrue(r.name.startswith('idioms.assign.'), "Must only run filtered tests" )
 
         # Check report
         reports = list((self.rootdir /'results').glob('report_*.html'))
         self.assertEqual(len(reports),1)
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':

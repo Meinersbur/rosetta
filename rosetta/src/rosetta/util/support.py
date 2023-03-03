@@ -380,6 +380,12 @@ def pystr(s):
     return f'"{pyescape(s)}"'
 
 
+def removeprefix(s: str, prefix: str):
+    if s.startswith(prefix):
+        return s[len(prefix):]
+    return s
+
+
 def removesuffix(s: str, suffix: str):
     if s.endswith(suffix):
         return s[:-len(suffix)]
