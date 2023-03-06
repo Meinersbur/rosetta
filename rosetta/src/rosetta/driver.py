@@ -169,32 +169,40 @@ def determine_default_action(args):
         return DefaultAction.EVALUATE
     if args.report:
         return DefaultAction.REPORT
-    if args.compare:
-        return DefaultAction.COMPARE
     return DefaultAction.VERIFY_THEN_BENCH
 
 
 def apply_default_action(default_action, args):
-    args.clean = first_defined(args.clean, default_action in {
-                               DefaultAction.CLEAN} or None)
-    args.configure = first_defined(args.configure, default_action in {
-                                   DefaultAction.CONFIGURE} or None)
-    args.build = first_defined(args.build, default_action in {
-                               DefaultAction.BUILD,       DefaultAction.BENCH, DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
-    args.probe = first_defined(
-        args.probe, default_action in {DefaultAction.PROBE})
-    args.tune = first_defined(args.tune, default_action in {
-                              DefaultAction.TUNE, DefaultAction.PROBE_TUNED})
-    args.verify = first_defined(args.verify, default_action in {
-                                DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
-    args.bench = first_defined(args.bench, default_action in {
-                               DefaultAction.BENCH, DefaultAction.VERIFY_THEN_BENCH})
-    args.evaluate = first_defined(args.evaluate, default_action in {
-                                  DefaultAction.EVALUATE,       DefaultAction.BENCH,   DefaultAction.VERIFY_THEN_BENCH})
-    args.report = first_defined(args.evaluate, default_action in {
-                                DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
-    args.compare = first_defined(args.compare, default_action in {
-                                 DefaultAction.COMPARE})
+    # Primary actions (execute the compiled program)
+    # In some sense probing is not primary (done for it's own sake), but for preparation of a bench run
+    args.bench = first_defined(args.bench, default_action in {DefaultAction.BENCH, DefaultAction.VERIFY_THEN_BENCH})
+    args.probe = first_defined(args.probe, default_action in {DefaultAction.PROBE})
+    args.tune = first_defined(args.tune, default_action in { DefaultAction.TUNE, DefaultAction.PROBE_TUNED})
+    args.verify = first_defined(args.verify, default_action in {DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
+
+    # Auxiliary actions (those that are needed to do some primary action)
+    if     args.build is None:
+                if default_action in  { DefaultAction.BUILD}:
+                    args.build = True
+                elif args.bench or args.probe or args.tune or args.verify:
+                    args.build = True
+                else:
+                    args.build = False
+    if args.configure is None:
+        if default_action in  {DefaultAction.CONFIGURE}:
+            args.configure = True
+        elif args.build:
+            # Default: configure if not yet configured or args changed
+            args.configure = None
+        else:
+            # Do not configure when not building
+            args.configure = False
+    args.clean = first_defined(args.clean, default_action in {DefaultAction.CLEAN} )
+
+    # Analysis actions
+    args.evaluate = first_defined(args.evaluate, default_action in { DefaultAction.EVALUATE,       DefaultAction.BENCH,   DefaultAction.VERIFY_THEN_BENCH})
+    args.report = first_defined(args.evaluate, default_action in { DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
+
 
 
 verbose = None
@@ -215,6 +223,8 @@ class DefaultAction:
     CLEAN = NamedSentinel('clean')
     CONFIGURE = NamedSentinel('configure')
     BUILD = NamedSentinel('build')
+    # TODO: Measure the compile/build time, so clean everytime 
+    BUILD_TIMED = NamedSentinel('timed_build')
     PROBE = NamedSentinel('probe')
     TUNE = NamedSentinel('tune')
     # Before probing a problem size, tune the benchmark with that problem size
@@ -247,6 +257,8 @@ def driver_main(
     if mode == DriverMode.MANAGEDBUILDDIR:
         assert benchlistfile is None
         assert builddir is None
+
+    probestages = ['hybrid', 'runtime', 'compiletime'] if DriverMode.MANAGEDBUILDDIR  else ['runtime']
 
     # TODO: Description according default_action
     parser = argparse.ArgumentParser(
@@ -290,23 +302,30 @@ def driver_main(
     parser.add_argument('--limit-walltime', type=parse_time)
     parser.add_argument('--limit-rss', type=parse_memsize)
     parser.add_argument('--limit-alloc', type=parse_memsize)
+    parser.add_argument('--probe-stage', choices=probestages, default=probestages[0] ,help="What toolchain stage to probe; compiletime allows the compiler to see the problem size")
+
 
     # Tune step
     add_boolean_argument(parser, 'tune', default=None,
                          help="Benchmark performance tuning")
+    parser.add_argument('--tune-stage', choices=probestages, default=probestages[0] , help="What toolchain stage to tune; compiletime allows tuning source and compiler parameters")
 
     # Verify step
     add_boolean_argument(parser, 'verify', default=None,
                          help="Enable check step")
+
 
     # Benchmark step
     add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
     parser.add_argument('--problemsizefile', type=pathlib.Path,
                         help="Problem sizes to use (.ini file)")  # Also used by --verify
 
+
+
     # Evaluate step
     add_boolean_argument(parser, 'evaluate', default=None,
                          help="Evaluate result")
+    parser.add_argument( '--use-results-rdir', type=pathlib.Path, action = 'append', default=[], help="Use these result xml files from this dir (recursive); incompatible with benching")
     parser.add_argument('--boxplot', type=pathlib.Path,
                         metavar="FILENAME", help="Save as boxplot to FILENAME")
 
@@ -314,11 +333,10 @@ def driver_main(
     add_boolean_argument(parser, 'report', default=None,
                          help="Create HTML report")
 
-    # Compare step
-    add_boolean_argument(parser, 'compare', default=None,
-                         help="Compare two or more benchmark runs")
 
-    args = parser.parse_args(None if argv is None else argv[1:])
+
+
+    args = parser.parse_args(None if argv is None else  [ str(a) for a in  argv[1:]])
     global verbose
     verbose = args.verbose
 
@@ -341,12 +359,24 @@ def driver_main(
     apply_default_action(main_action, args)
 
     with globalctxmgr:
+        resultfiles = None
+
+
+
         if mode == DriverMode.MANAGEDBUILDDIR:
+            resultsdir = None
+            def get_resultsdir():
+                nonlocal resultsdir
+                if not resultsdir:
+                    resultsdir = rootdir / 'results'
+                    resultsdir.mkdir(parents=True, exist_ok=True)
+                return resultsdir
+
             configs = parse_build_configs(args, implicit_reference=args.verify)
 
             rootdir = mkpath(first_defined(args.rootdir, pathlib.Path.cwd()))
             builddir = rootdir / 'build'
-            resultdir = rootdir / 'results'
+            
 
             # if builddir.exists():
             #    if args.clean:
@@ -358,7 +388,7 @@ def driver_main(
             #            shutil.rmtree(c)
             #    else:
             #        print_verbose("Reusing existing build")
-            resultdir.mkdir(parents=True, exist_ok=True)
+            
 
             # If only cleaning, clean everything
             # TODO: If specific config specified, clean only those
@@ -383,35 +413,35 @@ def driver_main(
                 builddir = config.builddir
                 configdescfile = builddir / 'RosettaCache.txt'
 
-                # TODO: Support other generators as well
-                opts = ['cmake', '-S', srcdir,  '-B', builddir, '-GNinja Multi-Config',
-                        '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={resultdir}']
-                opts += config.gen_cmake_args()
-                expectedopts = shjoin(opts).rstrip()
+                if args.configure is not False:
+                    opts = ['cmake', '-S', srcdir,  '-B', builddir, '-GNinja Multi-Config', '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={get_resultsdir()}']
+                    opts += config.gen_cmake_args()
+                    expectedopts = shjoin(opts).rstrip()
 
-                reusebuilddir = False
-                if config.is_predefined:
-                    # Without cmake options, reuse whatever is in the builddir if it is already configured
-                    reusebuilddir = (builddir / 'build.ninja').exists()
-                else:
-                    if args.configure or args.clean:
-                        pass
-                    elif args.configure is False:
-                        reusebuilddir = True
-                    elif config.usecur and (builddir / 'build.ninja').exists():
-                        reusebuilddir = True
-                    elif configdescfile.is_file() and (builddir / 'build.ninja').exists():
-                        existingopts = readfile(configdescfile).rstrip()
-                        if existingopts == expectedopts:
+                    reusebuilddir = False
+                    if config.is_predefined:
+                        # Without cmake options, reuse whatever is in the builddir if it is already configured
+                        reusebuilddir = (builddir / 'build.ninja').exists()
+                    else:
+                        if args.configure or args.clean:
+                            pass
+                        elif args.configure is False:
                             reusebuilddir = True
+                        elif config.usecur and (builddir / 'build.ninja').exists():
+                            reusebuilddir = True
+                        elif configdescfile.is_file() and (builddir / 'build.ninja').exists():
+                            existingopts = readfile(configdescfile).rstrip()
+                            if existingopts == expectedopts:
+                                reusebuilddir = True
 
-                if not reusebuilddir:
-                    if builddir.exists() and args.clean:
-                        shutil.rmtree(builddir)
-                    if args.configure or (args.configure is None and (args.build or args.verify or args.probe)):
-                        builddir.mkdir(exist_ok=True, parents=True)
-                        invoke_verbose(*opts, cwd=config.builddir)
-                        createfile(configdescfile, expectedopts)
+                    if not reusebuilddir:
+                        if builddir.exists() and args.clean:
+                            shutil.rmtree(builddir)
+                        if args.configure or (args.configure is None and (args.build or args.verify or args.probe)):
+                            # TODO: Support other generators as well
+                            builddir.mkdir(exist_ok=True, parents=True)
+                            invoke_verbose(*opts, cwd=config.builddir)
+                            createfile(configdescfile, expectedopts)
 
             if args.build:
                 for config in configs:
@@ -455,46 +485,22 @@ def driver_main(
                     runner.run_verify(
                         problemsizefile=args.problemsizefile, refdir=refdir)
 
-                resultfiles = None
+    
                 if bench:
                     resultfiles = runner.run_bench(
-                        srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+                        srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir())
             else:
                 # If not evaluating the just-executed, search for previously saved result files.
 
                 # TODO: Filter result files
-                resultfiles = []
-                for xmlfile in resultdir .rglob("*.xml"):
-                    resultfiles.append(xmlfile)
-
-            #subcommand_evaluate( None, args, resultfiles=resultfiles, resultsdir=resultdir)
-            if args.evaluate:
-                resultsdir = resultdir
-                results = evaluator.load_resultfiles(resultfiles)
-
-                # Remove bogus entries
-                # results = [r for r in results if   r.durations.get('walltime', statistic([]) ).count >= 1 ]
-
-                # if len(builddirs) > 1:
-                evaluator.results_compare(
-                    results, compare_by="configname", compare_val=["walltime"])
-                # else:
-                #    evaluate(resultfiles)
-
-                if args.boxplot:
-                    fig = evaluator. results_boxplot(results)
-                    fig.savefig(fname=args.boxplot)
-                    fig.canvas.draw_idle()
-
-                now = datetime.datetime.now()  # TODO: Use runner.make_resultssubdir
-                reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
+                resultfiles = resultfiles or []
                 if resultsdir:
-                    reportfile = resultsdir / reportfile
+                    for xmlfile in resultsdir .rglob("*.xml"):
+                        resultfiles.append(xmlfile)
 
-                # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
-                evaluator.save_report(results, filename=reportfile)
 
-        if mode == DriverMode.USERBUILDDIR:
+
+        else:
             # If neither no action is specified, enable --bench implicitly unless --no-bench
             probe = args.probe
             verify = args.verify
@@ -530,17 +536,62 @@ def driver_main(
                 runner.run_verify(
                     problemsizefile=args.problemsizefile, refdir=refdir)
 
-            resultfiles = None
+
+            resultfiles = resultfiles or []
             if bench:
-                resultfiles = runner.run_bench(
+                resultfiles += runner.run_bench(
                     srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
 
-            if args.report and resultfiles:
-                results = evaluator.load_resultfiles(resultfiles)
-                now = datetime.datetime.now()
-                reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
-                if resultdir:
-                    reportfile = resultdir / reportfile
-                evaluator.save_report(results, filename=reportfile)
 
-            return resultfiles
+        for use_results_rdir in args.use_results_rdir:
+            resultfiles = resultfiles or []
+            resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
+
+
+
+
+        if args.evaluate or args.report :
+            if resultfiles is None:
+                die("No source for resultfiles")
+            if not resultfiles:
+                die("No results") 
+
+            results = evaluator.load_resultfiles(resultfiles)
+
+
+            if mode == DriverMode.MANAGEDBUILDDIR:
+                #subcommand_evaluate( None, args, resultfiles=resultfiles, resultsdir=resultdir)
+                if args.evaluate:
+                    results = evaluator.load_resultfiles(resultfiles)
+
+                    # Remove bogus entries
+                    # results = [r for r in results if   r.durations.get('walltime', statistic([]) ).count >= 1 ]
+
+                    # if len(builddirs) > 1:
+                    evaluator.results_compare(
+                        results, compare_by="configname", compare_val=["walltime"])
+                    # else:
+                    #    evaluate(resultfiles)
+
+                    if args.boxplot:
+                        fig = evaluator. results_boxplot(results)
+                        fig.savefig(fname=args.boxplot)
+                        fig.canvas.draw_idle()
+
+                    now = datetime.datetime.now()  # TODO: Use runner.make_resultssubdir
+                    reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
+                    if resultsdir:
+                        reportfile = resultsdir / reportfile
+
+                    # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
+                    evaluator.save_report(results, filename=reportfile)
+            else:
+
+
+                if args.report and resultfiles:
+                    results = evaluator.load_resultfiles(resultfiles)
+                    now = datetime.datetime.now()
+                    reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
+                    if resultdir:
+                        reportfile = resultdir / reportfile
+                    evaluator.save_report(results, filename=reportfile)

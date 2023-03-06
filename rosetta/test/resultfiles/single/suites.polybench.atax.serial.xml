@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<benchmarks>
+  <benchmark name="suites.polybench.atax" n="410" cold_iterations="1" peak_alloc="1219832" ppm="serial" buildtype="Release" maxrss="0">
+    <iteration walltime="166900 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="165300 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="163100 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="166800 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="238800 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="298100 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="189200 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="163300 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="159900 ns" usertime="0 s" kerneltime="0 s"/>
+    <iteration walltime="159500 ns" usertime="0 s" kerneltime="0 s"/>
+  </benchmark>
+</benchmarks>
