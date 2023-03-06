@@ -326,8 +326,7 @@ def driver_main(
     add_boolean_argument(parser, 'evaluate', default=None,
                          help="Evaluate result")
     parser.add_argument( '--use-results-rdir', type=pathlib.Path, action = 'append', default=[], help="Use these result xml files from this dir (recursive); incompatible with benching")
-    parser.add_argument('--boxplot', type=pathlib.Path,
-                        metavar="FILENAME", help="Save as boxplot to FILENAME")
+
 
     # Report step
     add_boolean_argument(parser, 'report', default=None,
@@ -360,7 +359,7 @@ def driver_main(
 
     with globalctxmgr:
         resultfiles = None
-
+        resultssubdir = None
 
 
         if mode == DriverMode.MANAGEDBUILDDIR:
@@ -487,7 +486,7 @@ def driver_main(
 
     
                 if bench:
-                    resultfiles = runner.run_bench(
+                    resultfiles , resultssubdir = runner.run_bench(
                         srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir())
             else:
                 # If not evaluating the just-executed, search for previously saved result files.
@@ -497,8 +496,6 @@ def driver_main(
                 if resultsdir:
                     for xmlfile in resultsdir .rglob("*.xml"):
                         resultfiles.append(xmlfile)
-
-
 
         else:
             # If neither no action is specified, enable --bench implicitly unless --no-bench
@@ -533,24 +530,22 @@ def driver_main(
 
             if verify:
                 refdir = builddir / 'refout'
-                runner.run_verify(
-                    problemsizefile=args.problemsizefile, refdir=refdir)
+                runner.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
 
 
-            resultfiles = resultfiles or []
             if bench:
-                resultfiles += runner.run_bench(
-                    srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+                resultfiles, resultssubdir = runner.run_bench( srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
 
 
+
+        # Load resultsfiles for when analysis a previous run
         for use_results_rdir in args.use_results_rdir:
             resultfiles = resultfiles or []
             resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
 
 
 
-
-        if args.evaluate or args.report :
+        if args.evaluate or args.report:
             if resultfiles is None:
                 die("No source for resultfiles")
             if not resultfiles:
@@ -558,40 +553,17 @@ def driver_main(
 
             results = evaluator.load_resultfiles(resultfiles)
 
+            if args.evaluate:
 
-            if mode == DriverMode.MANAGEDBUILDDIR:
-                #subcommand_evaluate( None, args, resultfiles=resultfiles, resultsdir=resultdir)
-                if args.evaluate:
-                    results = evaluator.load_resultfiles(resultfiles)
-
-                    # Remove bogus entries
-                    # results = [r for r in results if   r.durations.get('walltime', statistic([]) ).count >= 1 ]
-
-                    # if len(builddirs) > 1:
-                    evaluator.results_compare(
-                        results, compare_by="configname", compare_val=["walltime"])
-                    # else:
-                    #    evaluate(resultfiles)
-
-                    if args.boxplot:
-                        fig = evaluator. results_boxplot(results)
-                        fig.savefig(fname=args.boxplot)
-                        fig.canvas.draw_idle()
-
+                evaluator.results_compare(results, compare_by="configname", compare_val=["walltime"])
+            if args.report:
+                if resultssubdir:
+                    # If emitting a report the analyze the last benchmark run, put the report into that directory
+                    reportfile =  resultssubdir / 'report.html'
+                else:
                     now = datetime.datetime.now()  # TODO: Use runner.make_resultssubdir
                     reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
-                    if resultsdir:
+                    if resultsdir := get_resultsdir():
                         reportfile = resultsdir / reportfile
+                evaluator.save_report(results, filename=reportfile)
 
-                    # first_defined(args.report,resultsdir /  f"report_{now:%Y%m%d_%H%M}.html" )
-                    evaluator.save_report(results, filename=reportfile)
-            else:
-
-
-                if args.report and resultfiles:
-                    results = evaluator.load_resultfiles(resultfiles)
-                    now = datetime.datetime.now()
-                    reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
-                    if resultdir:
-                        reportfile = resultdir / reportfile
-                    evaluator.save_report(results, filename=reportfile)

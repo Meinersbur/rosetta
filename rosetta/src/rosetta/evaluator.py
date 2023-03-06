@@ -576,16 +576,21 @@ compare_columns
         else:  # TODO: proper column name
             table.add_column(col, title=StrAlign(StrColor(col, colorama.Fore.BWHITE), pos=StrAlign.CENTER))
 
-    for j, col in enumerate(compare_columns):
-        supercolumns = []
-        table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col),
-                         colorama.Style.BRIGHT), pos=StrAlign.CENTER))
-        for i, resultname in enumerate(list_of_resultnames):  # Common title
-            sol = f"{col}_{i}"
-            supercolumns.append(sol)
-            table.add_column(sol, title=StrAlign(StrColor(resultname, colorama.Style.BRIGHT),
-                             pos=StrAlign.CENTER), formatter=duration_formatter())
-        table.make_supercolumn(f"{col}", supercolumns)
+    if len(list_of_resultnames) >= 2 or any(name.strip() for name in list_of_resultnames):
+        # We are comparing different groups or a single group with a name
+        for j, col in enumerate(compare_columns):
+            supercolumns = []
+            table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT), pos=StrAlign.CENTER))
+            for i, resultname in enumerate(list_of_resultnames):  # Common title
+                sol = f"{col}_{i}"
+                supercolumns.append(sol)
+                table.add_column(sol, title=StrAlign(StrColor(resultname, colorama.Style.BRIGHT),  pos=StrAlign.CENTER), formatter=duration_formatter())
+            table.make_supercolumn(f"{col}", supercolumns)
+    else:
+        # We are displaying a single group; no supercolumn needs
+        for col in compare_columns:
+            table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT), pos=StrAlign.CENTER), formatter=duration_formatter())
+
 
     for result in groups_of_results:
         representative = result[0]  # TODO: collect all occuring group values

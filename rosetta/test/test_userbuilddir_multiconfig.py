@@ -60,17 +60,26 @@ class UserBuilddirMulticonfig(unittest.TestCase):
         
 
     def test_bench(self):
-        rosetta.driver.driver_main( argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)    
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main( argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,benchlistfile=  self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)    
+
+        # Check terminal output
+        s=f.getvalue()
+        self.assertTrue(re.search(r'Benchmark.+Wall', s, re.MULTILINE), "Evaluation table Header")
+        self.assertTrue(re.search(r'suites\.polybench\.cholesky', s, re.MULTILINE), "Benchmark entry")
+
+        # Check existance of the reportfile, only a single one is expected
+        [reportfile] = list((self.builddir /'results').glob('*/report.html'))
+        resultsubdir = reportfile.parent
 
         # Check benchmark results 
-        results = list((self.builddir /'results').glob('**/*.xml'))
+        results = list(resultsubdir.glob('*.xml'))
         self.assertTrue(len(results)>=1)
         for r in results:
             self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
 
-        # Check report
-        reports = list((self.builddir /'results').glob('report_*.html'))
-        self.assertEqual(len(reports),1)
+
 
 
 

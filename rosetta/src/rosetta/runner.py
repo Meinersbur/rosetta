@@ -295,7 +295,7 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
         results .append(run_gbench(
             e, problemsizefile=problemsizefile, resultfile=thisresultdir))
-    return results
+    return results,resultssubdir
 
 
 def custom_bisect_left(lb, ub, func):
