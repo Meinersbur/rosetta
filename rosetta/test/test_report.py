@@ -26,7 +26,7 @@ class ReportTests(unittest.TestCase):
 
 
 
-    def test_singleresult(self):
+    def test_single(self):
         reportfile = self.rootdir / 'singleresult.html'
         rosetta.driver.driver_main(argv=[None,  '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'single', '--reportfile',  reportfile], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)   
 
@@ -35,6 +35,18 @@ class ReportTests(unittest.TestCase):
         self.assertRegex(s, r'Benchmark\ Report')
         self.assertRegex(s, r'idioms\.assign')
         self.assertRegex(s, r'serial')
+
+
+    def test_multi_ppm(self):
+        reportfile = self.rootdir / 'multiresult.html'
+        rosetta.driver.driver_main(argv=[None,  '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm', '--reportfile',  reportfile], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)   
+
+        with reportfile.open('r') as f:
+            s = f.read()
+        self.assertRegex(s, r'Benchmark\ Report')
+        self.assertRegex(s, r'idioms\.assign')
+        self.assertRegex(s, r'serial')
+        self.assertRegex(s, r'cuda')
 
 
 
