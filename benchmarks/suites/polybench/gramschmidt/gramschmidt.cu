@@ -77,14 +77,13 @@ static void kernel(pbsize_t m, pbsize_t n,
   for (idx_t k = 0; k < n; k++) {
     outer_sqr<real> op{m, n, A, k};
     real sum =
-#if 1
         thrust::transform_reduce(thrust::device,
                                  thrust::make_counting_iterator(0),
                                  thrust::make_counting_iterator(0) + m,
                                  op,
                                  (real)0,
                                  thrust::plus<real>());
-#endif
+
 
 
 
@@ -92,53 +91,10 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
     kernel_Q<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, A, R, Q, k);
-#if 1
     kernel_R<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(m, n, A, R, Q, k);
     kernel_A<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(m, n, A, R, Q, k);
-#endif
   }
 
-
-
-#if 0
-                           for (idx_t k = 0; k < n; k++) {
-
-                               double sum = 0;
-                               // FIXME: For some reason OpenMP-reduction numericall destabilizes this
-                               // Possibly inherent to Gram-Schmidt numeric instability
-                               // https://en.wikipedia.org/wiki/Gram–Schmidt_process#Numerical_stability
-                               // Generate fakedata that a not that similat to each other
-#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A) reduction(+ \
-                                                                                        : sum)
-                               for (int i = 0; i < m; i++) {
-//#pragma omp critical
-//                                   printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
-                                   sum += sqr(A[i][k]) ;
-                               }
-
-                           //    printf("%lu: sum=%g\n",k,sum );
-                               R[k][k] = std::sqrt(sum);
-
-
-#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A, Q, R)
-                               for (int i = 0; i < m; i++)
-                                   Q[i][k] = A[i][k] / R[k][k];
-
-
-#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, n, A, Q, R)
-                               for (int j = k + 1; j < n; j++) {
-                                   R[k][j] = 0;
-                                   for (idx_t i = 0; i < m; i++)
-                                       R[k][j] += Q[i][k] * A[i][j];
-                               }
-
-#pragma omp parallel for schedule(static) default(none) firstprivate(k, m, n, A, Q, R)
-                               for (int j = k + 1; j < n; j++) 
-                                   for (idx_t i = 0; i < m; i++)
-                                       A[i][j] -= Q[i][k] * R[k][j];
-                               
-                           }
-#endif
 }
 
 

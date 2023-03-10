@@ -353,6 +353,11 @@ class OrderedSet(MutableSet[T], Sequence[T]):
         items = it.chain.from_iterable(containers)
         return cls(items)
 
+    def union_update(self, *sets: SetLike[T]):
+        for s in sets:
+            for e in s:
+                self.add(e)
+
     def __and__(self, other: SetLike[T]) -> "OrderedSet[T]":
         # the parent implementation of this is backwards
         return self.intersection(other)

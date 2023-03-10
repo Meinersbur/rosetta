@@ -14,7 +14,7 @@ import sys
 import stat
 from pathlib import Path
 import logging as log 
-
+from functools import cached_property
 
 
 shsplit = shlex.split

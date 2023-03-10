@@ -55,8 +55,9 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
         basename = path.stem
         basename = '.'.join(list(rel.parts) + [basename])
 
-        if filter and not filter in basename:
-            log.info(f"Benchmark {basename} does not match --filter={filter}")
+        if filter and not any(f in basename for f in filter):
+            print(f"Benchmark {basename} does not match --filter-include={filter}")
+            log.info(f"Benchmark {basename} does not match --filter-include={filter}")
             continue
         log.info(f"Adding benchmark {path}")
         buildfiles.append(path)
@@ -166,12 +167,11 @@ def main():
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--configname')
     # TODO: More extensive filter mechanisms
-    parser.add_argument(
-        '--filter', help="Only look into filenames that contain this substring")
+    parser.add_argument('--filter-include','--filter', action='append', help="Only look into filenames that contain this substring")
     args = parser.parse_args()
 
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir,
-                     builddir=args.builddir, configname=args.configname, filter=args.filter)
+                     builddir=args.builddir, configname=args.configname, filter=args.filter_include)
 
 
 if __name__ == '__main__':

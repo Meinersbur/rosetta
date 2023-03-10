@@ -10,9 +10,6 @@ static real sqr(real v) { return v * v; }
 static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A, multarray<real, 2> R, multarray<real, 2> Q) {
     assert(n <= m && "Matrix needs sufficient rank");
-    A.dump("A");
-    R.dump("R");
-    Q.dump("Q");
 
 #pragma scop
   for (idx_t k = 0; k < n; k++) {
@@ -23,7 +20,6 @@ static void kernel(pbsize_t m, pbsize_t n,
     R[k][k] = std::sqrt(R[k][k]);
     for (idx_t i = 0; i < m; i++)
       Q[i][k] = A[i][k] / R[k][k];
-#if 1
     for (idx_t j = k + 1; j < n; j++) {
       R[k][j] = 0;
       for (idx_t i = 0; i < m; i++)
@@ -31,7 +27,6 @@ static void kernel(pbsize_t m, pbsize_t n,
       for (idx_t i = 0; i < m; i++)
         A[i][j] -= Q[i][k] * R[k][j];
     }
-#endif
   }
 #pragma endscop
 }

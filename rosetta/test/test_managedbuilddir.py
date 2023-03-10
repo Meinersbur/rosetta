@@ -4,6 +4,7 @@
 from context import rosetta
 import unittest
 import sys
+import io
 import tempfile
 from  rosetta.driver import *
 from rosetta.util.support import *
@@ -118,7 +119,7 @@ class ManagedBuilddirDefaultconfig(unittest.TestCase):
             self.assertTrue(r.name.startswith('idioms.assign.'), "Must only run filtered tests" )
 
         # Check report
-        reports = list((self.rootdir /'results').glob('report_*.html'))
+        reports = list((self.rootdir /'results').glob('**/report.html'))
         self.assertEqual(len(reports),1)
 
 
@@ -133,7 +134,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
         print("srcdir: " , cls.srcdir)
         print("rootdir: " , cls.rootdir)
 
-        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign',  "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter-include=idioms.assign --filter-include=suites.polybench.cholesky',  "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
 
         cls.resultsdir= cls.rootdir / 'results'
 
@@ -174,18 +175,19 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
     
         # Evaluate output
         s=f.getvalue()
-        self. assertTrue(re.search(r'Benchmark.+Wall', s, re.MULTILINE), "Evaluation table Header")
+        self. assertTrue(re.search(r'Benchmark.+PPM.*Wall', s, re.MULTILINE), "Evaluation table Header")
         self. assertTrue(re.search(r'O2.+O3', s, re.MULTILINE), "Comparison table Header")
-        self. assertTrue(re.search(r'idioms\.assign', s, re.MULTILINE), "Benchmark entry")
-    
+        self. assertTrue(re.search(r'idioms\.assign.+serial', s, re.MULTILINE), "Benchmark entry")
+        self. assertTrue(re.search(r'suites\.polybench\.cholesky.+serial', s, re.MULTILINE), "Benchmark entry")
+
         # Check benchmarking results
         results = list((self.rootdir /'results').glob('**/*.xml'))
         self.assertTrue(len(results)>=2)
         for r in results:
-            self.assertTrue(r.name.startswith('idioms.assign.'), "Must only run filtered tests" )
+            self.assertTrue(r.name.startswith('idioms.assign.') or r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
 
         # Check report
-        reports = list((self.rootdir /'results').glob('report_*.html'))
+        reports = list((self.rootdir /'results').glob('**/report.html'))
         self.assertEqual(len(reports),1)
 
 

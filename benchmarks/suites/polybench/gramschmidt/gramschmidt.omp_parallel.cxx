@@ -40,11 +40,6 @@ static real sqr(real v) { return v * v; }
 
 static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A, multarray<real, 2> R, multarray<real, 2> Q) {
-
-    //A.dump();
-    //R.dump();
-    //Q.dump();
-
   for (idx_t k = 0; k < n; k++) {
     real sum = 0;
     // FIXME: For some reason OpenMP-reduction numerically destabilizes this

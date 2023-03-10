@@ -84,7 +84,9 @@ set(_stage1args "--builddir=${CMAKE_CURRENT_BINARY_DIR}" "--benchdir=${CMAKE_CUR
 if (ROSETTA_CONFIGNAME)
   list(APPEND "--configname=${ROSETTA_CONFIGNAME}")
 endif ()
-list(APPEND _stage1args ${ROSETTA_BENCH_FILTER})
+separate_arguments(_filter_args NATIVE_COMMAND "${ROSETTA_BENCH_FILTER}")
+list(APPEND _stage1args ${_filter_args})
+message("Executing: ${Python_EXECUTABLE} -m rosetta.scripts.gen-stage1 ${_stage1args}")
 execute_process(COMMAND "${Python_EXECUTABLE}" -m rosetta.scripts.gen-stage1 ${_stage1args} COMMAND_ERROR_IS_FATAL ANY)
 list(APPEND CMAKE_CONFIGURE_DEPENDS ${_stage1generator})
 

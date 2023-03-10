@@ -1,31 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import importlib.util
 import importlib
-import contextlib
 import typing
-import configparser
-import io
 from collections import defaultdict
-import math
-import colorama
 import xml.etree.ElementTree as et
-from typing import Iterable
-import json
 import datetime
-import os
 import pathlib
-import subprocess
 import argparse
-import sys
-from itertools import count
-from cmath import exp
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
-from .evaluator import subcommand_evaluate
 import re
 import logging as log
 import typing
@@ -93,10 +79,6 @@ def parse_build_configs(args, implicit_reference):
         # TODO: Reference configuration (only reference PPM)
         selected_keys.add("REF")
         specified_keys.add('REF')
-    # If no config selected explicitly, use all preconfigured ons
-    # if selected_keys.empty():
-    #    for b in builddir.glob('build-*/CMakeCache.txt'):
-    #        selected_keys.add(  removeprefix( b.parent.name, 'build-') )
 
     configs = []
     for k in selected_keys:
@@ -165,9 +147,9 @@ def determine_default_action(args):
         return DefaultAction.CONFIGURE
     if args.clean:
         return DefaultAction.CLEAN
-    if args.evaluate:
+    if args.evaluate :
         return DefaultAction.EVALUATE
-    if args.report:
+    if args.report or args.reportfile:
         return DefaultAction.REPORT
     return DefaultAction.VERIFY_THEN_BENCH
 
@@ -181,13 +163,13 @@ def apply_default_action(default_action, args):
     args.verify = first_defined(args.verify, default_action in {DefaultAction.VERIFY, DefaultAction.VERIFY_THEN_BENCH})
 
     # Auxiliary actions (those that are needed to do some primary action)
-    if     args.build is None:
-                if default_action in  { DefaultAction.BUILD}:
-                    args.build = True
-                elif args.bench or args.probe or args.tune or args.verify:
-                    args.build = True
-                else:
-                    args.build = False
+    if args.build is None:
+        if default_action in  { DefaultAction.BUILD}:
+            args.build = True
+        elif args.bench or args.probe or args.tune or args.verify:
+            args.build = True
+        else:
+            args.build = False
     if args.configure is None:
         if default_action in  {DefaultAction.CONFIGURE}:
             args.configure = True
@@ -201,7 +183,7 @@ def apply_default_action(default_action, args):
 
     # Analysis actions
     args.evaluate = first_defined(args.evaluate, default_action in { DefaultAction.EVALUATE,       DefaultAction.BENCH,   DefaultAction.VERIFY_THEN_BENCH})
-    args.report = first_defined(args.evaluate, default_action in { DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
+    args.report = first_defined(args.report, bool( args.reportfile) or None  , default_action in { DefaultAction.BENCH,  DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT})
 
 
 
@@ -325,12 +307,16 @@ def driver_main(
     # Evaluate step
     add_boolean_argument(parser, 'evaluate', default=None,
                          help="Evaluate result")
-    parser.add_argument( '--use-results-rdir', type=pathlib.Path, action = 'append', default=[], help="Use these result xml files from this dir (recursive); incompatible with benching")
-
+    parser.add_argument( '--use-results-rdir', type=pathlib.Path, action = 'append', default=[], help="Use these result xml files from this dir (recursive); otherwise use result from benchmarking")
+    parser.add_argument('--group-by', help="Comma-separated list of categories to group" )
+    parser.add_argument('--compare-by', help="Comma-separated list of categories to compare" )
+    parser.add_argument('--cols', help="Comma-separated list of columns to display (overrides auto selection)")
+    parser.add_argument('--cols-always', help="Comma-separated list of columns to display even if it does not contains data")
+    parser.add_argument('--cols-never', help="Comma-separated list of columns to not display")
 
     # Report step
-    add_boolean_argument(parser, 'report', default=None,
-                         help="Create HTML report")
+    add_boolean_argument(parser, 'report', default=None,  help="Create HTML report")
+    parser.add_argument('--reportfile', type=pathlib.Path, help="Path to write the report.html to")
 
 
 
@@ -360,7 +346,7 @@ def driver_main(
     with globalctxmgr:
         resultfiles = None
         resultssubdir = None
-
+        default_compare_by=None
 
         if mode == DriverMode.MANAGEDBUILDDIR:
             resultsdir = None
@@ -372,10 +358,13 @@ def driver_main(
                 return resultsdir
 
             configs = parse_build_configs(args, implicit_reference=args.verify)
+            if len(configs) >= 2:
+                default_compare_by = ['configname']
 
             rootdir = mkpath(first_defined(args.rootdir, pathlib.Path.cwd()))
             builddir = rootdir / 'build'
-            
+
+
 
             # if builddir.exists():
             #    if args.clean:
@@ -554,10 +543,25 @@ def driver_main(
             results = evaluator.load_resultfiles(resultfiles)
 
             if args.evaluate:
+                #evaluator.results_compare(results, compare_by="configname", compare_val=["walltime"])
+                group_by = None
+                if args.group_by is not None:
+                    group_by =  [s.strip() for s in args.group_by.split(',')]
+                compare_by = default_compare_by
+                if args.compare_by is not None:
+                    compare_by =  [s.strip() for s in args.compare_by.split(',')]
+                cols = None
+                if args.cols is not None:
+                    cols = [s.trim() for s in args.cols.split('')]
+                cols_always =  [s.trim() for s in args.cols_always.split('')] if args.cols_always else ['program']
+                cols_never =  [s.trim() for s in args.cols_never.split('')] if args.cols_never else []
+                evaluator.results_compare(results,compare_by=compare_by,group_by=group_by,always_columns=cols_always,never_columns=cols_never,columns=cols)
 
-                evaluator.results_compare(results, compare_by="configname", compare_val=["walltime"])
+
             if args.report:
-                if resultssubdir:
+                if args.reportfile:
+                    reportfile = args.reportfile
+                elif resultssubdir:
                     # If emitting a report the analyze the last benchmark run, put the report into that directory
                     reportfile =  resultssubdir / 'report.html'
                 else:

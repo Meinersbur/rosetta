@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<benchmarks>
+  <benchmark name="idioms.assign" n="100" ppm="cuda">
+    <iteration walltime="4100000 ns" />
+    <iteration walltime="4.3 ms" />
+  </benchmark>
+</benchmarks>
