@@ -19,6 +19,8 @@ class ReportTests(unittest.TestCase):
         print("srcdir: " , self.srcdir)
         print("rootdir: " , self.rootdir)
 
+        self.report = None
+
 
     def tearDown(self):
         self.test_dir.cleanup()
@@ -26,28 +28,26 @@ class ReportTests(unittest.TestCase):
 
 
 
-    def test_single(self):
-        reportfile = self.rootdir / 'singleresult.html'
-        rosetta.driver.driver_main(argv=[None,  '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'single', '--reportfile',  reportfile], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)   
-
+    def createReport(self, reportfilename, resultsdir, args=[]):
+        reportfile = self.rootdir / reportfilename
+        rosetta.driver.driver_main(argv=[None, '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ resultsdir, '--reportfile', reportfile] + args, mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)   
         with reportfile.open('r') as f:
-            s = f.read()
-        self.assertRegex(s, r'Benchmark\ Report')
-        self.assertRegex(s, r'idioms\.assign')
-        self.assertRegex(s, r'serial')
+            self.report = f.read()
+
+
+    def test_single(self):
+        self.createReport(reportfilename='singleresult.html', resultsdir = 'single'  )
+        self.assertRegex(self.report, r'Benchmark\ Report')
+        self.assertRegex(self.report, r'idioms\.assign')
+        self.assertRegex(self.report, r'serial')
 
 
     def test_multi_ppm(self):
-        reportfile = self.rootdir / 'multiresult.html'
-        rosetta.driver.driver_main(argv=[None,  '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm', '--reportfile',  reportfile], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)   
-
-        with reportfile.open('r') as f:
-            s = f.read()
-        self.assertRegex(s, r'Benchmark\ Report')
-        self.assertRegex(s, r'idioms\.assign')
-        self.assertRegex(s, r'serial')
-        self.assertRegex(s, r'cuda')
-
+        self.createReport(reportfilename='multiresult.html', resultsdir = 'multi_ppm'  )
+        self.assertRegex(self.report, r'Benchmark\ Report')
+        self.assertRegex(self.report, r'idioms\.assign')
+        self.assertRegex(self.report, r'serial')
+        self.assertRegex(self.report, r'cuda')
 
 
 if __name__ == '__main__':

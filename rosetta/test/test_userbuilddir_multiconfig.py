@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
-from context import rosetta
-import rosetta.runner
 import tempfile
-import  rosetta.util.invoke as invoke
-from rosetta.util.support import *
 import unittest
 import sys
 import tempfile
+import shutil
+import io
+
+from context import rosetta
+import rosetta.runner
+import  rosetta.util.invoke as invoke
 from  rosetta.driver import *
 from rosetta.util.support import *
-import shutil
-
 
 
 

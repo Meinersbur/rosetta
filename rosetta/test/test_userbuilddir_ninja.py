@@ -1,22 +1,20 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
-from context import rosetta
 import unittest
 import tempfile
-import rosetta.util.invoke as invoke
-import pathlib
-from rosetta.util.support import *
-import rosetta.runner
-from context import rosetta
 import unittest
-import os
 import sys
 import tempfile
+import re
+import io
+
+from context import rosetta
+import rosetta.util.invoke as invoke
+import rosetta.runner
+from rosetta.util.support import *
 from rosetta.driver import *
 from rosetta.util.support import *
-import re
 
 
 class UserBuilddirNinja(unittest.TestCase):
