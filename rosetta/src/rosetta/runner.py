@@ -16,6 +16,7 @@ from .util import invoke
 from .common import *
 
 
+
 # Not included batteries
 # import tqdm # progress meter
 
@@ -307,10 +308,12 @@ def custom_bisect_left(lb, ub, func):
         result = func(mid)
         if result < 0:
             # Go smaller
+            assert ub > mid - 1, "Require the bisect range to become smaller"
             ub = mid - 1
             continue
         if result > 0:
             # Go larger, keep candidate as possible result
+            assert lb < mid , "Require the bisect range to become smaller"
             lb = mid
             continue
         # exact match?
@@ -340,6 +343,7 @@ def probe_bench(bench: Benchmark, limit_walltime, limit_rss, limit_alloc):
     # Bisect between lower_n and n
 
     def func(n):
+        from .evaluator import load_resultfiles
         resultfile = request_tempfilename(
             subdir='probe', prefix=f'{bench.target}-pbsize{n}', suffix='.xml')
         do_run(bench, args=[f'--pbsize={n}',

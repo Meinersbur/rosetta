@@ -92,6 +92,19 @@ class ManagedBuilddirDefaultconfig(unittest.TestCase):
         self.assertTrue((self.rootdir / 'build' / 'defaultbuild' / 'benchmarks' / 'Release' / 'idioms.assign.serial').exists())
 
 
+
+
+    def test_probe(self):
+        problemsizefile = self.resultsdir /  'proberesult.ini'
+        rosetta.driver.driver_main(  argv=[None, '--problemsizefile-out', problemsizefile, '--limit-walltime=10ms'],  default_action=DefaultAction.PROBE, mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )       
+
+        with problemsizefile.open('r') as f:
+            s = f.read()
+
+        self.assertRegex(s, r'\[idioms\.assign\]\nn\=')
+
+
+
     def test_verify(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):

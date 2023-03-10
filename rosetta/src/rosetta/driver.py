@@ -221,7 +221,7 @@ class DefaultAction:
 
 def driver_main(
         mode: DriverMode,
-        argv: typing.List[str] = None,
+        argv: typing.List[str] = [None],
         default_action: DefaultAction = None,
         benchlistfile: pathlib.Path = None,
         srcdir: pathlib.Path = None,
@@ -279,8 +279,10 @@ def driver_main(
     add_boolean_argument(parser, 'buildondemand', default=True,
                          help="build to ensure executables are up-to-date")
 
+
     # Probe step
     add_boolean_argument(parser, 'probe', default=None, help="Enable probing")
+    parser.add_argument('--problemsizefile-out', type=pathlib.Path)
     parser.add_argument('--limit-walltime', type=parse_time)
     parser.add_argument('--limit-rss', type=parse_memsize)
     parser.add_argument('--limit-alloc', type=parse_memsize)
@@ -464,9 +466,10 @@ def driver_main(
                 #    bench = True
 
                 if probe:
-                    assert args.problemsizefile, "Requires to set a problemsizefile to set"
-                    runner.run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime,
+                    assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
+                    runner.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                                      limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+
 
                 if verify:
                     refdir = refbuilddir / 'refout'
@@ -513,8 +516,8 @@ def driver_main(
             runner.load_register_file(benchlistfile)
 
             if probe:
-                assert args.problemsizefile, "Requires to set a problemsizefile to set"
-                runner.run_probe(problemsizefile=args.problemsizefile, limit_walltime=args.limit_walltime,
+                assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
+                runner.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                                  limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
             if verify:

@@ -47,6 +47,18 @@ class UserBuilddirNinja(unittest.TestCase):
         self.assertTrue((self.builddir / 'benchmarks' /
                         'suites.polybench.cholesky.serial').exists())
 
+
+    def test_probe(self):
+        problemsizefile = self.builddir / 'proberesult.ini'
+        rosetta.driver.driver_main(  argv=[None, '--problemsizefile-out', problemsizefile, '--limit-walltime=100ms'],  default_action=DefaultAction.PROBE, mode=DriverMode.USERBUILDDIR, benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir  )       
+
+        with problemsizefile.open('r') as f:
+            s = f.read()
+
+        self.assertRegex(s, r'\[suites\.polybench\.cholesky\]\nn\=')
+
+
+
     def test_verify(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
@@ -57,6 +69,10 @@ class UserBuilddirNinja(unittest.TestCase):
         self.assertTrue(
             re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
+
+
+
+
 
     def test_bench(self):
         f = io.StringIO()
