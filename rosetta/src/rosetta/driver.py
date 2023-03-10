@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
 
-import importlib
 import typing
 from collections import defaultdict
-import xml.etree.ElementTree as et
 import datetime
 import pathlib
 import argparse
+import re
+import logging as log
+import typing
+
+
+from .builder import *
+from . import runner, evaluator, prober
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
-import re
-import logging as log
-import typing
-from . import runner
-from .builder import *
-from . import evaluator
 
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
@@ -467,7 +466,7 @@ def driver_main(
 
                 if probe:
                     assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
-                    runner.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
+                    prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                                      limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
 
@@ -517,7 +516,7 @@ def driver_main(
 
             if probe:
                 assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
-                runner.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
+                prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                                  limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
             if verify:

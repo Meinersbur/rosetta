@@ -1,19 +1,14 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from context import rosetta
 import unittest
 import sys
 import io
 import tempfile
+
+from context import rosetta
 from  rosetta.driver import *
 from rosetta.util.support import *
-
-
-
-
-
-
 
 
 
