@@ -15,6 +15,7 @@ import stat
 from pathlib import Path
 import logging as log 
 from functools import cached_property
+import math
 
 
 shsplit = shlex.split
@@ -421,3 +422,14 @@ class Tee :
             self.fd1.close()
         if self.fd2 != sys.stdout and self.fd2 != sys.stderr :
             self.fd2.close()
+
+
+# math.prod only available in Python 3.8
+#def prod(iter):
+#    result = 1
+#    for v in iter:
+#        result *= v
+#    return result
+prod = math.prod
+
+

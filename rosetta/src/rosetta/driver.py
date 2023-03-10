@@ -11,7 +11,7 @@ import typing
 
 
 from .builder import *
-from . import runner, evaluator, prober
+from . import runner, evaluator, prober, verifier
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
@@ -472,7 +472,7 @@ def driver_main(
 
                 if verify:
                     refdir = refbuilddir / 'refout'
-                    runner.run_verify(
+                    verifier.run_verify(
                         problemsizefile=args.problemsizefile, refdir=refdir)
 
     
@@ -521,7 +521,7 @@ def driver_main(
 
             if verify:
                 refdir = builddir / 'refout'
-                runner.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
+                verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
 
 
             if bench:

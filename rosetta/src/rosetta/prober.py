@@ -1,38 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import typing
-import configparser
-import math
-import colorama
-import datetime
-import os
-import pathlib
-import subprocess
-import sys
-
 from .util.cmdtool import *
 from .util.support import *
-from .util import invoke
 from .common import *
-from .runner import Benchmark,benchmarks,get_problemsizefile,make_resultssubdir,do_run
+from .runner import Benchmark,do_run
 from  . import  runner
 from .evaluator import load_resultfiles
 
 
-def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
-    problemsizefile = get_problemsizefile(srcdir, problemsizefile)
-
-    results = []
-    resultssubdir = make_resultssubdir(within=resultdir)
-    for e in benchmarks:
-        thisresultdir = resultssubdir
-        configname = e.configname
-        if configname:
-            thisresultdir /= configname
-        thisresultdir /= f'{e.name}.{e.ppm}.xml'
-        results .append(run_gbench(
-            e, problemsizefile=problemsizefile, resultfile=thisresultdir))
-    return results,resultssubdir
 
 
 def custom_bisect_left(lb, ub, func):
