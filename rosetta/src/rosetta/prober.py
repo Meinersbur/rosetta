@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from .util.cmdtool import *
 from .util.support import *
 from .common import *
 from .runner import Benchmark,do_run
 from  . import  runner
 from .evaluator import load_resultfiles
-
+from . import registry
 
 
 
@@ -75,7 +74,7 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
         die("Problemsizes required")
 
     problemsizecontent = []
-    for bench in runner.benchmarks:
+    for bench in registry.benchmarks:
         n = probe_bench(bench=bench, limit_walltime=limit_walltime,
                         limit_rss=limit_rss, limit_alloc=limit_alloc)
 

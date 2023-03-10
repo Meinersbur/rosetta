@@ -14,7 +14,7 @@ from rosetta.util.support import *
 
 class ManagedBuilddirTests(unittest.TestCase):
     def setUp(self):
-        rosetta.runner.reset_registered_benchmarks()
+        rosetta.registry.reset_registered_benchmarks()
 
         self.srcdir = mkpath(__file__ ).parent.parent.parent
         self.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
@@ -68,7 +68,7 @@ class ManagedBuilddirDefaultconfig(unittest.TestCase):
 
 
     def setUp(self):
-        rosetta.runner.reset_registered_benchmarks()
+        rosetta.registry.reset_registered_benchmarks()
         if self.resultsdir.exists():
             shutil.rmtree(self.resultsdir)
 
@@ -153,7 +153,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
 
 
     def setUp(self):
-        rosetta.runner.reset_registered_benchmarks()
+        rosetta.registry.reset_registered_benchmarks()
         if self.resultsdir.exists():
             shutil.rmtree(self.resultsdir)
 

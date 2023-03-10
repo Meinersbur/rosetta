@@ -36,7 +36,7 @@ class UserBuilddirNinja(unittest.TestCase):
         cls.test_dir.cleanup()
 
     def setUp(self):
-        rosetta.runner.reset_registered_benchmarks()
+        rosetta.registry.reset_registered_benchmarks()
         if self.resultsdir.exists():
             shutil.rmtree(self.resultsdir)
         # self.resultsdir.mkdir(parents=True)

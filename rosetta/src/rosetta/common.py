@@ -2,6 +2,8 @@
 
 import tempfile
 import contextlib
+import math
+
 from .util.support import mkpath
 
 # TODO: enough precision for nanoseconds?

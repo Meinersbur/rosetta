@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import typing
-import configparser
 import math
-import colorama
-import datetime
-import os
-import pathlib
-import subprocess
-import sys
+
 from .util.cmdtool import *
 from .util.support import *
 from .util import invoke
@@ -16,10 +9,8 @@ from .common import *
 from .util.cmdtool import *
 from .util.support import *
 from .common import *
-from .runner import Benchmark,do_run,get_problemsizefile,get_problemsize
-from  . import  runner
-from .evaluator import load_resultfiles
-from . import runner
+from .runner import Benchmark,get_problemsizefile,get_problemsize
+from . import runner, registry
 
 
 
@@ -75,7 +66,7 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
 
     refdir.mkdir(exist_ok=True, parents=True)
 
-    for e in runner.benchmarks:
+    for e in registry.benchmarks:
         if filterfunc and not filterfunc(e):
             continue
 

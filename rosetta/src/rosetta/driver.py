@@ -11,7 +11,7 @@ import typing
 
 
 from .builder import *
-from . import runner, evaluator, prober, verifier
+from . import runner, evaluator, prober, verifier, registry
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
@@ -444,7 +444,7 @@ def driver_main(
             # Load all available benchmarks
             if args.verify or args.bench or args.probe:
                 for config in configs:
-                    runner.load_register_file(
+                    registry.load_register_file(
                         config.builddir / 'benchmarks' / 'benchlist.py')
 
             def only_REF(bench):
@@ -502,7 +502,7 @@ def driver_main(
                                '--target', 'build.ninja',  cwd=builddir)
 
             # Discover available benchmarks
-            runner.load_register_file(benchlistfile)
+            registry.load_register_file(benchlistfile)
 
             if probe:
                 assert args.problemsizefile_out, "Requires to set a problemsizefile to set"

@@ -37,7 +37,7 @@ class UserBuilddirMulticonfig(unittest.TestCase):
 
 
     def setUp(self):
-        rosetta.runner.reset_registered_benchmarks()
+        rosetta.registry.reset_registered_benchmarks()
         if self.resultsdir.exists():
             shutil.rmtree(self.resultsdir)
 

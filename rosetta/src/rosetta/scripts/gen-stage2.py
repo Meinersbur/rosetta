@@ -13,10 +13,12 @@ import re
 import importlib.util
 import importlib
 from io import StringIO
+
+from rosetta.util.support import *
 import rosetta.runner as runner
 import rosetta.generator as generator
-from rosetta.runner import register_benchmark
-from rosetta.util.support import *
+from rosetta.registry import register_benchmark
+from rosetta import registry
 
 
 def cquote(s):
@@ -88,9 +90,9 @@ def gen_stage2(builddir, benchdir, benchlistfile, config, resultsdir):
     # print("gen_stage2")
 
     # Load all available benchmarks
-    runner.load_register_file(benchlistfile)
+    registry.load_register_file(benchlistfile)
 
-    for bench in runner.benchmarks:
+    for bench in registry.benchmarks:
         gen_benchpropfile(bench, config=config, resultsdir=resultsdir)
 
 

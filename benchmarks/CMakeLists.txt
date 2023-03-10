@@ -153,7 +153,7 @@ file(
 if __name__ == '__main__':
   import sys
   sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/lib')
-from rosetta.runner import register_benchmark
+from rosetta.registry import register_benchmark
 
 ${_benchmarks_run}
 

@@ -6,8 +6,9 @@ import configparser
 import importlib
 import pathlib
 import re
-import importlib.util
 from io import StringIO
+import importlib.util
+
 from rosetta.util.support import *
 import rosetta.runner as runner
 from rosetta import generator
