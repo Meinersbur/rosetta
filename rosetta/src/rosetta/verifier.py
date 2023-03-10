@@ -71,8 +71,8 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
     problemsizefile = get_problemsizefile(
         srcdir=srcdir, problemsizefile=problemsizefile)
 
-    #x = request_tempdir(prefix=f'verify')
-    #tmpdir = mkpath(x.name)
+
+
     refdir.mkdir(exist_ok=True, parents=True)
 
     for e in runner.benchmarks:
@@ -88,12 +88,12 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
 
         testoutpath = request_tempfilename(
             subdir='verify', prefix=f'{e.name}_{e.ppm}_{pbsize}', suffix='.testout')
-        # tmpdir / f'{e.name}_{e.ppm}_{pbsize}.testout'
+
 
         args = [exepath, f'--verify', f'--verifyfile={testoutpath}']
         if problemsizefile:
             args.append(f'--problemsizefile={problemsizefile}')
-        p = invoke.call(*args, return_stdout=True, print_command=True)
+        invoke.call(*args, return_stdout=True, print_command=True)
 
         with refpath.open() as fref, testoutpath.open() as ftest:
             while True:

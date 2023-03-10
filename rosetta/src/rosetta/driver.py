@@ -349,14 +349,18 @@ def driver_main(
         resultssubdir = None
         default_compare_by=None
 
-        if mode == DriverMode.MANAGEDBUILDDIR:
-            resultsdir = None
-            def get_resultsdir():
-                nonlocal resultsdir
-                if not resultsdir:
+        resultsdir = None
+        def get_resultsdir():
+            nonlocal resultsdir
+            if not resultsdir:
+                if mode == DriverMode.MANAGEDBUILDDIR:
                     resultsdir = rootdir / 'results'
-                    resultsdir.mkdir(parents=True, exist_ok=True)
-                return resultsdir
+                else:
+                    resultsdir = builddir / 'results'
+                resultsdir.mkdir(parents=True, exist_ok=True)
+            return resultsdir
+
+        if mode == DriverMode.MANAGEDBUILDDIR:
 
             configs = parse_build_configs(args, implicit_reference=args.verify)
             if len(configs) >= 2:
@@ -470,23 +474,9 @@ def driver_main(
                                      limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
 
-                if verify:
-                    refdir = refbuilddir / 'refout'
-                    verifier.run_verify(
-                        problemsizefile=args.problemsizefile, refdir=refdir)
 
-    
-                if bench:
-                    resultfiles , resultssubdir = runner.run_bench(
-                        srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir())
-            else:
-                # If not evaluating the just-executed, search for previously saved result files.
 
-                # TODO: Filter result files
-                resultfiles = resultfiles or []
-                if resultsdir:
-                    for xmlfile in resultsdir .rglob("*.xml"):
-                        resultfiles.append(xmlfile)
+
 
         else:
             # If neither no action is specified, enable --bench implicitly unless --no-bench
@@ -496,7 +486,7 @@ def driver_main(
             # if bench is None and not verify and not probe:
             #    bench = True
 
-            resultdir = builddir / 'results'
+            
             configure_uptodate = False
 
             if args.build:
@@ -519,24 +509,38 @@ def driver_main(
                 prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                                  limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-            if verify:
-                refdir = builddir / 'refout'
-                verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
+
+        if args. verify:
+            if mode == DriverMode.MANAGEDBUILDDIR:
+                    refdir = (refconfig.builddir if refconfig else None) / 'refout'
+            else:
+                    refdir = builddir / 'refout'
+            verifier.run_verify( problemsizefile=args.problemsizefile, refdir=refdir)
+
+ 
 
 
-            if bench:
-                resultfiles, resultssubdir = runner.run_bench( srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=resultdir)
+        if args.bench:
+                resultfiles , resultssubdir = runner.run_bench( srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir())
 
 
 
-        # Load resultsfiles for when analysis a previous run
-        for use_results_rdir in args.use_results_rdir:
-            resultfiles = resultfiles or []
-            resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
-
+            
 
 
         if args.evaluate or args.report:
+            for use_results_rdir in args.use_results_rdir:
+                    resultfiles = resultfiles or []
+                    resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
+
+            # If there is no other source of results, source all prebious ones
+            if  resultfiles is None:
+                    resultfiles = resultfiles or []
+                    if resultsdir:
+                        for xmlfile in resultsdir .rglob("*.xml"):
+                            resultfiles.append(xmlfile)
+
+
             if resultfiles is None:
                 die("No source for resultfiles")
             if not resultfiles:

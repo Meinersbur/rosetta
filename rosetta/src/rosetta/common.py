@@ -42,10 +42,22 @@ globalctxmgr = contextlib.ExitStack()
 
 def request_tempdir(subdir=None):
     global mytempdir
-    if mytempdir:
-        return mytempdir
-    x = tempfile.TemporaryDirectory(prefix=f'rosetta-')  # TODO: Option to not delete / keep in current directory
-    mytempdir = mkpath(globalctxmgr.enter_context(x))
+    global tempdirhandle
+    if not mytempdir:
+        tempdirhandle = tempfile.TemporaryDirectory(prefix=f'rosetta-')  # TODO: Option to not delete / keep in current directory
+        mytempdir = mkpath(globalctxmgr.enter_context(tempdirhandle))
+        def clear_tempdirhandle():
+                # Ensure we don't try to reuse the same (deleted) tempdir
+                global mytempdir
+                mytempdir= None
+        globalctxmgr.callback(clear_tempdirhandle)
+
+    #print(f"Tempdir is: {mytempdir}")
+    if subdir :
+        subtmpdir = mytempdir / subdir
+        subtmpdir.mkdir(exist_ok=True)
+        return subtmpdir
+
     return mytempdir
 
 
