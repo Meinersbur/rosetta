@@ -16,7 +16,7 @@ from pathlib import Path
 import logging as log 
 from functools import cached_property
 import math
-
+import inspect
 
 shsplit = shlex.split
 
@@ -433,3 +433,28 @@ class Tee :
 prod = math.prod
 
 
+
+import functools
+import types
+
+
+
+class cached_generator:
+    """Like functools.cached_property, but converts a generator to a list to be only evaluated once"""
+    def __init__(self, func):
+        if inspect.isgeneratorfunction(func):
+            # TODO: Would be nice if the first invocation would not iterate everything immediately. 
+            def newfunc(self):
+                retval = func(self)
+                retval =  list (retval)
+                return retval
+            return   functools.cached_property.__init__(self,newfunc)
+        return functools.cached_property.__init__(self,func)
+
+    def __set_name__(self, owner, name):
+        return functools.cached_property.__set_name__(self,owner,name)
+
+    def __get__(self, instance, owner=None):
+        return functools.cached_property.__get__(self,instance,owner)
+
+    __class_getitem__ = classmethod(functools.GenericAlias)

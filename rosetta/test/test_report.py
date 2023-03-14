@@ -13,10 +13,8 @@ from rosetta.util.support import *
 
 class ReportTests(unittest.TestCase):
     def setUp(self):
-        self.srcdir = mkpath(__file__ ).parent.parent.parent
         self.test_dir = tempfile.TemporaryDirectory(prefix='reporttest-')
         self.rootdir = mkpath( self.test_dir)
-        print("srcdir: " , self.srcdir)
         print("rootdir: " , self.rootdir)
 
         self.report = None
@@ -30,7 +28,7 @@ class ReportTests(unittest.TestCase):
 
     def createReport(self, reportfilename, resultsdir, args=[]):
         reportfile = self.rootdir / reportfilename
-        rosetta.driver.driver_main(argv=[None, '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ resultsdir, '--reportfile', reportfile] + args, mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)   
+        rosetta.driver.driver_main(argv=[None, '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ resultsdir, '--reportfile', reportfile] + args, mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR)   
         with reportfile.open('r') as f:
             self.report = f.read()
 

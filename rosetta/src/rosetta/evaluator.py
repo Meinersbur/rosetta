@@ -109,6 +109,8 @@ def getColumnFormatter(colname: str):
     return None
 
 
+
+
 def formatColumnVal(colname:str, val):
     formatter = getColumnFormatter(colname)
     if formatter:
@@ -165,6 +167,24 @@ def duration_formatter(best=None, worst=None):
 
 
 
+def getHTMLFromatter(col: str):
+    def str_html_formatter(v):
+        return html.escape(str(v))
+    def duration_formatter(stat):
+        assert isinstance(stat,Statistic)
+        v = stat.mean
+        if v >= 1:
+            return f'{v:.2f}'
+        if v * 1000 >= 1:
+            return f'{v*1000:.2f}<span class="timeunit">ms</span>'
+        if v * 1000 * 1000 >= 1:
+            return f'{v*1000*1000:.2f}<span class="timeunit">µs</span>'
+        if v * 1000 * 1000 * 1000 >= 1:
+            return f'{v*1000*1000*1000:.2f}<span class="timeunit">ns</span>'
+
+    if col in BenchResult.numerical_cols:
+        return duration_formatter
+    return str_html_formatter
 
 
 
@@ -175,89 +195,8 @@ def duration_formatter(best=None, worst=None):
 
 
 
-def results_boxplot(results, group_by=None, compare_by=None):
-    r"""Produce a boxplot for benchmark results
-
-    :param group_by:   Summerize all results that have the same value for these properties. No summerization if None.
-    :param compare_by: Which property to compare side-by-side in a group of plots. Implicitly enables grouping.
-    """
 
 
-    if group_by or compare_by:
-        if group_by is None:
-            group_by = ["program", "ppm", "buildtype", "configname"]
-        if compare_by:
-            group_by.remove(compare_by)
-
-        grouped_results, all_cmpvals, div_groups = grouping(results, compare_by='configname', group_by=group_by)
-        groupdata = [[b.durations['walltime'].samples for b in group] for group in grouped_results]
-    else:
-        # Each result in its own group
-        grouped_results = [[r] for r in results]
-        div_groups = divergent_fields(["program", "ppm", "buildtype", "configname"], results)
-        all_cmpvals = [""]
-
-    def make_label(g: tuple):
-        first = g[0]
-        return ', '.join(get_column_data(first, k) for k in div_groups)
-    labels = [make_label(g) for g in grouped_results]
-
-
-    left = 1
-    right = 0.5
-    numgroups = len(grouped_results)
-    benchs_per_group = len(all_cmpvals)
-    barwidth = 0.3
-    groupwidth = 0.2 + benchs_per_group * barwidth
-    width = left + right + groupwidth * numgroups
-    fig, ax = plt.subplots(figsize=(width, 10))
-    prop_cycle = plt.rcParams['axes.prop_cycle']
-    colors = [c['color'] for j, c in zip(range(benchs_per_group), prop_cycle)]  # TODO: Consider seaborn palettes
-
-    fig.subplots_adjust(left=left / width, right=1 - right / width, top=0.95, bottom=0.25)
-
-    for i, group in enumerate(grouped_results):
-        benchs_this_group = len(group)
-        for j, benchstat in enumerate(group):  # TODO: ensure grouped_results non-jagged so colors match
-            data = benchstat.durations['walltime'].samples  # TODO: Allow other datum that walltime
-            rel = (j - benchs_this_group / 2.0 + 0.5) * barwidth
-            box = ax.boxplot(data, positions=[i * groupwidth + rel],
-                             notch=True, showmeans=False, showfliers=True, sym='+',
-                             widths=barwidth,
-                             patch_artist=True,  # fill with color
-                             )
-            for b in box['boxes']:
-                b.set_facecolor(colors[j])
-    ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
-
-    for j, (c, label) in enumerate(zip(colors, all_cmpvals)):
-        # Dummy item to add a legend handle; like seaborn does
-        rect = plt.Rectangle([0, 0], 0, 0,
-                             # linewidth=self.linewidth / 2,
-                             # edgecolor=self.gray,
-                             facecolor=c,
-                             label=label)
-        ax.add_patch(rect)
-
-    # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
-    # x.grid(linestyle='--',axis='y')
-    ax.set(
-        axisbelow=True,  # Hide the grid behind plot objects
-        xlabel='Benchmark',
-        ylabel='Walltime [s]',
-    )
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    ax.set_xticks([groupwidth * i for i in range(len(labels))])
-    ax.set_xticklabels(labels, rotation=20, ha="right", rotation_mode="anchor")
-
-    plt.legend()
-
-    # for label in ax.get_xticklabels(): # https://stackoverflow.com/a/43153984
-    #    label.set_ha("right")
-    #    label.set_rotation(45)
-    return plt.gcf()
 
 
 
@@ -302,13 +241,9 @@ def load_resultfiles(resultfiles, filterfunc=None):
 
 
 
-def results_compare(results, compare_by=None, group_by=None, compare_val=None, show_groups=None, always_columns=['program'],never_columns=[],columns=None):
-    groups = GroupedBenches(data=results,group_by=group_by,compare_by=compare_by)
-    compare_by = compare_by or []
-
-    if columns is None:
+def default_columns(groups,compare_by,always_columns,never_columns):
         columns = OrderedSet()
-        columns.union_update( always_columns)  # Try to put these to the front
+        columns.union_update(always_columns)  # Try to put these to the front
         columns.union_update(groups.divergent_categories)
         columns.union_update( groups.nonempty_vals() )
         columns.difference_update(OrderedSet(compare_by).difference(always_columns) )
@@ -321,6 +256,16 @@ def results_compare(results, compare_by=None, group_by=None, compare_val=None, s
                 return 1
             return 2
         columns.sort(key=enforce_order)
+        return columns
+
+
+
+def results_compare(results, compare_by=None, group_by=None, compare_val=None, show_groups=None, always_columns=['program'],never_columns=[],columns=None):
+    groups = GroupedBenches(data=results,group_by=group_by,compare_by=compare_by)
+    compare_by = compare_by or []
+
+    if columns is None:
+        columns = default_columns(groups,compare_by=compare_by, always_columns=always_columns,never_columns=never_columns)
 
     compare_columns=set()
     if compare_by:
@@ -403,10 +348,10 @@ If both are unspecified, every result gets its own group_by backet with a single
         # Special case: No grouping as all, no need to summerize
         if group_by is None and compare_by is None:
             # Each benchmark has its own group with just a single comparison category
-            self.compare_by=None
-            self.compare_tuples = None
+            self.compare_by=[]
+            self.compare_tuples = [()]
             self.group_by = None
-            self.group_tuples = None
+            self.group_tuples =  [(i,) for i,d  in enumerate(data)]
             self.benchgroups = [[d] for d in data]
             self.groupsummary = [d for d in data]
             return 
@@ -444,10 +389,14 @@ If both are unspecified, every result gets its own group_by backet with a single
         self.benchgroups  = benchgroups
         self.groupsummary =groupsummary
 
-
+    @property
+    def all(self):
+        for g in self.benchgroups:
+            for c in g:
+                yield c
 
     def divergent_group_keys(self):
-        return  divergent_keys(self.group_by,self.group_tuples)
+        return  divergent_keys(self.group_by ,self.group_tuples)
     
     def divergent_compare_keys(self):
         return  divergent_keys(self.compare_by,self.compare_tuples)
@@ -488,62 +437,6 @@ If both are unspecified, every result gets its own group_by backet with a single
 
 
 
-
-# Deprecated by GroupedBenches
-def grouping(results: Iterable[BenchResult], compare_by: str, group_by=None):
-    """
-Group benchmarks by propery
-
-Parameters
-----------
-results
-    List of results
-compare_by
-    Second order grouping categories
-group_by
-    First order grouping categories (If none, put everything into its own group)
-
-Returns
--------
-(grouped_results,all_cmpvals,show_groups)
-
-grouped_results
-all_cmpvals
-show_groups
-"""
-
-    
-
-
-    # TODO: allow compare_by multiple columns
-    # TODO: allow each benchmark to be its own group; find description for each such "group"
-    results_by_group = defaultdict(lambda: defaultdict(lambda: []))
-    all_cmpvals = OrderedSet()
-    for i, result in enumerate( results):
-        group = i if group_by is None else tuple(get_column_data(result, col) for col in group_by) 
-        cmpval = get_column_data(result, compare_by)
-        all_cmpvals.add(cmpval)
-        results_by_group[group][cmpval].append(result)
-
-    grouped_results = []
-    all_groups = []
-    for group, group_results in results_by_group.items():
-        group_cmp_results = []
-        for cmpval in all_cmpvals:
-            myresults = group_results.get(cmpval)
-            if myresults:
-                group_cmp_results.append(BenchResultSummary(myresults))
-            else:
-                # No values
-                group_cmp_results.append(None)
-            #is_unique_groups = tuple(same_or_none( g[i] for g in groups) is not None for  i in range(len(group_by)))
-        grouped_results.append(group_cmp_results)
-        all_groups.append(group)
-
-    # Find all fields that could be grouped by and have different values
-    show_groups = divergent_fields(group_by, results)
-
-    return grouped_results, list(all_cmpvals), show_groups
 
 
 
@@ -631,14 +524,18 @@ def evaluate(resultfiles):
 
 # TODO: Rename: getColumnDisplayString
 def getMeasureDisplayStr(s: str):
-    return {
-            'program': "Benchmark",
+    return {'program': "Benchmark",
             'ppm': "PPM",
             'buildtype':  "Buildtype",
             'configname': "Configuration",
-        'walltime': "Wall", 'usertime': "User", 'kerneltime': "Kernel",
+            'walltime': "Wall", 
+            'usertime': "User", 
+            'kerneltime': "Kernel",
             'acceltime': "CUDA Event",
-            'cupti': "nvprof", 'cupti_compute': "nvprof Kernel", 'cupti_todev': "nvprof H->D", 'cupti_fromdev': "nvprof D->H"}.get(s, s)
+            'cupti': "nvprof", 
+            'cupti_compute': "nvprof Kernel", 
+            'cupti_todev': "nvprof H->D", 
+            'cupti_fromdev': "nvprof D->H"}.get(s, s)
 
 
 def getPPMDisplayStr(s: str):
@@ -681,190 +578,119 @@ def print_comparison(benchgroups:GroupedBenches,columns,compare_columns):
         table.add_row(**data)
 
     table.print()
-    return 
 
 
-    for resultgroup in groups_of_results:
-        representative  = resultgroup[0]  # TODO: collect all occuring group values
-        data = dict()
-        for col in common_columns:
-            data[col] = get_column_data(representative, col)
-        for col in compare_columns:
-            for i, resultname in enumerate(list_of_resultnames):
-                data[f"{col}_{i}"] = get_column_data(resultgroup[i], col)
-        table.add_row(**data)
 
-    table.print()
 
-def print_comparison2(groups_of_results, list_of_resultnames, common_columns=["program"], compare_columns=[]):
-    """
-Print a benchmark result table.
 
-Parameters
-----------
-results_of_groups
-    Matrix of BenchResults or BenchResultGroups. Each major represents a row in the output table. Minors of the same major represent the results to be compared to each other. Benchmarks in a BenchResultSummary are to be summarized.
-list_of_resultnames
-    ?
-common_columns
-    Columns where the results of all minors of the same row are to be summerized into a single columns.
-compare_columns
-    Columns where the results of the minors of the same row are to be compared; each minor gets its own subcolumn.
+
+
+
+
+def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_cmpval=None,relcompare=True):
+    """Create a results plot
+
+:param groups: The data, grouped
+
+:param data_col: The data to use for the y-axis
+
+:param logscale: If true, use a logarithmic y-axis
+
+:param baseline_cmpval: If set, the compare_tuple the others are compared to; 
+                        If not set, show absolute values
+
+:param relcompare: If True, show the ratio between the value and the baseline 
+                   If False, show the different to the baseline value
+                   Only meaningful when baseline_cmpval is set
 """
 
-    table = Table()
-
-    for col in common_columns:
-        if col == "program":
-            table.add_column(col, title=StrAlign(StrColor("Benchmark", colorama.Fore.BWHITE),
-                             pos=StrAlign.CENTER), formatter=program_formatter)
-        else:  # TODO: proper column name
-            table.add_column(col, title=StrAlign(StrColor(col, colorama.Fore.BWHITE), pos=StrAlign.CENTER))
-
-    if len(list_of_resultnames) >= 2 or any(name.strip() for name in list_of_resultnames):
-        # We are comparing different groups or a single group with a name
-        for j, col in enumerate(compare_columns):
-            supercolumns = []
-            table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT), pos=StrAlign.CENTER))
-            for i, resultname in enumerate(list_of_resultnames):  # Common title
-                sol = f"{col}_{i}"
-                supercolumns.append(sol)
-                table.add_column(sol, title=StrAlign(StrColor(resultname, colorama.Style.BRIGHT),  pos=StrAlign.CENTER), formatter=duration_formatter())
-            table.make_supercolumn(f"{col}", supercolumns)
+    if groups.group_by:
+        label_groups =  groups.group_by
     else:
-        # We are displaying a single group; no supercolumn needs
-        for col in compare_columns:
-            table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT), pos=StrAlign.CENTER), formatter=duration_formatter())
+        label_groups = BenchResult.categorical_cols
+
+    # Find the diverging categories
+    label_groups = divergent_keys(label_groups, [ tuple( get_summary_data(r, col) for col in label_groups ) for r in  groups. groupsummary])
+    if not label_groups:
+        label_groups = ['program']
+
+    def make_group_label(s,g):
+            return ', '.join( get_summary_data(s, col) for col in label_groups )
+
+    labels = [make_group_label(s,g) for s,g in zip (groups. groupsummary, groups.benchgroups)]
 
 
-    for resultgroup in groups_of_results:
-        representative  = resultgroup[0]  # TODO: collect all occuring group values
-        data = dict()
-        for col in common_columns:
-            data[col] = get_column_data(representative, col)
-        for col in compare_columns:
-            for i, resultname in enumerate(list_of_resultnames):
-                data[f"{col}_{i}"] = get_column_data(resultgroup[i], col)
-        table.add_row(**data)
-
-    table.print()
-
-
-
-
-class HtmlWriter:
-    def __init__(self,fd):
-        self.indent = 0
-        self.fd = fd
-        self.nest = []
-
-    def print(self,*args):
-        print(' ' * (2* self.indent),end='', file=self.fd)
-        print(*args,file=self.fd)
-
-    def escaped(self,*args,quote=False):
-        print(' ' * (2* self.indent),end='', file=self.fd)
-        esc = (html.escape(str(arg),quote=quote) for arg in args)
-        print(*esc,file=self.fd)
-
-
-    def enter(self,tag,**props):
-        proplist = (f' {k}="{html.escape(v,quote=True)}"' for k,v in props.items())
-        self.print(f"<{tag}{''.join(proplist)}>")
-        self.nest.append(tag)
-        self.indent += 1
-
-    def leave(self):
-        tag = self.nest.pop()
-        self.indent -= 1
-        self.print(f"</{tag}>")
-
-    def tag(self,tag):
-        class TagContextmanager:
-            def __init__(self,html,tag):
-                    self.html=html
-                    self.tag=tag
-            def __enter__(self):
-                self.html.enter(self.tag)
-            def __exit__(self, exc_type, exc_value, exc_traceback):
-                self.html.leave()
-            def print(self,*args):
-                self.html.print(*args)
-            def tag(self,tag,**props):
-                return self.html.tag(tag,**props)
-        return TagContextmanager(self,tag)
-
-
-
-def save_report(results,filename):
-    filename = mkpath(filename)
-
-    with filename.open("w+") as f:
-        html = HtmlWriter(f)
-        make_report(html,results)
-
-
-
-
-
-def results_speedupplot(results, baseline, group_by=None, compare_by=None,value_key='walltime'):
-    groups =  GroupedBenches(data=results,group_by=group_by,compare_by=compare_by)
-    div_group_keys = groups.divergent_group_keys()
-    div_compare_keys = groups.divergent_compare_keys()
-
-    def make_group_label(t: tuple): # TODO: at least one label
-        return ', '.join(v for i, v in enumerate(t) if groups.group_by[i] in div_group_keys )
-
-    def make_compare_label(t: tuple):
-        return ', '.join(v for i, v in enumerate(t) if groups.compare_by[i] in div_compare_keys )
-
-    labels = [make_group_label(g) for g in groups.group_tuples]
-    assert baseline in groups.compare_tuples
-    baseline_compare_idx = groups.compare_tuples.index(baseline)
-
-    left = 1
-    right = 0.5
+    
+    leftmargin = 1
+    rightmargin = 0.5
     numgroups = len(groups.group_tuples)
-    benchs_per_group = len(groups.compare_tuples) -1
-    barwidth = 0.3
-    groupwidth = 0.2 + benchs_per_group * barwidth
-    width = left + right + groupwidth * numgroups
-    fig, ax = plt.subplots(figsize=(width, 10))
+    if baseline_cmpval:
+        # Hide the baseline bar itself, it would but just zero (or one on logscale) anyway
+        compare_tuples_without_baseline = [c for c in groups.compare_tuples if  c  != baseline_cmpval]
+    else:
+        compare_tuples_without_baseline = groups.compare_tuples
+    benchs_per_group = len(compare_tuples_without_baseline)
+    barwidth = 0.4
+    groupwidth = 0.3 + benchs_per_group * barwidth
+    plotwidth = groupwidth * numgroups
+    width = leftmargin + rightmargin + plotwidth
     prop_cycle = plt.rcParams['axes.prop_cycle']
-    colors = [c['color'] for j, c in zip(range(benchs_per_group), prop_cycle)]  # TODO: Consider seaborn palettes
-    compare_tuples_without_baseline = [c for c in groups.compare_tuples if c != baseline]
-
-    fig.subplots_adjust(left=left / width, right=1 - right / width, top=0.95, bottom=0.25)
-
-    for group_idx, group_key in enumerate(groups.group_tuples):
-        group_data = groups.benchgroups[group_idx]
-        baseline_result = group_data[baseline_compare_idx]
-        baseline_stat = get_column_data(baseline_result,value_key) # TODO: Skip group if baseline is missing
-        group_data_without_baseline = [b for i,b in enumerate(group_data) if i!=baseline_compare_idx]
-        baseline_mean =baseline_stat.mean
-        nonempty_results = [(j,r) for j,r in enumerate(group_data_without_baseline) if r]
-        benchs_this_group = len(nonempty_results)
+    colors = [c['color'] for j, c in zip(range(benchs_per_group), prop_cycle)]
 
 
-        for i,( j, benchstat )in enumerate(nonempty_results):
-            stat = get_column_data(benchstat,value_key)
-
-            # Skip bar if there is no statistic
-            if stat:
-                mean = stat.mean
-                speedup = baseline_mean / mean
-
-                rel = (i - benchs_this_group / 2.0 + 0.5) * barwidth
-                abserr = stat.abserr()
-                kwargs = {}
-                if abserr is not None:
-                    kwargs['yerr'] = abserr/baseline_mean
-                bar = ax.bar(x=group_idx * groupwidth + rel, height=speedup,width=barwidth,color = colors[j],bottom=1,**kwargs)
 
 
+
+    fig, ax = plt.subplots(figsize=(width, 10))
+    fig.subplots_adjust(left=leftmargin / width, right=1 - rightmargin / width, top=0.95, bottom=0.25)
+
+
+    for group_idx, (group_summary, group_data) in  enumerate(zip(groups.groupsummary, groups.benchgroups)):
+        baseline_idx = None
+        if baseline_cmpval:
+            # FIXME: What if missing?
+            [(baseline_idx, baseline_result)] = ((i,c) for i,(t,c) in enumerate(zip(groups.compare_tuples , group_data)) if t == baseline_cmpval)
+            baseline_stat = get_column_data(baseline_result,data_col) 
+            #group_data_without_baseline = [b for i,b in enumerate(group_data) if i!=baseline_compare_idx]
+            baseline_mean =baseline_stat.mean
+             
+        #nonempty_results = [(j,r) for j,r in enumerate(group_data_without_baseline) if r]
+        #benchs_this_group = len(nonempty_results)
+
+        for compare_idx, compare_data in enumerate(d for i,d in enumerate( group_data) if i != baseline_idx ):
+            stat = get_column_data(compare_data,data_col)
+            if baseline_cmpval:
+                if relcompare:
+                    val = baseline_mean / stat.mean
+                else:
+                    val = stat.mean - baseline_mean
+            else:
+                val = stat.mean
+
+            # TODO: Error bars
+            #    abserr = stat.abserr()
+            #    kwargs = {}
+            #    if abserr is not None:
+            #        kwargs['yerr'] = abserr/baseline_mean
+
+
+            rel = (compare_idx - benchs_per_group / 2.0 + 0.5) * barwidth
+            xpos = group_idx * groupwidth + rel
+            if baseline_cmpval:
+                bar = ax.bar(x=xpos, height=val,width=barwidth,color = colors[compare_idx],bottom=1)
+            else:
+                bar = ax.boxplot( stat.samples  , positions=[xpos],
+                             notch=True, showmeans=False, showfliers=True, sym='+',
+                             widths=barwidth,
+                             patch_artist=True,  # fill with color
+                             )
+
+    if logscale:
+        ax.set_yscale('log')
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
 
-    for j, (c, label) in enumerate(zip(colors, compare_tuples_without_baseline)):
+    # Set bar colors
+    for c, label in zip(colors, compare_tuples_without_baseline):
         # Dummy item to add a legend handle; like seaborn does
         rect = plt.Rectangle([0, 0], 0, 0,
                              # linewidth=self.linewidth / 2,
@@ -887,52 +713,251 @@ def results_speedupplot(results, baseline, group_by=None, compare_by=None,value_
     ax.set_xticks([groupwidth * i for i in range(len(labels))])
     ax.set_xticklabels(labels, rotation=20, ha="right", rotation_mode="anchor")
 
-    plt.legend()
-
-    fig =  plt.gcf()
-    i = io. StringIO()
-    plt.savefig(i, format="svg")
-    fig.canvas.draw_idle()
+    ax.legend()
+    return fig
 
 
-    i.seek(0)
-    s = et.canonicalize(from_file=i) # Remove <?xml> boilerplate
-    return s
+class ReportSection:
+    pass
 
 
-def make_report(html,results):
-    html.print("<!DOCTYPE html>")
-    with html.tag("html"):
-        with html.tag("head"):
-            html.print("<title>Benchmark Report</title>")
-        with html.tag("body"):
-            html.print("<h1>Benchmark Report</h1>")
+class AllResultsSection(ReportSection):
+    name = 'all-results'
+    title = "All Results (Table)"
+    
+    def __init__(self, groups,columns=None,compare_columns=[]):
+        super().__init__()
 
-            html.print("<h2>Speedup Relative to serial</h2>")
-            figdata = results_speedupplot(results,baseline=('serial',),compare_by=['ppm'])
-            html.print(figdata)
+        if columns is None:
+            columns = default_columns(groups,compare_by=[], always_columns=['program'],never_columns=[])
 
-            html.print("<h2>All Results</h2>")
-            with html.tag("table"):
-                with html.tag("tr"):
-                    html.print("<td>Program</td>")
-                    html.print("<td>PPM</td>")
-                    html.print("<td>Buildtype</td>")
-                    html.print("<td>Config</td>")
-                    html.print("<td>Walltime</td>")
 
-                for r in results:
-                    with html.tag("tr"):
-                        with html.tag("td"):
-                            html.escaped(r.name)
-                        with html.tag("td"):
-                            html.escaped(r.ppm)
-                        with html.tag("td"):
-                            html.escaped(r.buildtype)
-                        with html.tag("td"):
-                            html.escaped(r.configname)
-                        with html.tag("td"):
-                            html.escaped(r.durations['walltime'].mean)
+        self.groups = groups
+        self.columns = columns
 
+
+
+    @cached_generator
+    def content(self):
+        benchgroups = self.groups
+        columns = self.columns
+        compare_columns =[]
+
+        yield '<table class="table">'
+
+        # Print the table header
+        yield "<thead><tr>"
+        for col in columns:
+            if col in compare_columns:
+                    yield f'<td colspan="{len(columns)}">{getMeasureDisplayStr(col)}</td>'
+            else:
+                    yield f"<td>{getMeasureDisplayStr(col)}</td>"
+        if compare_columns:
+            yield "</tr><tr>"
+            for col in columns:
+                if col in compare_columns:
+                    for  i, resulttuple in enumerate( benchgroups.compare_tuples): 
+                        resultname = ','.join( formatColumnVal(ccat, resulttuple[i]) for i,ccat in enumerate(benchgroups.compare_by) )
+                        yield f"<td>{resultname}</td>"
+                else:
+                    yield f"<td></td>"
+        yield "</tr></thead>"
+
+        # Emit table data
+        
+        for rowsummery,row in zip(benchgroups.groupsummary, benchgroups.benchgroups):
+            yield "<tr>"
+            for col in columns:
+                if col in compare_columns:
+                    for i, resulttuple in enumerate(row): 
+                        yield f'<td>{formatColumnVal(col, get_summary_data(row[i], col))}</td>'
+                else:
+                    yield f'<td>{getHTMLFromatter(col)( get_summary_data(rowsummery, col))}</td>'
+            yield "</tr>"
+        yield "</table>"
+
+
+
+class WalltimePlotSection(ReportSection):
+    name = 'walltime-plot'
+    title = "Walltime Plot"
+
+    
+    def __init__(self, groups,columns=None,compare_columns=[]):
+        super().__init__()
+
+        if columns is None:
+            columns = default_columns(groups,compare_by=[], always_columns=['program'],never_columns=[])
+
+        self.groups = groups
+        self.columns = columns
+
+
+
+
+    @cached_generator
+    def content(self):
+        benchgroups = self.groups
+        columns = self.columns
+        compare_columns = []
+
+        fig = results_speedupplot(benchgroups, data_col='walltime',logscale=False)
+        s = fig_to_svg(fig)
+        yield s
+ 
+
+
+def fig_to_svg(fig):
+        i = io. StringIO()
+        #plt.savefig(i, format="svg")
+        fig.savefig(i, format='svg')
+        fig.canvas.draw_idle()
+        i.seek(0)
+        s = et.canonicalize(from_file=i) # Remove <?xml> boilerplate
+        return s
+
+
+class SpeedupPlotSection(ReportSection):
+    name = 'speedup-plot'
+    title = "Speedup Plot"
+
+    
+    def __init__(self, groups,compare_col,base_cat):
+        assert groups.compare_by == [compare_col]
+
+        super().__init__()
+        self.groups = groups
+        self.compare_col=compare_col
+        self.base_cat = base_cat
+
+
+
+    @cached_generator
+    def content(self):
+        benchgroups = self.groups
+
+        fig = results_speedupplot(benchgroups, data_col='walltime', baseline_cmpval=(self.base_cat,),relcompare=True,logscale=True)
+        s = fig_to_svg(fig)
+        yield s
+ 
+
+
+
+def make_report(results):
+    groups = GroupedBenches(data=results)
+    resultssec = AllResultsSection(groups)
+    resultsplotsec = WalltimePlotSection(groups)
+    sections =  [resultssec, resultsplotsec]
+
+    ppms = unique( c.ppm for c in  results  )
+    if len(ppms)>= 2:
+        walltimecompare  = GroupedBenches(data=results,compare_by=['ppm'])
+        for base in ppms:
+            speedupplotsec = SpeedupPlotSection(walltimecompare,compare_col='ppm',base_cat=base)
+            sections.append(speedupplotsec)
+    
+
+
+    yield """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Benchmark Report</title>
+	    <style>
+		body {
+			font-family: Arial, sans-serif;
+			font-size: 14px;
+			line-height: 1.5;
+			margin: 0;
+			padding: 0;
+		}
+		.container {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 0 auto;
+			max-width: 1200px;
+			padding: 20px;
+		}
+		.toc {
+			background-color: #f1f1f1;
+			border-radius: 5px;
+			box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+			flex-basis: 20%;
+			margin-right: 20px;
+			padding: 20px;
+			position: sticky;
+			top: 20px;
+		}
+		.toc ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+		.toc li {
+			margin-bottom: 10px;
+		}
+		.table-container {
+			flex-basis: 80%;
+		}
+		.table {
+			border-collapse: collapse;
+			margin-top: 20px;
+			width: 100%;
+		}
+		.table th,
+		.table td {
+			border: 1px solid #ddd;
+			padding: 8px;
+			text-align: left;
+		}
+		.table th {
+			background-color: #f2f2f2;
+			font-weight: bold;
+		}
+		.table tr:nth-child(even) {
+			background-color: #f9f9f9;
+		}
+
+        .timeunit {
+            color: #AAAAAA;
+        }
+	</style>
+    </head>
+    <body>
+      <div class="container">
+		<div class="toc">
+			<h2>Table of Contents</h2>
+			<ul>"""
+    for s in sections:
+        yield f'<li><a href="#{s.name}">{s.title}</a></li>'
+
+    yield """
+			</ul>
+		</div>
+        <div class="table-container">
+            <h1>Benchmark Report</h1>"""
+
+    for s in sections:
+        yield f'<h2 id="{s.name}">{s.title}</h2>'
+        yield from s.content
+      
+
+    yield """</div>
+        </div>
+    </body>
+</html>
+"""
+
+
+
+
+
+
+def save_report(results,filename):
+    filename = mkpath(filename)
+
+    with filename.open("w+") as f:
+        for  line in make_report(results):
+            print(line, file=f)
 
 

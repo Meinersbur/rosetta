@@ -230,14 +230,14 @@ def driver_main(
     assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD,
                               DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
 
-    if mode == DriverMode.USERBUILDDIR:
-        assert benchlistfile is not None
-        assert rootdir is None
-        assert builddir is not None
 
-    if mode == DriverMode.MANAGEDBUILDDIR:
-        assert benchlistfile is None
-        assert builddir is None
+
+
+   
+
+    
+ 
+
 
     probestages = ['hybrid', 'runtime', 'compiletime'] if DriverMode.MANAGEDBUILDDIR  else ['runtime']
 

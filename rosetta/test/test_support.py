@@ -30,6 +30,40 @@ class SupportTests(unittest.TestCase):
         self.assertEqual(removesuffix("mysuffix", "suffix"), "my")
         self.assertEqual(removesuffix("mynofix", "suffix"), "mynofix")
 
+    def test_cached_generator(self):
+        class Testclass:
+            def __init__(self):
+                self.called = 0
+
+            @cached_generator
+            def cacheme(self):
+                self.called+=1
+                yield "one"
+                yield "two"
+        obj = Testclass()
+        self.assertEqual(obj.called, 0)
+        self.assertSequenceEqual(obj.cacheme, ["one", "two"] )
+        self.assertEqual(obj.called, 1)
+        self.assertSequenceEqual(obj.cacheme, ["one", "two"] )
+        self.assertEqual(obj.called, 1)
+
+        # Should work like cache_property if not a generator
+        class Testclass2:
+            def __init__(self):
+                self.called = 0
+
+            @cached_generator
+            def cacheme(self):
+                self.called+=1
+                return ["eins", "zwei"]
+
+        obj = Testclass2()
+        self.assertEqual(obj.called, 0)
+        self.assertSequenceEqual(obj.cacheme, ["eins", "zwei"] )
+        self.assertEqual(obj.called, 1)
+        self.assertSequenceEqual(obj.cacheme, ["eins", "zwei"] )
+        self.assertEqual(obj.called, 1)
+
 
 if __name__ == '__main__':
     unittest.main()
