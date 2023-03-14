@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <iomanip>
 
 //#if HAS_INCLUDE_CHARCONV
 //#include <charconv>
@@ -1417,7 +1418,7 @@ struct Rosetta {
   }
 
   static BenchmarkRun *currentRun;
-  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, std::filesystem::path verifyout, int n, int repeats) {
+  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, std::filesystem::path verifyout, int n, int repeats, std::string timestamp) {
     BenchmarkRun executor(verify, repeats, verifyout);
     currentRun = &executor;
     executor.run(program, n);
@@ -1485,6 +1486,8 @@ struct Rosetta {
         cxml << R"(<?xml version="1.0" encoding="UTF-8" ?>)" << std::endl;
         cxml << R"(<benchmarks>)" << std::endl;
         cxml << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << '\"';
+        if (!timestamp.empty())
+            cxml << " timestamp=\"" << escape(timestamp) << '\"';
         if (strlen(rosetta_configname) >= 1)
           cxml << " configname=\"" << escape(rosetta_configname) << '\"';
         if (strlen(bench_buildtype) >= 1)
@@ -1690,6 +1693,15 @@ int main(int argc, char *argv[]) {
   std::string_view problemsizefile; // TOOD: Use std::filesystem::path
   std::string_view verifyfile;
   std::string_view xmlout;
+
+  // Use current time as timestamp by default
+  auto now = std::chrono::system_clock::now();
+  auto now_tm = std::chrono::system_clock::to_time_t(now);
+  std::stringstream ss;
+  ss << std::put_time(std::localtime(&now_tm), "%F %T%z");
+  std::string timestamp = ss.str();
+
+
   int problemsize = -1;
   int repeats = -1;
   int cold = -1;
@@ -1726,12 +1738,22 @@ int main(int argc, char *argv[]) {
         i += 1;
       }
       verifyfile = *val;
-    } else if (name == "xmlout") {
-      if (!val.has_value() && i <= argc) {
-        val = argv[i];
-        i += 1;
-      }
-      xmlout = *val;
+    }
+    else if (name == "xmlout") {
+        if (!val.has_value() && i <= argc) {
+            val = argv[i];
+            i += 1;
+        }
+        xmlout = *val;
+    } else if (name == "timestamp") {
+        // Timestamp to log when the benchmarking was invoked,
+        // So all benchmark get the same timestamp
+        assert(val.has_value() || i <= argc);
+        if (!val.has_value() && i <= argc) {
+            val = argv[i];
+            i += 1;
+        } 
+        timestamp =* val;
     } else {
       assert(!"unknown switch");
     }
@@ -1803,6 +1825,7 @@ int main(int argc, char *argv[]) {
       // Use cwd, without subdirs
     }
 
+    // TODO: Use timestamp for consistency
     std::string suffix;
     int i = 0;
     while (true) {
@@ -1827,7 +1850,7 @@ int main(int argc, char *argv[]) {
 
   if (!verify)
     warn_load();
-  Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats);
+  Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats, timestamp);
   if (!verify)
     warn_load();
 

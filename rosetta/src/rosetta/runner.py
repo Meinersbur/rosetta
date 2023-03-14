@@ -44,11 +44,13 @@ def same_or_none(data):
         return common_value
 
 
-def do_run(bench, args, resultfile):
+def do_run(bench, args, resultfile, timestamp=None):
     exe = bench.exepath
 
     start = datetime.datetime.now()
     args.append(f'--xmlout={resultfile}')
+    if timestamp:
+        args.append(f'--timestamp={timestamp.isoformat(sep = " ")}')
     print("Executing", shjoin([exe] + args))
     #p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     p = subprocess.Popen([exe] + args)
@@ -68,11 +70,11 @@ def do_run(bench, args, resultfile):
     return resultfile
 
 
-def run_gbench(bench, problemsizefile, resultfile):
+def run_gbench(bench, problemsizefile, resultfile,timestamp):
     args = []
     if problemsizefile:
         args.append(f'--problemsizefile={problemsizefile}')
-    return do_run(bench=bench, args=args, resultfile=resultfile)
+    return do_run(bench=bench, args=args, resultfile=resultfile,timestamp=timestamp)
 
 
 
@@ -123,6 +125,7 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
 
     results = []
     resultssubdir = make_resultssubdir(within=resultdir)
+    timestamp = datetime. datetime.now(datetime.timezone.utc)
     for e in registry.benchmarks:
         thisresultdir = resultssubdir
         configname = e.configname
@@ -130,7 +133,7 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
             thisresultdir /= configname
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
         results .append(run_gbench(
-            e, problemsizefile=problemsizefile, resultfile=thisresultdir))
+            e, problemsizefile=problemsizefile, resultfile=thisresultdir,timestamp=timestamp))
     return results,resultssubdir
 
 

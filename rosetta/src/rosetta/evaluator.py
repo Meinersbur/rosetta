@@ -42,18 +42,21 @@ def name_or_list(data):
     return data
 
 
+import dateutil
+
 
 #TODO: dataclass
 class BenchResult:
-    categorical_cols = ['program', 'ppm', 'buildtype', 'configname']
+    categorical_cols = ['program', 'ppm', 'buildtype', 'configname', 'timestamp']
     numerical_cols = ['walltime']
-    def __init__(self, name: str, ppm: str, buildtype: str, configname: str,
+    def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         # self.bench=bench
         self.name = name
         self.ppm = ppm
-        self.buildtype = buildtype
+        self.buildtype = buildtype 
         self.configname = configname
+        self.timestamp = dateutil. parser.parse( timestamp) if isinstance(timestamp,str) else timestamp
         self.count = count
         # self.wtime=wtime
         # self.utime=utime
@@ -73,6 +76,7 @@ class BenchResultSummary:
         self.ppm = name_or_list(unique(r.ppm for r in results))
         self.buildtype = name_or_list(unique(r.buildtype for r in results))
         self.configname = name_or_list(unique(r.configname for r in results))
+        self.timestamp  = name_or_list(unique(r.timestamp for r in results))
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
         measures = unique(k for r in results for k in r.durations.keys())
@@ -95,6 +99,8 @@ def get_column_data(result: BenchResult, colname: str):
         return first_defined(result.configname, "") #FIXME: "defaultbuild" is just placeholder
     if colname == "walltime":
         return result.durations.get("walltime")
+    if colname == "timestamp":
+        return result.timestamp
     assert False, "TODO: Add to switch of use getattr"
 
 def get_summary_data(result: BenchResultSummary, colname: str):
@@ -189,6 +195,30 @@ def getHTMLFromatter(col: str):
 
 
 
+def getPlaintextFormatter(col: str):
+    def timestamp_plaintext_formatter(v):
+        assert isinstance(v,datetime.datetime)
+        return f'{v.astimezone():%c}'
+    def str_plaintext_formatter(v):
+        return str(v)
+    def duration_plaintext_formatter(stat):
+        assert isinstance(stat,Statistic)
+        v = stat.mean
+        if v >= 1:
+            return f'{v:.2f}'
+        if v * 1000 >= 1:
+            return f'{v*1000:.2f} ms'
+        if v * 1000 * 1000 >= 1:
+            return f'{v*1000*1000:.2f} µs'
+        if v * 1000 * 1000 * 1000 >= 1:
+            return f'{v*1000*1000*1000:.2f} ns'
+
+    if col == 'timestamp':
+        return timestamp_plaintext_formatter
+    if col in BenchResult.numerical_cols:
+        return duration_plaintext_formatter
+    return  str_plaintext_formatter
+
 
 
 
@@ -221,6 +251,7 @@ def load_resultfiles(resultfiles, filterfunc=None):
             ppm = benchmark.attrib.get('ppm')
             buildtype = benchmark.attrib.get('buildtype')
             configname = benchmark.attrib.get('configname')
+            timestamp = benchmark.attrib.get('timestamp')
             count = len(benchmark)
 
             time_per_key = defaultdict(lambda: [])
@@ -232,7 +263,7 @@ def load_resultfiles(resultfiles, filterfunc=None):
             for k, data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            item = BenchResult(name=name, ppm=ppm, buildtype=buildtype, count=count, durations=stat_per_key,
+            item = BenchResult(name=name, ppm=ppm, buildtype=buildtype, timestamp=timestamp, count=count, durations=stat_per_key,
                                cold_count=cold_count, peak_alloc=peak_alloc, configname=configname, maxrss=maxrss)
             if filterfunc and not filterfunc(item):
                 continue
@@ -615,7 +646,7 @@ def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_
         label_groups = ['program']
 
     def make_group_label(s,g):
-            return ', '.join( get_summary_data(s, col) for col in label_groups )
+            return ', '.join( getPlaintextFormatter( col)( get_summary_data(s, col)) for col in label_groups )
 
     labels = [make_group_label(s,g) for s,g in zip (groups. groupsummary, groups.benchgroups)]
 
