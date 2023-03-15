@@ -4,7 +4,7 @@
 
 static real kernel(pbsize_t n) {
     real sum = 0;
-    #pragma omp parallel reduction(+:sum)
+    #pragma omp parallel for reduction(+:sum) schedule(static)
     for (idx_t i = 0; i < n; i += 1)
         sum += i;
     return sum;

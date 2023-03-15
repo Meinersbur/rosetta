@@ -1,6 +1,7 @@
-// BUILD:add_benchmark(ppm=serial)
+// BUILD: add_benchmark(ppm=serial)
 
 #include "rosetta.h"
+
 
 static void kernel(pbsize_t n, real A[]) {
   for (idx_t i = 0; i < n; i += 1)

@@ -3,12 +3,9 @@
 #include "rosetta.h"
 
 
-
 static unsigned num_blocks(int num, int factor) {
   return (num + factor - 1) / factor;
 }
-
-
 
 __global__ void kernel_device(pbsize_t n, real A[]) {
   idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -16,13 +13,10 @@ __global__ void kernel_device(pbsize_t n, real A[]) {
     A[i] += 42;
 }
 
-
-
 void run(State &state, pbsize_t n) {
   auto A = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true, "A");
   real *dev_A = state.allocate_dev<real>(n);
 
-  // TODO: #pragma omp parallel outside of loop
   for (auto &&_ : state) {
     BENCH_CUDA_TRY(cudaMemcpy(dev_A, A.data(), n * sizeof(real), cudaMemcpyHostToDevice));
 
@@ -33,4 +27,6 @@ void run(State &state, pbsize_t n) {
 
     BENCH_CUDA_TRY(cudaDeviceSynchronize());
   }
+
+  state.free_dev(dev_A);
 }

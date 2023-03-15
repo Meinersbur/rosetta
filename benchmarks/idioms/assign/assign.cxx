@@ -2,6 +2,7 @@
 
 #include "rosetta.h"
 
+
 // TODO: use data size instead of passing n separately
 static void kernel(pbsize_t n, multarray<real, 1> data) {
     for (idx_t i = 0; i < n; i += 1)
