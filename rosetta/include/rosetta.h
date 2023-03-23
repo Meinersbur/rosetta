@@ -19,6 +19,10 @@
 #if ROSETTA_PPM_CUDA
 #include <cuda_runtime_api.h>
 #endif
+#if ROSETTA_PPM_CUDA || ROSETTA_PLATFORM_NVIDIA
+#include "rosetta-cuda.h"
+#endif
+
 
 // From Google benchmark
 // TODO: remove, make standalone
@@ -32,16 +36,7 @@ typedef SSIZE_T ssize_t;
 #endif
 
 
-#ifdef ROSETTA_PPM_CUDA
-#define BENCH_CUDA_TRY(call)                                 \
-  do {                                                       \
-    auto const status = (call);                              \
-    if (cudaSuccess != status) {                             \
-      printf("CUDA call '" #call "' returned %d\n", status); \
-      abort();                                               \
-    }                                                        \
-  } while (0);
-#endif
+
 
 using benchmark::ClobberMemory;
 

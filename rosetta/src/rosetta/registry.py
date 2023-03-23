@@ -3,31 +3,81 @@
 """Global registry of benchmarks"""
 
 import typing
-import configparser
-import math
-import colorama
-import datetime
-import os
-import pathlib
-import subprocess
-import sys
 
 from .util.cmdtool import *
 from .util.support import *
-from .util import invoke
 from .common import *
 
 
 
 
 
+runtime = NamedSentinel('runtime')
+compiletime = NamedSentinel('compiletime')
+
+class Param:
+    def __init__(self,name,choices=None,evaltime=None,*args):
+        self.name = name
+        self.choices=choices
+        self.allow_compiletime = None
+        self.allow_runtime = None
+
+        for a in itertools.chain(  ensure_list(evaltime),args):
+            if a == compiletime :
+                self.allow_compiletime = True
+            elif a == compiletime:
+                self.allow_runtime=True
+            else:
+                raise Exception(f"Unexpected parameter {a}")
+
+        if self.allow_compiletime is None and self.allow_runtime is None:
+             self.allow_compiletime =True
+             self.allow_runtime=True
+
+        self.allow_compiletime = first_defined(self.allow_compiletime,False)
+        self.allow_runtime = first_defined(self.allow_runtime,False)
+
+
+
+class GenParam(Param):
+    """Parameter used to generate benchmarks (e.g. real=float or double); All possible combinations are selected"""
+    def __init__(self,*args,**kwargs):
+         super().__init__(*args,**kwargs)
+
+
+class SizeParam(Param):
+    """Parameter to generate benchmarks that differ in the working set size; Its value is probed to be as large as possible without violating constraints
+    
+    One one size parameter allowed: 'n'
+    """
+    def __init__(self,*args,**kwargs):
+         super().__init__(*args,**kwargs)
+
+
+
+class TuneParam(Param):
+    """Parameter that does not have an influence on the output; Its value is tuned to optimize a criterium (usually minimize execution time) under constraints"""
+    def __init__(self,*args,**kwargs):
+         super().__init__(*args,**kwargs)
 
 
 
 
+class UnsizedBenchmark:
+    """Fixed generator parameters (including ppm)"""
+    pass
+
+
+class SizedBenchmark:
+    """Fixed generator (and size, if compiletime) parameters"""
+    pass
+
+
+# TOOD: Rename: TunedBenchmark
 class Benchmark:
+    """A benchmark executable with fixed static parameters"""
     def __init__(self, basename, target, exepath, buildtype, ppm, configname, sources=None,
-                 benchpropfile=None, compiler=None, compilerflags=None, pbsize=None, benchlistfile=None, is_ref=None):
+                 benchpropfile=None, compiler=None, compilerflags=None, pbsize=None, benchlistfile=None, is_ref=None, params=[]):
         self.basename = basename
         self.target = target
         self.exepath = exepath

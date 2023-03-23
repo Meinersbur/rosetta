@@ -208,6 +208,16 @@ def first_defined(*args, fallback=None):
     return fallback
 
 
+def ensure_list(v):
+    if v is None:
+        return []
+    if isinstance(v,list):
+        return v
+    if isinstance(v,tuple) or isinstance(v,set) :
+        return list(v)
+    return [v]
+
+
 # Select a choice out of a set of predefined values
 #
 # Passing a dict allows mapping an alias to another definition. Multiple dicts/sets are applied one ofter the other.
@@ -458,3 +468,4 @@ class cached_generator:
         return functools.cached_property.__get__(self,instance,owner)
 
     __class_getitem__ = classmethod(functools.GenericAlias)
+

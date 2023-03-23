@@ -51,7 +51,7 @@ class ManagedBuilddirTests(unittest.TestCase):
 class ManagedBuilddirDefaultconfig(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.srcdir = mkpath(__file__ ).parent.parent.parent
+        cls.srcdir = mkpath(__file__).parent.parent.parent
         cls.test_dir = tempfile.TemporaryDirectory(prefix='managed-')
         cls.rootdir = mkpath( cls.test_dir)
         print("srcdir: " , cls.srcdir)

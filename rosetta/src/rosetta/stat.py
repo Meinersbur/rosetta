@@ -24,14 +24,21 @@ from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
+import scipy
+
 
 # Summary statistics
 # Don't trust yet, have to check correctness
 # TODO: Use numpy
+# http://htor.inf.ethz.ch/publications/img/hoefler-scientific-benchmarking.pdf
+# http://htor.inf.ethz.ch/publications/img/hoefler-scientific-benchmarking_wide_HLRS.pdf
+# https://htor.inf.ethz.ch/publications/img/hoefler-scientific-benchmarking_aachen.pdf
 class Statistic:
     # TODO: Consider using SciPy's scipy.distributions.t.cdf if available
     # Or just directly use scipy.distributions.ttest_ind
     # https://pythonguides.com/scipy-confidence-interval/
+    # https://www.scribbr.com/statistics/students-t-table/
+
     studentt_density_95 = list({
         1: 12.706,
         2: 4.303,
@@ -254,13 +261,26 @@ class Statistic:
 
 
     # Symmetric confidence interval around mean, assuming normal distributed samples
-    # TODO: Asymetric confidence interval
-    # See also: Central limit theorem
+    # TODO: Asymetric confidence interval; Runtimes are usually non-symmetric; can normalize using log (changes mean to geomen)
+    # See also (for ratios): https://www.scribbr.com/statistics/t-test/#what-type-of-t-test-should-i-use
+    # TODO: Rename
     def abserr(self, ratio=0.95):
-        assert ratio == 0.95, r"Only two-sided 95% confidence interval supported atm"
         n = self.count
         if n < 2:
             return 0
+
+        import scipy.stats as stats
+        mean = self.mean 
+        q = 1 - (1 - ratio) / 2 # Two-sided
+        abserr =  stats.t.ppf(q, 
+                                          loc=mean, # Middle point
+                                          df=n-1, 
+                                          scale=self.stddev / math.sqrt(n) # Standard error of the mean
+                                          ) - mean
+        assert abserr>=0
+        return abserr
+
+        assert ratio == 0.95, r"Only two-sided 95% confidence interval supported atm"
 
         # Table lookup
         # TODO: bisect
@@ -275,6 +295,7 @@ class Statistic:
             c = Statistic.studentt_density_95[-1][1]
 
         return c * self.corrected_variance  / math.sqrt(n)
+
 
 
     def relerr(self, ratio=0.95):

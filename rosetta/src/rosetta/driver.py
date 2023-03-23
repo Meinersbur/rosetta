@@ -9,9 +9,8 @@ import re
 import logging as log
 import typing
 
-
 from .builder import *
-from . import runner, evaluator, prober, verifier, registry
+from . import runner, prober, verifier, registry
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
@@ -461,32 +460,7 @@ def driver_main(
                 refbuilddir = refconfig.builddir if refconfig else None
                 builddirs = [config.builddir for config in configs]
                 buildondemand = not args.build
-
-                probe = args.probe
-                verify = args.verify
-                bench = args.bench
-                # if bench is None and not verify and not probe:
-                #    bench = True
-
-                if probe:
-                    assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
-                    prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
-                                     limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
-
-
-
-
-
-
         else:
-            # If neither no action is specified, enable --bench implicitly unless --no-bench
-            probe = args.probe
-            verify = args.verify
-            bench = args.bench
-            # if bench is None and not verify and not probe:
-            #    bench = True
-
-            
             configure_uptodate = False
 
             if args.build:
@@ -504,11 +478,12 @@ def driver_main(
             # Discover available benchmarks
             registry.load_register_file(benchlistfile)
 
-            if probe:
+
+        if args.probe:
                 assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
                 prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                                  limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
-
+                
 
         if args. verify:
             if mode == DriverMode.MANAGEDBUILDDIR:
@@ -525,10 +500,9 @@ def driver_main(
 
 
 
-            
-
-
         if args.evaluate or args.report:
+            from . import evaluator
+
             for use_results_rdir in args.use_results_rdir:
                     resultfiles = resultfiles or []
                     resultfiles += mkpath(use_results_rdir).glob('**/*.xml')

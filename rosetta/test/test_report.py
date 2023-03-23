@@ -2,9 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import contextlib
-import io
-import re
 
 from context import rosetta
 import rosetta.driver

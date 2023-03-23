@@ -682,14 +682,21 @@ def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_
             # FIXME: What if missing?
             [(baseline_idx, baseline_result)] = ((i,c) for i,(t,c) in enumerate(zip(groups.compare_tuples , group_data)) if t == baseline_cmpval)
             baseline_stat = get_column_data(baseline_result,data_col) 
+            if not baseline_stat:
+                log.warn(f"No baseline {baseline_cmpval}; skipping group f{group_idx}")
+                continue
             #group_data_without_baseline = [b for i,b in enumerate(group_data) if i!=baseline_compare_idx]
-            baseline_mean =baseline_stat.mean
+            baseline_mean = baseline_stat.mean
              
         #nonempty_results = [(j,r) for j,r in enumerate(group_data_without_baseline) if r]
         #benchs_this_group = len(nonempty_results)
 
         for compare_idx, compare_data in enumerate(d for i,d in enumerate( group_data) if i != baseline_idx ):
             stat = get_column_data(compare_data,data_col)
+            if not stat:
+                # No bar for missing measurement
+                continue
+
             if baseline_cmpval:
                 if relcompare:
                     val = baseline_mean / stat.mean
@@ -887,8 +894,6 @@ def make_report(results):
             speedupplotsec = SpeedupPlotSection(walltimecompare,compare_col='ppm',base_cat=base)
             sections.append(speedupplotsec)
     
-
-
     yield """
 <!DOCTYPE html>
 <html>
@@ -896,28 +901,36 @@ def make_report(results):
         <title>Benchmark Report</title>
 	    <style>
 		body {
-			font-family: Arial, sans-serif;
+			font-family: sans-serif;
 			font-size: 14px;
 			line-height: 1.5;
 			margin: 0;
 			padding: 0;
 		}
+
+        /* CSS grid layout */
 		.container {
 			display: flex;
 			flex-wrap: wrap;
 			margin: 0 auto;
-			max-width: 1200px;
 			padding: 20px;
+            column-gap: 15px;
+            display: grid;
+            grid-template-columns: 15em minmax(0,1fr);
 		}
+
+        /* CSS grid column 1: navigation */
+        .toc-container {  /* Container in which the sticky div can move */
+            display: block;
+            height: 100%;
+        }
 		.toc {
 			background-color: #f1f1f1;
 			border-radius: 5px;
 			box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
 			flex-basis: 20%;
-			margin-right: 20px;
-			padding: 20px;
+            top: 20px;
 			position: sticky;
-			top: 20px;
 		}
 		.toc ul {
 			list-style: none;
@@ -927,6 +940,8 @@ def make_report(results):
 		.toc li {
 			margin-bottom: 10px;
 		}
+
+        /* CSS grid column 2: content */
 		.table-container {
 			flex-basis: 80%;
 		}
@@ -956,8 +971,9 @@ def make_report(results):
     </head>
     <body>
       <div class="container">
+      <div class="toc-container">
 		<div class="toc">
-			<h2>Table of Contents</h2>
+			<h2>Sections</h2>
 			<ul>"""
     for s in sections:
         yield f'<li><a href="#{s.name}">{s.title}</a></li>'
@@ -965,6 +981,7 @@ def make_report(results):
     yield """
 			</ul>
 		</div>
+        </div>
         <div class="table-container">
             <h1>Benchmark Report</h1>"""
 

@@ -38,18 +38,27 @@ class StatisticTests(unittest.TestCase):
     def test_stddev(self):
         self.assertEqual(statistic([]).stddev, 0)
         self.assertEqual(statistic([42]).stddev, 0)
+        self.assertEqual(statistic([-1, 1]).stddev, 1)
         self.assertEqual(statistic([2, 6]).stddev, 2)
+        self.assertEqual(statistic([0, 0, 6, 6]).stddev, 3)
+        self.assertAlmostEqual(statistic([0, 0, 0, 0, 3.5, 7, 7, 7, 7]).stddev, 3.2998316455372216)
+
 
     def test_range(self):
         self.assertEqual(statistic([]).range, 0)
         self.assertEqual(statistic([42]).range, 0)
+        self.assertEqual(statistic([-1, 1]).range, 2)
         self.assertEqual(statistic([2, 7]).range, 5)
+
 
     def test_abserr(self):
         self.assertEqual(statistic([]).abserr(), 0)
         self.assertEqual(statistic([42]).abserr(), 0)
-        self.assertAlmostEqual(statistic([0,0,6,6]).abserr(), 16.656) # Should be 3 plusminus 4.77367 according to wolframalpha 
-        self.assertAlmostEqual(statistic([0,0,0,0,3.5,7,7,7,7]).abserr(), 9.2365)
+        self.assertAlmostEqual(statistic([-1, 1]).abserr(), 8.984643532275763 )
+        self.assertAlmostEqual(statistic([0, 1]).abserr(), 4.492321766137882  )
+        self.assertAlmostEqual(statistic([0, 0, 6, 6]).abserr(), 4.7736694579263945) # Should be 3 plusminus 4.77367 according to wolframalpha
+        self.assertAlmostEqual(statistic([0, 0, 0, 0, 3.5, 7, 7, 7, 7]).abserr(), 2.5364751398409346) # Should be 3.5 plusminus ~2.7
+
 
 
 

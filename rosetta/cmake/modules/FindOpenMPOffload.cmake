@@ -15,11 +15,13 @@ endif ()
 include(CheckCXXSourceCompiles)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  # set(OPENMP_OFFLOADING_CFLAGS "-foffload=default") # default anyway set(OPENMP_OFFLOADING_LDFLAGS
-  # "-foffload=default")
-  set(OPENMP_OFFLOADING_CFLAGS "-foffload=nvptx-none")
-  set(OPENMP_OFFLOADING_LDFLAGS "-foffload=nvptx-none")
-
+  # Ubuntu: "GCC is not configured to support default as offload target"
+  #set(OPENMP_OFFLOADING_CFLAGS  "-foffload=default" CACHE STRING "Compiler arguments for OpenMP offloading")
+  #set(OPENMP_OFFLOADING_LDFLAGS "-foffload=default" CACHE STRING "Linker arguments for OpenMP offloading")
+  # Look for OFFLOAD_TARGET_NAMES in `g++ -v` to get otpions
+  # CUDA doesn't like extra protections that gcc adds by default
+  set(OPENMP_OFFLOADING_CFLAGS  "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\"" CACHE STRING "Compiler arguments for OpenMP offloading")
+  set(OPENMP_OFFLOADING_LDFLAGS "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\"" CACHE STRING "Linker arguments for OpenMP offloading")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(OPENMP_OFFLOADING_CFLAGS
       "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"

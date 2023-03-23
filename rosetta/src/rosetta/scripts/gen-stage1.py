@@ -7,11 +7,12 @@ import importlib
 import pathlib
 import re
 from io import StringIO
+import itertools 
 import importlib.util
 
 from rosetta.util.support import *
 import rosetta.runner as runner
-from rosetta import generator
+import rosetta.registry  as registry
 
 
 buildre = re.compile(r'^\s*//\s*BUILD\:(?P<script>.*)$')
@@ -39,6 +40,13 @@ def global_unintent(slist):
     yield from unindent(slist, gindent)
 
 
+
+
+
+
+
+
+
 def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, filter=None):
     problemsizefile = runner.get_problemsizefile(
         problemsizefile=problemsizefile)
@@ -57,7 +65,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
         basename = '.'.join(list(rel.parts) + [basename])
 
         if filter and not any(f in basename for f in filter):
-            print(f"Benchmark {basename} does not match --filter-include={filter}")
+            #print(f"Benchmark {basename} does not match --filter-include={filter}")
             log.info(f"Benchmark {basename} does not match --filter-include={filter}")
             continue
         log.info(f"Adding benchmark {path}")
@@ -88,7 +96,16 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 scriptdir = buildfile.parent
                 relbuildfile = buildfile.relative_to(scriptdir)
 
-                def add_benchmark(sources=None, basename=None, ppm=None):
+                def add_benchmark(*args, sources=None, basename=None, ppm=None,params=None):
+                    for a in args:
+                        if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target'}:
+                            ppm = a
+                        elif  isinstance(a,registry.GenParam) or  isinstance(a,registry.SizeParam) or  isinstance(a,registry.TuneParam)  :
+                            params = (params or []) + [a]
+                        else:
+                            die(f"Unknown argument to add_benchmark in {buildfile}: {a}")
+
+
                     if sources is not None:
                         mysources = []
                         for s in sources:
@@ -113,11 +130,20 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     pbsize = config.getint(basename, 'n')
 
                     bench = runner.Benchmark(basename=basename, target=target, exepath=None, ppm=ppm,
-                                             configname=configname, buildtype=None, sources=mysources, pbsize=pbsize)
+                                             configname=configname, buildtype=None, sources=mysources, pbsize=pbsize,params=params)
                     benchs.append(bench)
+
+
 
                 globals['add_benchmark'] = add_benchmark
                 globals['__file__'] = relbuildfile
+
+                globals['GenParam'] = registry. GenParam
+                globals['SizeParam'] = registry. SizeParam
+                globals['TuneParam'] = registry.  TuneParam
+                globals['runtime'] =  registry. runtime
+                globals['compiletime'] =  registry. compiletime
+
 
                 # Common PPMs for convenience
                 globals['serial'] = 'serial'

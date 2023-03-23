@@ -1,4 +1,5 @@
 // BUILD: add_benchmark(ppm=cuda,sources=[__file__, "cholesky-common.cxx"])
+
 #include "cholesky-common.h"
 #include <rosetta.h>
 
