@@ -265,9 +265,10 @@ class Statistic:
     # See also (for ratios): https://www.scribbr.com/statistics/t-test/#what-type-of-t-test-should-i-use
     # TODO: Rename
     def abserr(self, ratio=0.95):
+
         n = self.count
         if n < 2:
-            return 0
+            return None # Concept not defined with just one value
 
         import scipy.stats as stats
         mean = self.mean 

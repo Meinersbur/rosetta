@@ -1,9 +1,10 @@
 // BUILD: add_benchmark(ppm=cuda)
-#include "rosetta.h"
+
+#include <rosetta.h>
 
 
 
-__global__ void kernel3(int m, int n, real *A, real *x, real *y, real *tmp) {
+__global__ void kernel3(pbsize_t m, pbsize_t n, real *A, real *x, real *y, real *tmp) {
   idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
   if (i < m) {
@@ -13,7 +14,7 @@ __global__ void kernel3(int m, int n, real *A, real *x, real *y, real *tmp) {
 }
 
 
-__global__ void kernel4(int m, int n, real *A, real *x, real *y, real *tmp) {
+__global__ void kernel4(pbsize_t m, pbsize_t n, real *A, real *x, real *y, real *tmp) {
   idx_t j = blockDim.x * blockIdx.x + threadIdx.x;
 
   if (j < n) {

@@ -1,10 +1,18 @@
 // BUILD: add_benchmark(ppm=cuda,sources=[__file__, "gramschmidt-common.cxx"])
 
 #include "gramschmidt-common.h"
+
 #include <rosetta.h>
 #include <thrust/device_ptr.h>
 #include <thrust/reduce.h>
-
+#include <thrust/transform_reduce.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/functional.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/for_each.h>
+#include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 
 
 static unsigned num_blocks(int num, int factor) {

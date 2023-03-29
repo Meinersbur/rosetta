@@ -192,7 +192,7 @@ class DriverMode:
     """Multiple builddirs managed by rosetta.py. May create+deleta builddirs as needed."""
     MANAGEDBUILDDIR = NamedSentinel('managed builddir(s)')
 
-    """Running from a user-created cmake builddir. Must not change any CMakeCache settings."""
+    """Running from a user-created cmake builddir. Must not change any CMakeCache settings. Also, only one config (Debug, Release, Minsize, ...) available"""
     USERBUILDDIR = NamedSentinel('user builddir')
 
     """Invoked by cmake/make itself (e.g. `ninja bench`). Should not trigger any re=configure or build, assume this has already been done."""
@@ -456,10 +456,6 @@ def driver_main(
                 refconfig = None
                 if len(refconfigs) == 1:
                     [refconfig] = refconfigs
-
-                refbuilddir = refconfig.builddir if refconfig else None
-                builddirs = [config.builddir for config in configs]
-                buildondemand = not args.build
         else:
             configure_uptodate = False
 
@@ -490,7 +486,7 @@ def driver_main(
                     refdir = (refconfig.builddir if refconfig else None) / 'refout'
             else:
                     refdir = builddir / 'refout'
-            verifier.run_verify( problemsizefile=args.problemsizefile, refdir=refdir)
+            verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
 
  
 

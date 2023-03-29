@@ -226,25 +226,6 @@ public:
 
 
 
-#if 0
-template<typename DIMLENGTHS>
-struct  _flatindex {
-    using TupleTy = typename  _make_tuple<DIMLENGTHS>::type;
-    using RestDimlengths = typename _unqueue_dimlengths< DIMLENGTHS>::rest;
-
-    static ssize_t flatindex(TupleTy lengths, TupleTy coords) {
-        auto sublengths = extract_subtuple(lengths, std::make_index_sequence<std::tuple_size<RestDimlengths> > {});
-        auto subcoords  = extract_subtuple(coords, std::make_index_sequence<std::tuple_size<RestDimlengths> > {});
-
-        auto len   = get<0>(lengths);
-        auto coord = get<0>( coords);
-
-        auto result = _flatindex<RestDimlengths>::flatindex();
-        result *= get<0>(lengths);
-        result += 
-    }
-};
-#endif
 
 
 
@@ -262,14 +243,6 @@ class _multarray_partial_subscript {
 public:
   _multarray_partial_subscript(T *data, RemainingLengthsTy remainingLengths)
       : data(data), remainingLengths(remainingLengths) {}
-
-#if 0
-private:
-    template<size_t... Indices>
-    subty buildSubtyHelper(_indices<Indices...>/*unused*/, int64_t coords[sizeof...(Indices)], int64_t appendCoord)   {
-        return subty(owner, coords[Indices]..., appendCoord);
-    }
-#endif
 
 public:
   subty operator[](int64_t i) /*TODO: const*/ {
@@ -317,7 +290,7 @@ static const char * indent(int amount) {
 
 template<typename T>
 void dumpArray(T *data,std::tuple<int64_t,int64_t> DimLengths, const char *d) {
-    int dlen = strlen(d);
+    size_t dlen = d ? strlen(d) : 0; // TODO: d should be taken from the allocation call
     for (int i = 0; i < std::get<0>(DimLengths); i += 1) {
         if (i == 0) {
             if (d)

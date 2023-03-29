@@ -2,7 +2,7 @@
 
 #include "rosetta.h"
 
-static void kernel(pbsize_t m, pbsize_t n, multarray<real, 2> A, real *x, real *y, real *tmp) {
+static void kernel(pbsize_t m, pbsize_t n, multarray<real, 2> A, real x[], real y[], real tmp[]) {
 #pragma scop
   for (idx_t i = 0; i < n; i++)
     y[i] = 0;
@@ -16,10 +16,10 @@ static void kernel(pbsize_t m, pbsize_t n, multarray<real, 2> A, real *x, real *
 #pragma endscop
 }
 
-
+ 
 
 void run(State &state, pbsize_t pbsize) {
-  // n is 5%-20% larger than m
+    // n is 5%-20% larger than m
   pbsize_t n = pbsize;
   pbsize_t m = pbsize - pbsize / 10;
 

@@ -6,9 +6,16 @@ set(ENV{PYTHONPATH} "${_pythonpath}")
 
 # Stage 1 #######################################################################################################
 
+if (NOT ROSETTA_MAINTAINER_MODE)
+  # These are the files gen-stage1.py looks for. If a new file is added, need to re-run CMake to search for build instructions.
+  file(GLOB_RECURSE _potential_build_files FOLLOW_SYMLINKS LIST_DIRECTORIES false CONFIGURE_DEPENDS "*.cxx" "*.cu" "*.build")
+endif ()
+
 # internal TODO: basename is not required
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
   cmake_parse_arguments(_arg "" "PBSIZE" "SOURCES" ${ARGN})
+
+  message("Add benchmark ${basename} ${ppm}")
 
   file(RELATIVE_PATH _relpath "${CMAKE_SOURCE_DIR}/benchmarks" "${CMAKE_CURRENT_SOURCE_DIR}")
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
@@ -28,6 +35,7 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
                ROSETTA_BASENAME "${basename}"
                ROSETTA_BENCHPROPFILE "${_benchprop_filename}"
                ROSETTA_PBSIZE "${_arg_PBSIZE}")
+#set_target_properties("${_bench_target}" PROPERTIES CUDA_SEPARABLE_COMPILATION ON) #TODO: Remove if not needed
   target_link_libraries("${_bench_target}" PRIVATE "${_library}")
   if (ROSETTA_REALTYPE)
     # TODO: Support compiling mutiple real types at the same time?

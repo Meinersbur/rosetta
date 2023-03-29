@@ -38,14 +38,27 @@ extern "C"
 static void kernel(pbsize_t n,
                    multarray<real, 2> L, real x[], real b[]) {
 #pragma scop
+#if 0
   for (idx_t i = 0; i < n; i++) {
     x[i] = b[i];
     for (idx_t j = 0; j < i; j++)
       x[i] -= L[i][j] * x[j];
     x[i] /= L[i][i];
   }
+#else 
+    for (idx_t i = 0; i < n; i++) {
+        real  sum =  0;
+        for (idx_t j = 0; j < i; j++)
+            sum += L[i][j] * x[j];
+       //    sum += L[i][j];
+
+        x[i] = (  b[i] - sum) / L[i][i];
+      //  x[i] = 1 +sum;
+    }
+#endif 
 #pragma endscop
 }
+
 
 
 void run(State &state, pbsize_t pbsize) {
@@ -53,7 +66,7 @@ void run(State &state, pbsize_t pbsize) {
 
 
   auto L = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false, "L");
-  auto x = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ true, "x");
+  auto x = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "x");
   auto b = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "b");
 
   for (auto &&_ : state)

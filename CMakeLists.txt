@@ -51,6 +51,12 @@ endif ()
 set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
 set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
 
+
+option(ROSETTA_MAINTAINER_MODE "Skip always looking for changed benchmark build instructions (maintainer mode meaning now its the benchmark maintainer's responsibility to invoke CMake when benchmark build instructions change)" OFF)
+
+
+
+
 # Dependencies ################################################################
 
 # Python
@@ -74,6 +80,27 @@ elseif (ROSETTA_PPM_CUDA)
     message(FATAL_ERROR "CUDA enabled but no CUDA not found")
   endif ()
 endif ()
+
+# Add -G option to debug flags by default because CMake's default doesn't
+if (CMAKE_CUDA_COMPILER)
+  if (NOT ROSETTA_CUDA_IS_FIRST_CONFIG)
+  string(STRIP "${CMAKE_CUDA_FLAGS_DEBUG}" CMAKE_CUDA_FLAGS_DEBUG)
+  string(STRIP "${CMAKE_CUDA_FLAGS_DEBUG_INIT}" CMAKE_CUDA_FLAGS_DEBUG_INIT)
+    message("Is first config '${CMAKE_CUDA_FLAGS_DEBUG}' == '${CMAKE_CUDA_FLAGS_DEBUG_INIT}'")
+    if (DEFINED CMAKE_CUDA_FLAGS_DEBUG AND CMAKE_CUDA_FLAGS_DEBUG STREQUAL CMAKE_CUDA_FLAGS_DEBUG_INIT)
+    message("Appending -G to CMAKE_CUDA_FLAGS_DEBUG")
+      set (CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -G" CACHE STRING "Flags used by the CUDA compiler during DEBUG builds." FORCE)
+    endif ()
+    string(STRIP "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO}" CMAKE_CUDA_FLAGS_RELWITHDEBINFO)
+    string(STRIP "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT}" CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT)
+    if (DEFINED CMAKE_CUDA_FLAGS_RELWITHDEBINFO AND CMAKE_CUDA_FLAGS_RELWITHDEBINFO STREQUAL CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT)
+    message("Appending -G to CMAKE_CUDA_FLAGS_RELWITHDEBINFO")
+      set (CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -G" CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds." FORCE)
+    endif ()
+  endif ()
+  set(ROSETTA_CUDA_IS_FIRST_CONFIG 1 CACHE INTERNAL "Used to set override CMake's default flags" FORCE)
+endif ()
+
 
 if (CMAKE_CUDA_COMPILER)
   # only for CUDA_VERSION
@@ -222,6 +249,7 @@ if (CMAKE_CUDA_COMPILER)
 endif ()
 option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
 
+
 set(_nvidia_enabled_default OFF)
 if (TARGET CUDA::cudart)
   set(_nvidia_enabled_default ON)
@@ -263,6 +291,7 @@ option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
 set(ROSETTA_REALTYPE
     "double"
     CACHE STRING "Which type to prefer for floating-point values ('float', 'double', or 'long double')")
+set_property(CACHE ROSETTA_REALTYPE PROPERTY STRINGS "float" "double" "long double")
 
 set(ROSETTA_PROBLEMSIZE
     "medium"
@@ -323,6 +352,11 @@ if (ROSETTA_PPM_CUDA)
   add_custom_target(build-cuda)
   set_target_properties(build-cuda PROPERTIES FOLDER "Benchmarks")
   add_dependencies(build build-cuda)
+
+  # For convenience, we add -G to add debug symbols to device code by default, which CMake unfortunately forgets
+  #set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -G" CACHE STRING "Flags used by the CUDA compiler during DEBUG builds.")
+  #set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -G" CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds.")
+  #message("CMAKE_CUDA_FLAGS_DEBUG: ${CMAKE_CUDA_FLAGS_DEBUG}")
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL
@@ -602,7 +636,9 @@ message("Cheat Sheet (What can I do now?)")
 message("--------------------------------")
 # TODO: Customize to driver mode/local path
 message("Build:                     ninja (implicit for every command)")
-message("Search for new benchmarks: cmake .")
+if (ROSETTA_MAINTAINER_MODE)
+  message("Search for new benchmarks: cmake .")
+endif ()
 message("")
 message("Probe max problemsize:     ./probe.py --limit-walltime=5s")
 message("Performance tuning:        <TODO>")

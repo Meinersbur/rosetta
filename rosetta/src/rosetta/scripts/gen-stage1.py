@@ -54,9 +54,11 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
     config.read(problemsizefile)
 
     buildfiles = []
+    potentialbuildfiles = []
     for path in benchdir.rglob('*'):
         if not path.suffix.lower() in {'.cxx', '.cu', '.build'}:
             continue
+        potentialbuildfiles.append(path)
 
         # Predict basename
         # TODO: Separate filter path/basename
@@ -100,7 +102,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     for a in args:
                         if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target'}:
                             ppm = a
-                        elif  isinstance(a,registry.GenParam) or  isinstance(a,registry.SizeParam) or  isinstance(a,registry.TuneParam)  :
+                        elif isinstance(a,registry.GenParam) or  isinstance(a,registry.SizeParam) or  isinstance(a,registry.TuneParam)  :
                             params = (params or []) + [a]
                         else:
                             die(f"Unknown argument to add_benchmark in {buildfile}: {a}")
@@ -157,10 +159,19 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
     out = StringIO()
     if configdepfiles:
-        print(
-            "set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
+        print("if (NOT ROSETTA_MAINTAINER_MODE)", file=out)
+
+        print ("# Build instructions were found in these", file=out)
+        print("  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
         print('"' + ';'.join(pyescape(s)
               for s in configdepfiles) + '")', file=out)
+        
+        print("# These were searched for build instructions", file=out)
+        print("  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
+        print('"' + ';'.join(pyescape(s)
+              for s in  potentialbuildfiles if s not in configdepfiles ) + '")', file=out)
+        
+        print("endif ()",file=out)
         print(file=out)
 
     for bench in benchs:

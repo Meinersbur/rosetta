@@ -6,18 +6,18 @@ static void kernel(pbsize_t m, pbsize_t n, multarray<real, 2> A, real *x, real *
 #pragma omp parallel
   {
 #pragma omp for schedule(static) nowait
-    for (idx_t i = 0; i < n; i++)
+    for (idx_t i = 0; i < n; ++i)
       y[i] = 0;
 #pragma omp for schedule(static)
-    for (idx_t i = 0; i < m; i++) {
+    for (idx_t i = 0; i < m; ++i) {
       tmp[i] = 0;
-      for (int j = 0; j < n; j++)
+      for (int j = 0; j < n; ++j)
         tmp[i] += A[i][j] * x[j];
     }
 
 #pragma omp for schedule(static)
-    for (idx_t j = 0; j < n; j++)
-      for (idx_t i = 0; i < m; i++)
+    for (idx_t j = 0; j < n; ++j)
+      for (idx_t i = 0; i < m; ++i)
         y[j] += A[i][j] * tmp[i];
   }
 }

@@ -6,7 +6,7 @@ import unittest
 from context import rosetta
 from rosetta.stat import statistic
 import rosetta.stat as stat
-
+ 
 
 class StatisticTests(unittest.TestCase):
     def test_count(self):

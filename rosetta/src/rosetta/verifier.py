@@ -22,23 +22,31 @@ def get_refpath(bench, refdir, problemsizefile):
     return refpath
 
 
+
 def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
-    refpath = get_refpath(bench, refdir=refdir,
-                          problemsizefile=problemsizefile)
+    refpath = get_refpath(bench, refdir=refdir,  problemsizefile=problemsizefile)
+
+
+
+
+    # Get the reference implementation
+    # TODO : Use the one from reference builddir if any
+    refbench = bench.comparable .reference
+
 
     if refpath.exists():
         # Reference output already exists; check that it is the latest
-        benchstat = bench.exepath.stat()
+        benchstat = refbench.exepath.stat()
         refstat = refpath.stat()
         if benchstat.st_mtime < refstat.st_mtime:
-            print(
-                f"Reference output of {bench.name} already exists at {refpath} an is up-to-date")
+            print(f"Reference output of {refbench.exepath} ({benchstat.st_mtime}) already exists at {refpath} ({refstat.st_mtime}) an is up-to-date")
             return
         print(f"Reference output {refpath} an is out-of-date")
         refpath.unlink()
 
+
     # Invoke reference executable and write to file
-    args = [bench.exepath, f'--verify', f'--verifyfile={refpath}']
+    args = [refbench.exepath, f'--verify', f'--verifyfile={refpath}']
     if problemsizefile:
         args.append(f'--problemsizefile={problemsizefile}')
     invoke.call(*args, print_command=True)
@@ -47,6 +55,7 @@ def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
         assert refpath.is_file()
 
     print(f"Reference output of {bench.name} written to {refpath}")
+
 
 
 def ensure_reffiles(refdir, problemsizefile, filterfunc=None, srcdir=None):
@@ -128,6 +137,7 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                 if refname is not None and testname is not None and refname != testname:
                     die(f"Array names {refname} and {testname} disagree")
 
+                errsfound  = 0
                 for i, (refv, testv) in enumerate(zip(refdata, testdata)):
                     coord = [str((i // prod(refshape[0:j])) % refshape[j])
                              for j in range(0, refdim)]
@@ -150,9 +160,17 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                         reld = 0 if absd == 0 else math.inf
                     else:
                         reld = absd / mid
+                    #if refv != absd :
                     if reld > 1e-4:  # TODO: Don't hardcode difference
-                        print(f"While comparing {refpath} and {testoutpath}:")
-                        die(
-                            f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
+                        if errsfound == 0:
+                            print(f"While comparing {refpath} and {testoutpath}:")
+                        print( f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
+                        errsfound += 1
+
+                    if errsfound >= 20:
+                        die (f"Found at least {errsfound} differences; output considered incorrect")
+
+        if errsfound:
+            die(f"Found {errsfound} output differences; output considered incorrect")
 
         print(f"Output of {e.exepath} considered correct")

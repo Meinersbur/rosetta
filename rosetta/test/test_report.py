@@ -7,7 +7,8 @@ from context import rosetta
 import rosetta.driver
 from rosetta.util.support import *
 
-
+  
+  
 class ReportTests(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory(prefix='reporttest-')
@@ -21,7 +22,7 @@ class ReportTests(unittest.TestCase):
         self.test_dir.cleanup()
         
 
-
+    
 
     def createReport(self, reportfilename, resultsdir, args=[]):
         reportfile = self.rootdir / reportfilename

@@ -45,13 +45,16 @@ class GenParam(Param):
          super().__init__(*args,**kwargs)
 
 
-class SizeParam(Param):
+class SizeParam(GenParam):
     """Parameter to generate benchmarks that differ in the working set size; Its value is probed to be as large as possible without violating constraints
     
     One one size parameter allowed: 'n'
     """
     def __init__(self,*args,**kwargs):
          super().__init__(*args,**kwargs)
+
+class RealtypeParam(GenParam):
+    """For selecting the floating point precision"""
 
 
 
@@ -73,7 +76,32 @@ class SizedBenchmark:
     pass
 
 
-# TOOD: Rename: TunedBenchmark
+
+class ComparableBenchmark:
+    """Set of benchmarks that are expected to compute the same result, PPM and TuneParam may very, but not GenParams or SizeParam"""
+    def __init__(self,basename,params=[]):
+        self.benchmarks = []
+        self.basename = basename
+        assert all( not issubclass(p,TuneParam) for p in params )
+        self.params = params
+
+
+    def add(self,benchmark):
+        self.benchmarks.append(benchmark)
+
+    @property 
+    def reference(self):
+        """Return the executable that computes the reference output"""
+        for b in self.benchmarks:
+            if b.ppm == 'serial': # TODO: Make configurable
+                return b
+        log.warn(f"No reference found for {self.basename}; using {self.benchmarks[0]}")
+        return self.benchmarks[0]
+
+
+
+# TOOD: Rename: TunedBenchmark(?)
+# TOOD: Fixed static parameters?
 class Benchmark:
     """A benchmark executable with fixed static parameters"""
     def __init__(self, basename, target, exepath, buildtype, ppm, configname, sources=None,
@@ -92,22 +120,50 @@ class Benchmark:
         self.benchlistfile = benchlistfile
         self.is_ref = is_ref
 
+        # The set of comparable benchmarks   it belongs to 
+        self.comparable = None
+
+
     @property
     def name(self):
         return self.basename
 
  
 
+class TunedBenchmark: 
+    """Benchmark with fixed static and dynamic parameters"""
+    def __init__(self,executable:Benchmark):
+        self.executable = executable
+
+
 benchlistfile = None
 import_is_ref = None
 benchmarks: typing.List[Benchmark] = []
 
+comparables = []
+
+
 
 def register_benchmark(basename, target, exepath, buildtype, ppm, configname,
                        benchpropfile=None, compiler=None, compilerflags=None, pbsize=None):
+    assert basename is not None
+
     bench = Benchmark(basename=basename, target=target, exepath=mkpath(exepath), buildtype=buildtype, ppm=ppm, configname=configname,
                       benchpropfile=benchpropfile, compiler=compiler, compilerflags=compilerflags, pbsize=pbsize, benchlistfile=benchlistfile, is_ref=import_is_ref)
     benchmarks.append(bench)
+    global comparables
+    for c in comparables:
+        if c.basename != basename:
+            continue
+        # TODO: Compare GenParams are the same
+        comparable = c
+        break
+    else:
+        comparable  = ComparableBenchmark(basename=basename)
+        comparables.append(comparable)
+    bench.comparable = comparable
+    comparable.add(bench)
+
 
 
 def load_register_file(filename, is_ref=False):
@@ -125,6 +181,9 @@ def load_register_file(filename, is_ref=False):
     finally:
         benchlistfile = None
         import_is_ref = None
+
+
+
 
 # TODO: Use global contenxt manager from support
 def reset_registered_benchmarks():

@@ -1,23 +1,15 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
-import rosetta
 import argparse
 import configparser
-import importlib
 import pathlib
-import types
-import sys
-import re
 import importlib.util
 import importlib
 from io import StringIO
 
 from rosetta.util.support import *
 import rosetta.runner as runner
-import rosetta.generator as generator
-from rosetta.registry import register_benchmark
 from rosetta import registry
 
 

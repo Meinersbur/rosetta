@@ -1,9 +1,19 @@
 // BUILD: add_benchmark(ppm=cuda)
 
 #include <rosetta.h>
+
 #include <thrust/device_ptr.h>
 #include <thrust/reduce.h>
-
+#include <thrust/device_ptr.h>
+#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/functional.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/for_each.h>
+#include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 
 
 static unsigned num_blocks(int num, int factor) {
@@ -41,7 +51,7 @@ __global__ void kernel_z(pbsize_t n,
 static void kernel(pbsize_t n,
                    thrust::device_ptr<real> r,
                    thrust::device_ptr<real> y, thrust::device_ptr<real> z) {
-  const unsigned threadsPerBlock = 256;
+  const unsigned threadsPerBlock = 32;
 
   real beta = 1;
   real alpha = -r[0];
@@ -50,7 +60,7 @@ static void kernel(pbsize_t n,
 
   y[0] = alpha;
   for (idx_t k = 1; k < n; k++) {
-    // FIXME: Quite approximate sum
+    // FIXME: Rounding error around 1e-4, normal?
     r_times_y op{r, y, k};
     real sum = thrust::transform_reduce(
         thrust::device,
@@ -59,7 +69,6 @@ static void kernel(pbsize_t n,
         op,
         (real)0,
         thrust::plus<real>());
-
 
     beta = (1 - alpha * alpha) * beta;
     alpha = -(r[k] + sum) / beta;

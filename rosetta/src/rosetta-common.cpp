@@ -1,5 +1,7 @@
 #include "rosetta.h"
 
+#include "cdflib.hpp"
+
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
@@ -199,6 +201,77 @@ BENCHMARK_NORETURN static void DiagnoseAndExit(const char *msg) {
   std::cerr << "ERROR: " << msg << std::endl;
   std::exit(EXIT_FAILURE);
 }
+
+
+
+// Avoid double evaluation of v
+static double sqr(double v) {
+return v * v;
+}
+
+
+class Statistic {
+private:
+    size_t count ;
+
+    double sum;
+    double sumsqr ;
+
+public :
+    Statistic(double *data, size_t count) : count( count) {
+        double sum = 0;
+        double sumsqr = 0;
+        for (int i = 0; i < count; ++i) {
+            sum += data[i];
+            sumsqr += sqr(data[i]);
+        }
+        this->sum=sum;
+        this->sumsqr = sumsqr;
+    }
+
+
+    double mean() {
+        return sum / count;
+    }
+
+
+    double variance() {
+            return sumsqr  / count - sqr(mean());
+       }
+
+
+    double stddev() {
+        return std::sqrt(variance());
+    }
+
+
+
+// 95% confidence interval around mean
+    double abserr(double ratio =0.95) {
+        if (count <2)
+             return 0;  // Spread not defined with just one value
+
+        auto mean = this->mean();
+        auto stddev = this->stddev();
+
+      
+
+       auto  q = 1 - (1 - ratio) / 2 ;// Two-sided
+
+        int which = 2;
+        double q=1.0-p, t=0, bound=0;
+        int status=10;
+        int df = count -1;
+        cdft(&which, &p,& q,& t,& df,& status,&bound );
+    }
+
+};
+
+
+
+
+
+
 
 } // end namespace
 
@@ -1053,7 +1126,9 @@ public:
     if (verify) {
       // When verifying, always do exactly one iteration
       return 1 - measurements.size();
-    } else {
+    } 
+
+
       auto now = std::chrono::steady_clock::now();
       auto duration = now - startTime;
 
@@ -1066,7 +1141,7 @@ public:
 
       // TODO: configure, until stability, max/min number iterations, ...
       if (duration >= 1s)
-        return 0;
+        return measurements.size()?0 : 1; // At least one iteration
       if (measurements.size() > 10)
         return 0;
 
@@ -1074,7 +1149,7 @@ public:
       measurements.reserve(measurements.size() + howManyMoreIterations);
 
       return howManyMoreIterations;
-    }
+    
   }
 
 
