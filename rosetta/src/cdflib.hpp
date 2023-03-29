@@ -1,3 +1,5 @@
+#include <string>
+
 double algdiv ( double *a, double *b );
 double alnrel ( double *a );
 double apser ( double *a, double *b, double *x, double *eps );
@@ -96,7 +98,7 @@ double fifdsign ( double mag, double sign );
 long fifidint ( double a );
 long fifmod ( long a, long b );
 double fpser ( double *a, double *b, double *x, double *eps );
-void ftnstop ( string msg );
+void ftnstop ( std::string msg );
 double gam1 ( double *a );
 void gamma_inc ( double *a, double *x, double *ans, double *qans, int *ind );
 void gamma_inc_inv ( double *a, double *x, double *x0, double *p, double *q,

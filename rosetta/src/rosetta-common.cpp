@@ -259,10 +259,12 @@ public :
        auto  q = 1 - (1 - ratio) / 2 ;// Two-sided
 
         int which = 2;
-        double q=1.0-p, t=0, bound=0;
+        double p=1.0-q, t=0, bound=0;
         int status=10;
-        int df = count -1;
-        cdft(&which, &p,& q,& t,& df,& status,&bound );
+        double df = count -1;
+        cdft(&which, &p,& q,& t,& df,& status,&bound);
+        assert(status == 0 && "Expect CDF to succeed");
+
     }
 
 };
