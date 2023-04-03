@@ -1,6 +1,6 @@
 #include "rosetta.h"
 
-#include "cdflib.hpp"
+#include "rosetta-stat.h"
 
 #include <algorithm>
 #include <cassert>
@@ -118,6 +118,8 @@ typedef struct _MEMORY_WORKING_SET_INFORMATION {
 #endif
 
 
+using namespace rosetta;
+
 namespace benchmark::internal {
 int InitializeStreams() {
   static std::ios_base::Init init;
@@ -150,6 +152,18 @@ using duration_t = std::variant<std::monostate, common_duration_t // lowest comm
                                 std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
 #endif
                                 >;
+
+static double to_seconds(const duration_t &lhs) {
+    return std::visit(
+        [](const auto &lhs) {
+            using T = std::remove_const_t<std::remove_reference_t<decltype(lhs)>>;
+            if constexpr (!std::is_same_v<T, std::monostate>)
+                return std::chrono::duration_cast<std::chrono::duration<double>>(lhs).count();
+            return 0.0;
+        },
+        lhs);
+}
+
 
 
 // size in bytes
@@ -201,75 +215,6 @@ BENCHMARK_NORETURN static void DiagnoseAndExit(const char *msg) {
   std::cerr << "ERROR: " << msg << std::endl;
   std::exit(EXIT_FAILURE);
 }
-
-
-
-// Avoid double evaluation of v
-static double sqr(double v) {
-return v * v;
-}
-
-
-class Statistic {
-private:
-    size_t count ;
-
-    double sum;
-    double sumsqr ;
-
-public :
-    Statistic(double *data, size_t count) : count( count) {
-        double sum = 0;
-        double sumsqr = 0;
-        for (int i = 0; i < count; ++i) {
-            sum += data[i];
-            sumsqr += sqr(data[i]);
-        }
-        this->sum=sum;
-        this->sumsqr = sumsqr;
-    }
-
-
-    double mean() {
-        return sum / count;
-    }
-
-
-    double variance() {
-            return sumsqr  / count - sqr(mean());
-       }
-
-
-    double stddev() {
-        return std::sqrt(variance());
-    }
-
-
-
-// 95% confidence interval around mean
-    double abserr(double ratio =0.95) {
-        if (count <2)
-             return 0;  // Spread not defined with just one value
-
-        auto mean = this->mean();
-        auto stddev = this->stddev();
-
-      
-
-       auto  q = 1 - (1 - ratio) / 2 ;// Two-sided
-
-        int which = 2;
-        double p=1.0-q, t=0, bound=0;
-        int status=10;
-        double df = count -1;
-        cdft(&which, &p,& q,& t,& df,& status,&bound);
-        assert(status == 0 && "Expect CDF to succeed");
-
-    }
-
-};
-
-
 
 
 
@@ -1144,12 +1089,28 @@ public:
       // TODO: configure, until stability, max/min number iterations, ...
       if (duration >= 1s)
         return measurements.size()?0 : 1; // At least one iteration
-      if (measurements.size() > 10)
-        return 0;
 
-      int howManyMoreIterations = 1;
+      int howManyMoreIterations = 0;
+      if (measurements.size() < 2) {
+          // Need at least two measurements for estimating the spread
+          howManyMoreIterations = 1;
+      } else {
+          std::vector<double> vals;
+          vals.reserve(measurements.size());
+          for (auto&& m : measurements) {
+              vals.push_back(to_seconds(m.values[WallTime]));
+          }
+          Statistic stat{ vals.data(), vals.size() };
+
+
+
+        
+          if (stat.relerr() >= 1e-2)
+              howManyMoreIterations = 1;
+      }
+      // TODO: Estimate with some confidence interval how many more iterations we need
+
       measurements.reserve(measurements.size() + howManyMoreIterations);
-
       return howManyMoreIterations;
     
   }
@@ -1391,16 +1352,7 @@ struct duration_formatter {
 };
 
 
-static double to_seconds(const duration_t &lhs) {
-  return std::visit(
-      [](const auto &lhs) {
-        using T = std::remove_const_t<std::remove_reference_t<decltype(lhs)>>;
-        if constexpr (!std::is_same_v<T, std::monostate>)
-          return (double)std::chrono::duration_cast<std::chrono::seconds>(lhs).count();
-        return 0.0;
-      },
-      lhs);
-}
+
 
 
 
@@ -1778,6 +1730,8 @@ int main(int argc, char *argv[]) {
   ss << std::put_time(std::localtime(&now_tm), "%F %T%z");
   std::string timestamp = ss.str();
 
+  // TODO: Consider Catch2 for cmd parsing
+  // using namespace Catch::Clara;
 
   int problemsize = -1;
   int repeats = -1;

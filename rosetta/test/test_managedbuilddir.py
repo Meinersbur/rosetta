@@ -142,7 +142,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
         print("srcdir: " , cls.srcdir)
         print("rootdir: " , cls.rootdir)
 
-        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter-include=idioms.assign --filter-include=suites.polybench.cholesky',  "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter-include=idioms.assign --filter-include=suites.polybench.cholesky', '--cmake-def=ROSETTA_PPM_CUDA=OFF', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
 
         cls.resultsdir= cls.rootdir / 'results'
 

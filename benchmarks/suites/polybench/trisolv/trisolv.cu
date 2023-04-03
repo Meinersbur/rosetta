@@ -40,7 +40,7 @@ static void kernel(pbsize_t n, thrust::device_ptr<real> L, thrust::device_ptr<re
         x[i] /= L[i][i];
     }
 #endif  
-    fprintf(stderr, "Alive!\n");
+  //  fprintf(stderr, "Alive!\n");
 
   for (idx_t i = 0; i < n; i++) {
     Lij_times_xj op{n, L, x, i};

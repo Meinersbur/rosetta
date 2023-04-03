@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 
@@ -10,6 +10,10 @@ static void kernel(
     multarray<real, 2> v,
     multarray<real, 2> p,
     multarray<real, 2> q) {
+   real* udata = &u[0][0];
+   real *vdata = &v[0][0];
+   real *pdata = &p[0][0];
+   real *qdata = &q[0][0];
 
   real DX = 1 / (real)n;
   real DY = 1 / (real)n;
@@ -26,41 +30,49 @@ static void kernel(
   real e = 1 + mul2;
   real f = d;
 
-#pragma omp parallel
+
+#pragma omp target data map(tofrom:udata[0:n*n]) map(alloc:vdata[0:n*n],pdata[0:n*n],qdata[0:n*n])
   {
+
     for (idx_t t = 1; t <= tsteps; t++) {
+
 // Column Sweep
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
       for (idx_t i = 1; i < n - 1; i++) {
-        v[0][i] = 1;
-        p[i][0] = 0;
-        q[i][0] = v[0][i];
+        vdata[0*n+i] = 1;
+        pdata[i*n+0] = 0;
+        qdata[i*n+0] = vdata[0*n+i];
         for (idx_t j = 1; j < n - 1; j++) {
-          p[i][j] = -c / (a * p[i][j - 1] + b);
-          q[i][j] = (-d * u[j][i - 1] + (1 + 2 * d) * u[j][i] - f * u[j][i + 1] - a * q[i][j - 1]) / (a * p[i][j - 1] + b);
+          pdata[i*n+j] = -c / (a * pdata[i*n+(j - 1)] + b);
+          qdata[i*n+j] = (-d * udata[j*n+(i - 1)] + (1 + 2 * d) * udata[j*n+i] - f * udata[j*n+(i + 1)] - a * qdata[i*n+(j - 1)]) / (a * pdata[i*n+(j - 1)] + b);
         }
 
-        v[n - 1][i] = 1;
+        vdata[(n - 1)*n+i] = 1;
         for (idx_t j = n - 2; j >= 1; j--)
-          v[j][i] = p[i][j] * v[j + 1][i] + q[i][j];
+          vdata[j*n+i] = pdata[i*n+j] * vdata[(j + 1)*n+i] + qdata[i*n+j];
       }
+
 // Row Sweep
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
       for (idx_t i = 1; i < n - 1; i++) {
-        u[i][0] = 1;
-        p[i][0] = 0;
-        q[i][0] = u[i][0];
+        udata[i*n+0] = 1;
+        pdata[i*n+0] = 0;
+        qdata[i*n+0] = udata[i*n+0];
         for (idx_t j = 1; j < n - 1; j++) {
-          p[i][j] = -f / (d * p[i][j - 1] + e);
-          q[i][j] = (-a * v[i - 1][j] + (1 + 2 * a) * v[i][j] - c * v[i + 1][j] - d * q[i][j - 1]) / (d * p[i][j - 1] + e);
+          pdata[i*n+j] = -f / (d * pdata[i*n+(j - 1)] + e);
+          qdata[i*n+j] = (-a * vdata[(i - 1)*n+j] + (1 + 2 * a) * vdata[i*n+j] - c * vdata[(i + 1)*n+j] - d * qdata[i*n+(j - 1)]) / (d * pdata[i*n+(j - 1)] + e);
         }
-        u[i][n - 1] = 1;
+        udata[i*n+(n - 1)] = 1;
         for (idx_t j = n - 2; j >= 1; j--)
-          u[i][j] = p[i][j] * u[i][j + 1] + q[i][j];
+          udata[i*n+j] = pdata[i*n+j] * udata[i*n+(j + 1)] + qdata[i*n+j];
       }
     }
+
   }
 }
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 #include <omp.h>
@@ -10,25 +10,26 @@ static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> corr,
                    real mean[],
                    real stddev[]) {
+    real *pdata = &data[0][0];
+    real *pcorr = &corr[0][0];
 
-
-#pragma omp parallel default(none) firstprivate(m, n, data, corr, mean, stddev)
+#pragma omp target data map(from:pdata[0:n*m]) map(to:mean[0:m],stddev[0:m],pcorr[0:m*m])
   {
     real eps = 0.1;
 
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
     for (idx_t j = 0; j < m; j++) {
       mean[j] = 0.0;
       for (idx_t i = 0; i < n; i++)
-        mean[j] += data[i][j];
+        mean[j] += pdata[i*m+j];
       mean[j] /= n;
     }
 
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
     for (idx_t j = 0; j < m; j++) {
       stddev[j] = 0.0;
       for (idx_t i = 0; i < n; i++)
-        stddev[j] += (data[i][j] - mean[j]) * (data[i][j] - mean[j]);
+        stddev[j] += (pdata[i*m+j] - mean[j]) * (pdata[i*m+j] - mean[j]);
       stddev[j] /= n;
       stddev[j] = std::sqrt(stddev[j]);
       /* The following in an inelegant but usual way to handle
@@ -40,30 +41,29 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
     /* Center and reduce the column vectors. */
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for collapse(2) 
     for (idx_t i = 0; i < n; i++)
       for (idx_t j = 0; j < m; j++) {
-        data[i][j] -= mean[j];
-        data[i][j] /= std::sqrt((real)n) * stddev[j];
+        pdata[i*m+j] -= mean[j];
+        pdata[i*m+j] /= std::sqrt((real)n) * stddev[j];
       }
 
 
       /* Calculate the m * m correlation matrix. */
-#pragma omp for
+#pragma omp target teams distribute parallel for
     for (idx_t i = 0; i < m - 1; i++) {
-      corr[i][i] = 1.0;
+      pcorr[i*m+i] = 1.0;
       for (idx_t j = i + 1; j < m; j++) {
-        corr[i][j] = 0.0;
+        pcorr[i*m+j] = 0.0;
         for (idx_t k = 0; k < n; k++)
-          corr[i][j] += (data[k][i] * data[k][j]);
-        corr[j][i] = corr[i][j];
+          pcorr[i*m+j] += (pdata[k*m+i] * pdata[k*m+j]);
+        pcorr[j*m+i] = pcorr[i*m+j];
       }
     }
 
-#pragma omp single
-    {
-      corr[m - 1][m - 1] = 1.0;
-    }
+#pragma omp target 
+      pcorr[(m - 1)*m+(m - 1)] = 1.0;
+
   }
 }
 

@@ -12,7 +12,8 @@ from rosetta.util.support import *
 
 
 def tablecellre(*args):
-    return '.+' .join(a.replace('\\', r'\\').replace('.', r'\.').replace('-', r'\-').replace('%', r'\%').replace(' ', r'\ ')  for a in args )
+    return '.+'.join(a.replace('\\', r'\\').replace('.', r'\.').replace('-', r'\-').replace('%', r'\%').replace(' ', r'\ ')  for a in args )
+
 
 class EvaluateTests(unittest.TestCase):
     @classmethod
@@ -33,7 +34,7 @@ class EvaluateTests(unittest.TestCase):
         rootcontent = list(self.rootdir .iterdir())
         self.assertEquals(len(rootcontent),0)
 
-
+ 
     def test_single(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
@@ -42,13 +43,13 @@ class EvaluateTests(unittest.TestCase):
         # Search for the table header
         s=f.getvalue().splitlines()
         while s:
-            if re.search(tablecellre('Benchmark', 'Wall'), s[0]):
+            if re.search(tablecellre('Benchmark', 'timestamp', 'Wall'), s[0]):
                 break
             s.pop(0)
 
         self.assertRegex(s[1], tablecellre('---',  '---') )
-        self.assertRegex(s[2], tablecellre('idioms.assign',  '42.00', '0.0%') )
-        self.assertRegex(s[3], tablecellre('idioms.assign',  '42.00', '0.1%') ) # Should it combine multiple different runs?
+        self.assertRegex(s[2], tablecellre('idioms.assign',  '42.00') )
+        self.assertRegex(s[3], tablecellre('idioms.assign',  '42.00') ) # Should it combine multiple different runs?
 
 
     def test_ppm(self):

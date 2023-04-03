@@ -39,9 +39,9 @@ def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
         benchstat = refbench.exepath.stat()
         refstat = refpath.stat()
         if benchstat.st_mtime < refstat.st_mtime:
-            print(f"Reference output of {refbench.exepath} ({benchstat.st_mtime}) already exists at {refpath} ({refstat.st_mtime}) an is up-to-date")
+            print(f"Reference output of {refbench.exepath} ({benchstat.st_mtime}) already exists at {refpath} ({refstat.st_mtime}) and is up-to-date")
             return
-        print(f"Reference output {refpath} an is out-of-date")
+        print(f"Reference output {refpath} is out-of-date")
         refpath.unlink()
 
 

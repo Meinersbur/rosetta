@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 
@@ -7,9 +7,13 @@ static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> data,
                    multarray<real, 2> cov,
                    real *mean) {
-#pragma omp parallel default(none) firstprivate(m, n, data, cov, mean)
+    real *pdata = &data[0][0];
+    real *pcov = &cov[0][0];
+
+#pragma omp target data map(to:pdata[0:n*m]) map(from:pcov[0:m*m],mean[0:m])
   {
-#pragma omp for schedule(static)
+
+#pragma omp target teams distribute parallel for
     for (idx_t j = 0; j < m; j++) {
       mean[j] = 0.0;
       for (idx_t i = 0; i < n; i++)
@@ -17,12 +21,12 @@ static void kernel(pbsize_t m, pbsize_t n,
       mean[j] /= n;
     }
 
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for collapse(2)
     for (idx_t i = 0; i < n; i++)
       for (idx_t j = 0; j < m; j++)
         data[i][j] -= mean[j];
 
-#pragma omp for collapse(2) // schedule (static)
+#pragma omp target teams distribute parallel for collapse(2)
     for (idx_t i = 0; i < m; i++)
       for (idx_t j = i; j < m; j++) {
         cov[i][j] = 0.0;
@@ -31,7 +35,8 @@ static void kernel(pbsize_t m, pbsize_t n,
         cov[i][j] /= (n - 1.0);
         cov[j][i] = cov[i][j];
       }
-  }
+
+  } // #pragma omp target data
 }
 
 

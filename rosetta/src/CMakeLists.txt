@@ -1,4 +1,4 @@
-set(_common_sources "rosetta-common.cpp" "${cdflib.cpp}")
+set(_common_sources "rosetta-common.cpp" "rosetta-stat.cpp" "cdflib.cpp")
 
 function (enable_platform_nvidia target)
   if (NOT ROSETTA_PLATFORM_NVIDIA)

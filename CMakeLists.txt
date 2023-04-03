@@ -8,6 +8,13 @@ include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
 
+
+set(CMAKE_CTEST_ARGUMENTS "-j")
+set(CTEST_TEST_TARGET_ALIAS check)
+include (CTest)
+set_target_properties(check PROPERTIES FOLDER "Self-Testing")
+
+
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
 include(Formatting)
 
@@ -64,6 +71,27 @@ find_package(Python 3.6 REQUIRED)
 
 # Google Benchmark set(BENCHMARK_ENABLE_TESTING OFF) include(FetchContent) FetchContent_Declare(googlebenchmark
 # GIT_REPOSITORY https://github.com/google/benchmark.git ) FetchContent_MakeAvailable(googlebenchmark)
+
+# Catch2
+# Literally an example from https://cmake.org/cmake/help/latest/module/FetchContent.html
+# Or: https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md
+# TODO: Option to skip
+include(FetchContent)
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.3.2
+  #FIND_PACKAGE_ARGS
+)
+FetchContent_MakeAvailable(Catch2)
+#find_package(Catch2)
+if (TARGET Catch2)
+  set_target_properties(Catch2 PROPERTIES FOLDER "Self-Testing")
+endif ()
+if (TARGET Catch2WithMain)
+  set_target_properties(Catch2WithMain PROPERTIES FOLDER "Self-Testing")
+endif ()
+
 
 # CUDA
 if (NOT DEFINED ROSETTA_PPM_CUDA)
