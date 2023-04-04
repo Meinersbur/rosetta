@@ -35,8 +35,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 
 # Doesn't mean that it actually offloads, just that it compiles and links.
-separate_arguments(_offload_required_flags "${OPENMP_OFFLOADING_CFLAGS}" NATIVE_COMMAND)
-set(CMAKE_REQUIRED_FLAGS ${OpenMP_CXX_FLAGS} ${_offload_required_flags})
+separate_arguments(_offload_required_cflags "${OPENMP_OFFLOADING_CFLAGS}" NATIVE_COMMAND)
+set(CMAKE_REQUIRED_FLAGS ${OpenMP_CXX_FLAGS} ${_offload_required_cflags})
 set(CMAKE_REQUIRED_INCLUDES ${OpenMP_CXX_INCLUDE_DIRS})
 separate_arguments(_offload_required_ldflags "${OPENMP_OFFLOADING_LDFLAGS}" NATIVE_COMMAND)
 separate_arguments(_offload_openmp_flags "${OpenMP_CXX_FLAGS}" NATIVE_COMMAND)
@@ -63,9 +63,14 @@ if (HAVE_PRAGMA_OMP_TARGET)
 
   add_library(OpenMP::OpenMP_Offload_CXX INTERFACE IMPORTED)
   target_link_libraries(OpenMP::OpenMP_Offload_CXX INTERFACE OpenMP::OpenMP_CXX)
-  set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_COMPILE_OPTIONS ${_offload_required_flags})
-  
+  set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_COMPILE_OPTIONS ${_offload_required_cflags})
   set_property(
     TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_LINK_OPTIONS ${_offload_openmp_flags} ${_offload_required_ldflags}
   )# FIXME: OpenMP_CXX_FLAGS (-fopenmp) already be added by target_link_libraries
+
+  add_library(OpenMP::OpenMP_Offload_C INTERFACE IMPORTED)
+  target_link_libraries(OpenMP::OpenMP_Offload_C INTERFACE OpenMP::OpenMP_C)
+  set_property(TARGET OpenMP::OpenMP_Offload_C PROPERTY INTERFACE_COMPILE_OPTIONS ${_offload_required_cflags})
+  set_property(TARGET OpenMP::OpenMP_Offload_C PROPERTY INTERFACE_LINK_OPTIONS ${_offload_openmp_flags} ${_offload_required_ldflags})
+
 endif ()

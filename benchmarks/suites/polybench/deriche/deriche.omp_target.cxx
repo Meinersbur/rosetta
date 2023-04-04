@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 
@@ -10,6 +10,11 @@ static void kernel(pbsize_t w, pbsize_t h,
                    multarray<real, 2> imgOut,
                    multarray<real, 2> y1,
                    multarray<real, 2> y2) {
+    real *pimgIn = &imgIn[0][0];
+    real *pimgOut = &imgOut[0][0];
+    real *py1 = &y1[0][0];
+    real *py2 = &y2[0][0];
+
   real k = (1 - std::exp(-alpha)) * (1 - std::exp(-alpha)) / (1 + 2 * alpha * std::exp(-alpha) - std::exp(2 * alpha));
   real a1 = k;
   real a5 = k;
@@ -23,10 +28,10 @@ static void kernel(pbsize_t w, pbsize_t h,
   real b2 = -std::exp(-2 * alpha);
   real c1 = 1, c2 = 1;
 
-#pragma omp parallel default(none) firstprivate(w, h, imgIn, imgOut, y1, y2) firstprivate(k, a1, a5, a6, a2, a7, a3, a8, a4, b1, b2, c1, c2)
+#pragma omp target data map(to:pimgIn[0:w*h])   map(from:pimgOut[0:w*h])    map(alloc:py1[0:w*h])  map(alloc:py2[0:w*h]) 
   {
 
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
     for (idx_t i = 0; i < w; i++) {
       real ym1 = 0;
       real ym2 = 0;
@@ -39,7 +44,7 @@ static void kernel(pbsize_t w, pbsize_t h,
       }
     }
 
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
     for (idx_t i = 0; i < w; i++) {
       real yp1 = 0;
       real yp2 = 0;
@@ -54,13 +59,13 @@ static void kernel(pbsize_t w, pbsize_t h,
       }
     }
 
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for  collapse(2)
     for (idx_t i = 0; i < w; i++)
       for (idx_t j = 0; j < h; j++) {
         imgOut[i][j] = c1 * (y1[i][j] + y2[i][j]);
       }
 
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
     for (idx_t j = 0; j < h; j++) {
       real tm1 = 0;
       real ym1 = 0;
@@ -74,7 +79,7 @@ static void kernel(pbsize_t w, pbsize_t h,
     }
 
 
-#pragma omp for schedule(static)
+#pragma omp target teams distribute parallel for
     for (idx_t j = 0; j < h; j++) {
       real tp1 = 0;
       real tp2 = 0;
@@ -89,7 +94,7 @@ static void kernel(pbsize_t w, pbsize_t h,
       }
     }
 
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for collapse(2) 
     for (idx_t i = 0; i < w; i++)
       for (idx_t j = 0; j < h; j++)
         imgOut[i][j] = c2 * (y1[i][j] + y2[i][j]);

@@ -3,6 +3,17 @@
 
 #include <cstddef>
 #include <initializer_list>
+
+
+extern "C" {
+    // From cephes library
+    double stdtr( int k, double t );
+    double stdtri(int  k,double  p );
+    double ndtri(double y0);
+    double ndtr(double a);
+}
+
+
 		
 
 namespace rosetta{ 
@@ -47,6 +58,8 @@ namespace rosetta{
 
 
         double variance() {
+            if (_count < 1)
+                return 0;
             return _sumsqr  / _count - sqr(mean());
         }
 
@@ -54,14 +67,21 @@ namespace rosetta{
         double stddev() ;
 
 
-        // 95% confidence interval around mean
+        // Confidence interval around mean
         double abserr(double ratio =0.95) ;
 
 
-        double relerr(double ration = 0.95) {
-            return abserr() / mean();
+        double relerr(double ratio = 0.95) {
+            return abserr(ratio) / mean();
         }
 
+
+        // Estimate required additional samples to get the abserr below the constant.
+        size_t min_more_samples(double abserr, double ratio = 0.9);
+
+        size_t   min_more_samples_rel(double relerr, double ratio = 0.9) {
+            return min_more_samples(relerr * mean(), ratio);
+        }
     };
 
 

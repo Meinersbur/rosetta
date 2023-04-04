@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19) # COMMAND_ERROR_IS_FATAL
 project(
   rosetta
   VERSION 0.0.2
-  LANGUAGES CXX)
+  LANGUAGES C CXX)
 
 include(CheckLanguage)
 include(CheckCXXSourceCompiles)

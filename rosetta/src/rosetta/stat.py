@@ -1,30 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import cwcwidth
-import importlib.util
 import importlib
-import contextlib
-import typing
-import configparser
-import io
 from collections import defaultdict
 import math
-import colorama
-import xml.etree.ElementTree as et
-from typing import Iterable
-import json
-import datetime
-import os
-import pathlib
-import subprocess
-import argparse
-import sys
-from itertools import count
 from .util.cmdtool import *
-from .util.orderedset import OrderedSet
 from .util.support import *
-from .util import invoke
-import scipy
 
 
 # Summary statistics

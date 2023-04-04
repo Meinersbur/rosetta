@@ -1,5 +1,6 @@
 #include "rosetta.h"
 
+#include "rosetta-common.h"
 #include "rosetta-stat.h"
 
 #include <algorithm>
@@ -25,77 +26,7 @@
 #include <stdio.h>
 #endif
 
-#ifdef BENCHMARK_OS_WINDOWS
 
-#define NOMINMAX 1
-#ifndef WIN32_LEAN_AND_MEAN // Already set by cupti
-#define WIN32_LEAN_AND_MEAN 1
-#endif
-#include <shlwapi.h>
-#undef StrCat // Don't let StrCat in string_util.h be renamed to lstrcatA
-#include <Psapi.h>
-#include <Psapi.h>  // memory_info(), memory_maps()
-#include <bcrypt.h> // NTSTATUS
-#include <ntstatus.h>
-#include <signal.h>
-#include <tlhelp32.h>
-#include <versionhelpers.h>
-#include <windows.h>
-
-// #include <ntdef.h>
-// #include <ntifs.h>
-// (requires driver SDK)
-#define NtCurrentProcess() ((HANDLE)(LONG_PTR)-1)
-#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
-NTSTATUS(NTAPI *_NtQueryVirtualMemory)
-(
-    HANDLE ProcessHandle,
-    PVOID BaseAddress,
-    int MemoryInformationClass,
-    PVOID MemoryInformation,
-    SIZE_T MemoryInformationLength,
-    PSIZE_T ReturnLength);
-#define NtQueryVirtualMemory _NtQueryVirtualMemory
-#define MemoryWorkingSetInformation 0x1
-typedef struct _MEMORY_WORKING_SET_BLOCK {
-  ULONG_PTR Protection : 5;
-  ULONG_PTR ShareCount : 3;
-  ULONG_PTR Shared : 1;
-  ULONG_PTR Node : 3;
-#ifdef _WIN64
-  ULONG_PTR VirtualPage : 52;
-#else
-  ULONG VirtualPage : 20;
-#endif
-} MEMORY_WORKING_SET_BLOCK, *PMEMORY_WORKING_SET_BLOCK;
-typedef struct _MEMORY_WORKING_SET_INFORMATION {
-  ULONG_PTR NumberOfEntries;
-  MEMORY_WORKING_SET_BLOCK WorkingSetInfo[1];
-} MEMORY_WORKING_SET_INFORMATION, *PMEMORY_WORKING_SET_INFORMATION;
-
-#else
-#include <fcntl.h>
-#ifndef BENCHMARK_OS_FUCHSIA
-#include <sys/resource.h>
-#endif
-#include <sys/time.h>
-#include <sys/types.h> // this header must be included before 'sys/sysctl.h' to avoid compilation error on FreeBSD
-#include <unistd.h>
-#if defined BENCHMARK_OS_FREEBSD || defined BENCHMARK_OS_DRAGONFLY || \
-    defined BENCHMARK_OS_MACOSX
-#include <sys/sysctl.h>
-#endif
-#if defined(BENCHMARK_OS_MACOSX)
-#include <mach/mach_init.h>
-#include <mach/mach_port.h>
-#include <mach/thread_act.h>
-#endif
-
-#endif
-
-#ifdef BENCHMARK_OS_EMSCRIPTEN
-#include <emscripten.h>
-#endif
 
 #include <cerrno>
 #include <cstdint>
@@ -127,31 +58,6 @@ int InitializeStreams() {
 }
 } // namespace benchmark::internal
 
-#if defined(BENCHMARK_OS_WINDOWS)
-using usage_duration_t = std::chrono::duration<ULONGLONG, std::ratio_multiply<std::chrono::nanoseconds::period, std::ratio<100, 1>>>;
-#else
-using usage_duration_t = std::chrono::microseconds;
-#endif
-
-
-using common_duration_t = std::chrono::duration<double, std::chrono::seconds::period>;
-
-// TODO: filter out duplicates; may result in ambiguous operator= errors. Or use make it explicit which counter uses which type (e.g. std::in_place_index)
-// TODO: make extendable
-using duration_t = std::variant<std::monostate, common_duration_t // lowest common denominator
-                                ,
-                                std::chrono::high_resolution_clock::duration // for wall time
-                                ,
-                                usage_duration_t // for user/kernel time
-#ifdef ROSETTA_PPM_NVIDIA
-                                ,
-                                std::chrono::duration<double, std::chrono::milliseconds::period> // Used by CUDA events
-#endif
-#ifdef ROSETTA_PLATFORM_NVIDIA
-                                ,
-                                std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
-#endif
-                                >;
 
 static double to_seconds(const duration_t &lhs) {
     return std::visit(
@@ -799,20 +705,7 @@ void run(State &state, int pbsize);
 
 
 
-class IterationMeasurement {
-  friend class Iteration;
-  template <typename I>
-  friend class Iterator;
-  friend class State;
-  friend class Rosetta;
-  friend class Scope;
-  friend class BenchmarkRun;
 
-public:
-private:
-  // TODO: Make extendable (register user measures in addition to predefined ones)
-  duration_t values[MeasureCount];
-};
 
 
 class BenchmarkRun {
@@ -822,6 +715,7 @@ class BenchmarkRun {
 private:
   std::vector<IterationMeasurement> measurements;
   std::chrono::steady_clock::time_point startTime;
+  std::chrono::steady_clock::time_point firstIterTime;
 
 
   // TODO: Running sum, sumsquare, mean(?) of exit-determining measurement
@@ -829,6 +723,7 @@ private:
   bool verify;
   int exactRepeats = -1;
   std::filesystem::path verifyoutpath;
+  std::chrono::seconds max_duration;
 
 public:
   std::ofstream verifyout;
@@ -838,7 +733,7 @@ public:
   bool isBenchRun() const { return !verify; }
 
 public:
-  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) {}
+  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath, std::chrono::seconds max_duration) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) , max_duration(max_duration) {}
   // ~BenchmarkRun() {
   //   if (verifyout)
   //        verifyout.close();
@@ -1058,62 +953,80 @@ public:
     measurements.push_back(std::move(m));
   }
 
-  int refresh() {
-    switch (measurements.size()) {
-    case 0:
-      postinitRSS = getMaxRSS();
-      break;
-    case 1:
-      firstRSS = getMaxRSS();
-      break;
-    }
-
-
-
-    if (verify) {
+  int computeMoreIterations() {
       // When verifying, always do exactly one iteration
+      // TODO: supersede by exactRepeats
+    if (verify)     
       return 1 - measurements.size();
-    } 
+    
+
+
+// If the number of iterations was specified on the command line, use that 
+      if (exactRepeats >= 1) 
+          return exactRepeats - measurements.size();
+      
 
 
       auto now = std::chrono::steady_clock::now();
-      auto duration = now - startTime;
+      auto elapsed = now - startTime; 
+      auto avgDuration =std::chrono::duration<double> (  to_seconds (now - firstIterTime ) /  measurements.size());
 
-      if (exactRepeats >= 1) {
-        measurements.reserve(exactRepeats);
-        if (measurements.size() == 0)
-          return std::min((size_t)1, exactRepeats - measurements.size()); // Ensure that refresh() is called again after the first iterations to measure firstRSS.
-        return exactRepeats - measurements.size();
-      }
+      // Estimate how many iterations we can do before max elapsed is exceeded.
+      // Note: max_duration includes startup time (firstIterTime - startTime)
+    // auto iters_to_elapse =  std::floor(  (max_duration -  (firstIterTime - startTime)  ) / avgDuration)  ; 
+     auto iters_before_elapse =  std::floor( ( max_duration - elapsed ) / avgDuration );
+     size_t howManyMoreIterations = (iters_before_elapse <= 0)? 0 : std::llround(iters_before_elapse);
 
-      // TODO: configure, until stability, max/min number iterations, ...
-      if (duration >= 1s)
-        return measurements.size()?0 : 1; // At least one iteration
+     // If time has elapsed, no more iterations to do
+     if (howManyMoreIterations == 0)
+         return 0;
 
-      int howManyMoreIterations = 0;
-      if (measurements.size() < 2) {
-          // Need at least two measurements for estimating the spread
-          howManyMoreIterations = 1;
-      } else {
-          std::vector<double> vals;
-          vals.reserve(measurements.size());
-          for (auto&& m : measurements) {
-              vals.push_back(to_seconds(m.values[WallTime]));
-          }
-          Statistic stat{ vals.data(), vals.size() };
+     // If we are stable enough, finish earlier.
+     // Get at least 5 measurements before any statistical significance
+     // FIXME: Isnt' that quite low? Make configurable
+     if (measurements.size() >= 5) {
+         // TODO: Remove cold runs?
+         std::vector<double> vals;
+         vals.reserve(measurements.size());
+         for (auto&& m : measurements) {
+             vals.push_back(to_seconds(m.values[WallTime]));
+         }
+         Statistic stat{ vals.data(), vals.size() };
 
+         // Stop if goal has been reached
+         // Goal: 95%-CI within 0.01 == 1% of mean
+         // TODO: Make configurable
+         if (stat.relerr() <= 0.01) 
+             return 0;
+         
 
+         auto iters_until_stable = std::max<size_t>( stat.min_more_samples_rel(0.05), 1); // Note: the ratio is more optimistic here (90% instead 95%)
+         howManyMoreIterations = std::min(howManyMoreIterations, iters_until_stable);
+     } else {
+         howManyMoreIterations = std::min(howManyMoreIterations, 5 - measurements.size()  );
+     }
 
-        
-          if (stat.relerr() >= 1e-2)
-              howManyMoreIterations = 1;
-      }
-      // TODO: Estimate with some confidence interval how many more iterations we need
-
-      measurements.reserve(measurements.size() + howManyMoreIterations);
-      return howManyMoreIterations;
-    
+      return howManyMoreIterations;    
   }
+
+
+  int refresh() {
+      switch (measurements.size()) {
+      case 0:
+          postinitRSS = getMaxRSS();
+          firstIterTime = std::chrono::steady_clock::now();
+          return 1;    // Ensure that we can measure firstRSS (and emit verify data if enabled) after first iteration
+      case 1:
+          firstRSS = getMaxRSS();
+          break;
+      }
+
+    auto howManyMoreIterations =  computeMoreIterations();
+    assert(howManyMoreIterations >= 0);
+    measurements.reserve(measurements.size() + howManyMoreIterations);
+    return howManyMoreIterations;
+  }
+
 
 
 #if ROSETTA_PLATFORM_NVIDIA
@@ -1447,8 +1360,8 @@ struct Rosetta {
   }
 
   static BenchmarkRun *currentRun;
-  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, std::filesystem::path verifyout, int n, int repeats, std::string timestamp) {
-    BenchmarkRun executor(verify, repeats, verifyout);
+  static void run(std::filesystem::path executable, std::string program, std::filesystem::path xmlout, bool verify, std::filesystem::path verifyout, int n, int repeats, std::string timestamp, std::chrono::seconds max_duration) {
+    BenchmarkRun executor(verify, repeats, verifyout, max_duration);
     currentRun = &executor;
     executor.run(program, n);
 
@@ -1738,6 +1651,7 @@ int main(int argc, char *argv[]) {
   int cold = -1;
   int i = 1;
   bool verify = false;
+  std::chrono::seconds max_duration = 10s;
   while (i < argc) {
     auto [name, val] = nextArg(argc, argv, i);
 
@@ -1776,15 +1690,23 @@ int main(int argc, char *argv[]) {
             i += 1;
         }
         xmlout = *val;
-    } else if (name == "timestamp") {
+    }
+    else if (name == "timestamp") {
         // Timestamp to log when the benchmarking was invoked,
         // So all benchmark get the same timestamp
         assert(val.has_value() || i <= argc);
         if (!val.has_value() && i <= argc) {
             val = argv[i];
             i += 1;
-        } 
-        timestamp =* val;
+        }
+        timestamp = *val;
+    } else if (name == "max-duration") {
+        assert(val.has_value() || i <= argc);
+        if (!val.has_value() && i <= argc) {
+            val = argv[i];
+            i += 1;
+        }
+        max_duration =  std::chrono::seconds( parseInt( *val));
     } else {
       assert(!"unknown switch");
     }
@@ -1881,7 +1803,7 @@ int main(int argc, char *argv[]) {
 
   if (!verify)
     warn_load();
-  Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats, timestamp);
+  Rosetta::run(program, benchname, resultsfilename, verify, verifyfile, n, repeats, timestamp, max_duration);
   if (!verify)
     warn_load();
 
