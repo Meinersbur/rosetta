@@ -1,12 +1,16 @@
-# TODO: Introspect availability of clang-format, autopip8/flake8/black, cmake-format TODO: Should be called multiple
-# times with different .clang-format configurations for benchmarks/ and rosetta/
+# TODO: Introspect availability of clang-format, autopip8/flake8/black, cmake-format 
+# TODO: Should be called multiple times with different .clang-format configurations for benchmarks/ and rosetta/
+# TODO: Ensure that the .git directory is not globbed recursively, very slow in WSL2
 function (add_format_target)
-  cmake_parse_arguments(_arg "" "" "CLANG_RGLOB;PY_RGLOB;CMAKE_RGLOB" ${ARGN})
+  cmake_parse_arguments(_arg "" "" "CLANG_RGLOB;PY_RGLOB;CMAKE;CMAKE_RGLOB" ${ARGN})
+
+  message("Searching for files that can be automatically formatted...")
 
   set(check_format_depends)
   set(update_format_depends)
   set(i 0)
 
+  message("Globbing ${_arg_CLANG_RGLOB} ...")
   file(GLOB_RECURSE format_files ${_arg_CLANG_RGLOB})
   foreach (file IN LISTS format_files)
     set(_stamp "stamps/check-format-stamp${i}")
@@ -32,6 +36,8 @@ function (add_format_target)
     math(EXPR i ${i}+1)
   endforeach ()
 
+
+  message("Globbing ${_arg_PY_RGLOB} ...")
   file(GLOB_RECURSE format_py_files ${_arg_PY_RGLOB})
   foreach (file IN LISTS format_py_files)
     set(_stamp "stamps/check-py-format-stamp${i}")
@@ -57,7 +63,10 @@ function (add_format_target)
     math(EXPR i ${i}+1)
   endforeach ()
 
-  file(GLOB_RECURSE format_cmake_files CMakeLists.txt ${_arg_CMAKE_RGLOB})
+
+  message("Globbing ${_arg_CMAKE_RGLOB} ...")
+  file(GLOB_RECURSE format_cmake_files ${_arg_CMAKE_RGLOB})
+  list(APPEND format_cmake_files ${_arg_CMAKE})
   foreach (file IN LISTS format_cmake_files)
     set(_stamp "stamps/check-cmake-format-stamp${i}")
     list(APPEND check_format_depends "${_stamp}")
@@ -65,7 +74,7 @@ function (add_format_target)
     add_custom_command(
       OUTPUT "${_stamp}"
       DEPENDS "${file}"
-      COMMAND cmake-format --check --line-width 120 --separate-ctrl-name-with-space true --line-ending unix "${file}"
+      COMMAND cmake-format --check --line-width 120 --separate-ctrl-name-with-space true --enable-markup false --max-statement-spacing 2 --output-encoding utf-8 --line-ending unix "${file}"
       VERBATIM
       COMMENT "Check format of ${file}")
 
@@ -74,7 +83,7 @@ function (add_format_target)
     add_custom_command(
       OUTPUT "${_stamp}"
       DEPENDS "${file}"
-      COMMAND cmake-format -i --line-width 120 --separate-ctrl-name-with-space true --line-ending unix "${file}"
+      COMMAND cmake-format -i --line-width 120 --separate-ctrl-name-with-space true --enable-markup false --max-statement-spacing 2 --output-encoding utf-8 --line-ending unix "${file}"
       COMMAND "${CMAKE_COMMAND}" -E touch "${_stamp}"
       VERBATIM
       COMMENT "Update format of ${file}")
@@ -86,4 +95,7 @@ function (add_format_target)
   add_custom_target(update-format DEPENDS ${update_format_depends})
   set_target_properties("check-format" PROPERTIES FOLDER "Maintanance")
   set_target_properties("update-format" PROPERTIES FOLDER "Maintanance")
+
+
+  message("... done searching")
 endfunction ()

@@ -419,17 +419,21 @@ add_subdirectory(benchmarks)
 
 add_format_target(
   CLANG_RGLOB
-  benchmarks/*.cxx
-  benchmarks/*.cu
-  benchmarks/*.h
-  rosetta/*.h
-  rosetta/*.cpp
+    benchmarks/*.cxx
+    benchmarks/*.cu
+    benchmarks/*.h
+    rosetta/*.h
+    rosetta/*.cpp
   PY_RGLOB
-  rosetta/src/*.py
-  rosetta/tests/*.py
+    rosetta/src/*.py
+    rosetta/tests/*.py
+  CMAKE
+    CMakeLists.txt
   CMAKE_RGLOB
-  CMakeLists.txt
-  *.cmake)
+    rosetta/CMakeLists.txt
+    rosetta/cmake/*.cmake
+)
+
 
 
 # Run #########################################################################

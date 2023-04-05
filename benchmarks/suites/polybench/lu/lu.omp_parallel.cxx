@@ -23,7 +23,7 @@ for (int c0 = 0; c0 < n - 1; c0 += 1) {
             Stmt_for_body43_us_i_us(c1, c2, c0);
 }
 */
-void kernel_polly(pbsize_t n, multarray<real, 2> A) {
+static void kernel_polly(pbsize_t n, multarray<real, 2> A) {
   for (idx_t i = 0; i < n; i++) {
     for (idx_t j = 0; j < i; j++) {
       for (idx_t k = 0; k < j; k++)

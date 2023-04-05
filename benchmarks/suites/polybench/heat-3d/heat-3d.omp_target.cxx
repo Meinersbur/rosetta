@@ -9,7 +9,7 @@ static void kernel(pbsize_t tsteps, pbsize_t n,
     real *pA = &A[0][0][0];
     real *pB = &B[0][0][0];
 
-#pragma omp parallel default(none) firstprivate(tsteps, n, A, B) map(to:pA[0:n*n*n])  map(from:pB[0:n*n*n])
+#pragma omp target data map(to:pA[0:n*n*n])  map(from:pB[0:n*n*n])
   {
 
     for (idx_t t = 1; t <= tsteps; t++) {
