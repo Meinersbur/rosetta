@@ -58,7 +58,7 @@ endif ()
 set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
 set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
 
-
+# TODO: Better name; "maintainer mode" comes from GNU autotools
 option(ROSETTA_MAINTAINER_MODE "Skip always looking for changed benchmark build instructions (maintainer mode meaning now its the benchmark maintainer's responsibility to invoke CMake when benchmark build instructions change)" OFF)
 
 
@@ -75,7 +75,7 @@ find_package(Python 3.6 REQUIRED)
 # Catch2
 # Literally an example from https://cmake.org/cmake/help/latest/module/FetchContent.html
 # Or: https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md
-# TODO: Option to skip
+# TODO: Option to skip; ROSETTA_MAINTAINER_MODE(?)
 include(FetchContent)
 FetchContent_Declare(
   Catch2

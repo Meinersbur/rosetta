@@ -11,13 +11,13 @@ static void kernel(pbsize_t tmax,
 #pragma scop
   for (idx_t t = 0; t < tmax; t++) {
     for (idx_t j = 0; j < ny; j++)
-      ey[0][j] = fict[t];
+      ey[0][j] =  fict[t];
     for (idx_t i = 1; i < nx; i++)
       for (idx_t j = 0; j < ny; j++)
-        ey[i][j] -= (real)(0.5) * (hz[i][j] - hz[i - 1][j]);
+        ey[i][j] -= (hz[i][j] - hz[i - 1][j])/2;
     for (idx_t i = 0; i < nx; i++)
       for (idx_t j = 1; j < ny; j++)
-        ex[i][j] -= (real)(0.5) * (hz[i][j] - hz[i][j - 1]);
+        ex[i][j] -=  (hz[i][j] - hz[i][j - 1])/2;
     for (idx_t i = 0; i < nx - 1; i++)
       for (idx_t j = 0; j < ny - 1; j++)
         hz[i][j] -= (real)(0.7) * (ex[i][j + 1] - ex[i][j] + ey[i + 1][j] - ey[i][j]);

@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 
@@ -7,18 +7,24 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk,
                    real alpha,
                    real beta,
                    multarray<real, 2> C, multarray<real, 2> A, multarray<real, 2> B) {
-#pragma omp parallel default(none) firstprivate(ni, nj, nk, alpha, beta, C, A, B)
+    real *pC = &C[0][0];
+    real *pA = &A[0][0];
+    real *pB = &B[0][0];
+
+#pragma omp target data map(tofrom:pC[0:ni*nj]) map(to:pA[0:ni*nk]) map(to:pB[0:nk*nj])
   {
-#pragma omp for collapse(2) schedule(static)
+
+#pragma omp target teams distribute parallel for collapse(2)  dist_schedule(static) schedule(static)
     for (idx_t i = 0; i < ni; i++)
       for (idx_t j = 0; j < nj; j++)
-        C[i][j] *= beta;
+        pC[i*nj+j] *= beta;
 
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static) schedule(static)
     for (idx_t i = 0; i < ni; i++)
       for (idx_t j = 0; j < nj; j++)
         for (idx_t k = 0; k < nk; k++)
-          C[i][j] += alpha * A[i][k] * B[k][j];
+          pC[i*nj+j] += alpha * pA[i*nk+k] * pB[k*nj+j];
+
   }
 }
 

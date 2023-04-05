@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 
@@ -8,29 +8,34 @@ static void kernel(pbsize_t tmax,
                    pbsize_t nx,
                    pbsize_t ny,
                    multarray<real, 2> ex, multarray<real, 2> ey, multarray<real, 2> hz, real fict[]) {
-#pragma omp parallel default(none) firstprivate(tmax, nx, ny, ex, ey, hz, fict)
-  {
+    real *pex = &ex[0][0];
+    real *pey = &ey[0][0];
+    real *phz = &hz[0][0];
 
+
+#pragma omp target data map (tofrom:pex[0:nx*ny],pey[0:nx*ny],phz[0:nx*ny]) map(to:fict[0:tmax])
+  {
     for (idx_t t = 0; t < tmax; t++) {
 
-#pragma omp for schedule(static) nowait
+#pragma omp target teams distribute parallel for dist_schedule(static)  schedule(static) // nowait
       for (idx_t j = 0; j < ny; j++)
-        ey[0][j] = fict[t];
+        pey[0*ny+j] = fict[t];
 
-#pragma omp for collapse(2) schedule(static) nowait
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static)  schedule(static) // nowait (seems to cause crashes in libomp.so)
       for (idx_t i = 1; i < nx; i++)
         for (idx_t j = 0; j < ny; j++)
-          ey[i][j] -=  (hz[i][j] - hz[i - 1][j])/2;
+          pey[i*ny+j] -=  (phz[i*ny+j] - phz[(i - 1)*ny+j])/2;
 
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static)  schedule(static)
       for (idx_t i = 0; i < nx; i++)
         for (idx_t j = 1; j < ny; j++)
-          ex[i][j] -=  (hz[i][j] - hz[i][j - 1])/2;
+          pex[i*ny+j] -=  (phz[i*ny+j] - phz[i*ny+(j - 1)])/2;
 
-#pragma omp for collapse(2) schedule(static)
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static)  schedule(static)
       for (idx_t i = 0; i < nx - 1; i++)
         for (idx_t j = 0; j < ny - 1; j++)
-          hz[i][j] -= (real)(0.7) * (ex[i][j + 1] - ex[i][j] + ey[i + 1][j] - ey[i][j]);
+         //   phz[i*ny+j] = 42;
+          phz[i*ny+j] -= (real)(0.7) * (pex[i*ny+(j + 1)] - pex[i*ny+j] + pey[(i + 1)*ny+j] - pey[i*ny+j]);
 
     }
   }

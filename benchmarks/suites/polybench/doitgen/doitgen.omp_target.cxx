@@ -1,22 +1,29 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
 
 
 static void kernel(pbsize_t nr, pbsize_t nq, pbsize_t np,
     multarray<real, 3> A, multarray<real, 2> C4, multarray<real, 3> sum) {
-#pragma omp parallel for default(none) firstprivate(nr, nq, np, A, C4, sum)  collapse(2) schedule(static)
+    real *pA = &A[0][0][0];
+    real *pC4 = &C4[0][0];
+    real *psum = &sum[0][0][0];
+
+#pragma omp target teams distribute parallel for collapse(2)  map(tofrom:pA[0:nr*nq*np])  map(to:pC4[0:np*np]) map(alloc:psum[0:nr*nq*np])
             for (idx_t r = 0; r < nr; r++)
                 for (idx_t q = 0; q < nq; q++) {
                     for (idx_t p = 0; p < np; p++) {
-                        sum[r][q][p] = 0;
+                        psum[(r*nq+q)*np+p] = 0;
                         for (idx_t s = 0; s < np; s++)
-                            sum[r][q][p] += A[r][q][s] * C4[s][p];
+                            psum[(r*nq+q)*np+p] += pA[(r*nq+q)*np+s] * pC4[s*np+p];
                     }
                     for (idx_t p = 0; p < np; p++)
-                        A[r][q][p] = sum[r][q][p];
+                        pA[(r*nq+q)*np+p] = psum[(r*nq+q)*np+p];
                 }
+
 }
+
+
 
 
 

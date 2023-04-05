@@ -1,8 +1,10 @@
 // BUILD: add_benchmark(ppm=omp_parallel,sources=[__file__, "gramschmidt-common.cxx"])
 
-
 #include "gramschmidt-common.h"
 #include <rosetta.h>
+
+
+
 
 #if 0
 void kernel_polly(pbsize_t m, pbsize_t n,
@@ -48,7 +50,7 @@ static void kernel(pbsize_t m, pbsize_t n,
     // Generate fakedata that is not that similar to each other
 #pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A) \
                      reduction(+: sum)
-    for (int i = 0; i < m; i++) {
+    for (idx_t i = 0; i < m; i++) {
       //#pragma omp critical
       // printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
       sum += sqr(A[i][k]);
@@ -59,19 +61,19 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 #pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A, Q, R)
-    for (int i = 0; i < m; i++)
+    for (idx_t i = 0; i < m; i++)
       Q[i][k] = A[i][k] / R[k][k];
 
 
 #pragma omp parallel for schedule(static) default(none) firstprivate(k, m, n, A, Q, R)
-    for (int j = k + 1; j < n; j++) {
+    for (idx_t j = k + 1; j < n; j++) {
       R[k][j] = 0;
       for (idx_t i = 0; i < m; i++)
         R[k][j] += Q[i][k] * A[i][j];
     }
 
 #pragma omp parallel for schedule(static) default(none) firstprivate(k, m, n, A, Q, R)
-    for (int j = k + 1; j < n; j++)
+    for (idx_t j = k + 1; j < n; j++)
       for (idx_t i = 0; i < m; i++)
         A[i][j] -= Q[i][k] * R[k][j];
   }

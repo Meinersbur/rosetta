@@ -37,10 +37,10 @@ static void kernel(pbsize_t w, pbsize_t h,
       real ym2 = 0;
       real xm1 = 0;
       for (idx_t j = 0; j < h; j++) {
-        y1[i][j] = a1 * imgIn[i][j] + a2 * xm1 + b1 * ym1 + b2 * ym2;
-        xm1 = imgIn[i][j];
+        py1[i*h+j] = a1 * pimgIn[i*h+j] + a2 * xm1 + b1 * ym1 + b2 * ym2;
+        xm1 = pimgIn[i*h+j];
         ym2 = ym1;
-        ym1 = y1[i][j];
+        ym1 = py1[i*h+j];
       }
     }
 
@@ -51,18 +51,18 @@ static void kernel(pbsize_t w, pbsize_t h,
       real xp1 = 0;
       real xp2 = 0;
       for (idx_t j = h - 1; j >= 0; j--) {
-        y2[i][j] = a3 * xp1 + a4 * xp2 + b1 * yp1 + b2 * yp2;
+        py2[i*h+j] = a3 * xp1 + a4 * xp2 + b1 * yp1 + b2 * yp2;
         xp2 = xp1;
-        xp1 = imgIn[i][j];
+        xp1 = pimgIn[i*h+j];
         yp2 = yp1;
-        yp1 = y2[i][j];
+        yp1 = py2[i*h+j];
       }
     }
 
 #pragma omp target teams distribute parallel for  collapse(2)
     for (idx_t i = 0; i < w; i++)
       for (idx_t j = 0; j < h; j++) {
-        imgOut[i][j] = c1 * (y1[i][j] + y2[i][j]);
+        pimgOut[i*h+j] = c1 * (py1[i*h+j] + py2[i*h+j]);
       }
 
 #pragma omp target teams distribute parallel for
@@ -71,10 +71,10 @@ static void kernel(pbsize_t w, pbsize_t h,
       real ym1 = 0;
       real ym2 = 0;
       for (idx_t i = 0; i < w; i++) {
-        y1[i][j] = a5 * imgOut[i][j] + a6 * tm1 + b1 * ym1 + b2 * ym2;
-        tm1 = imgOut[i][j];
+        py1[i*h+j] = a5 * pimgOut[i*h+j] + a6 * tm1 + b1 * ym1 + b2 * ym2;
+        tm1 = pimgOut[i*h+j];
         ym2 = ym1;
-        ym1 = y1[i][j];
+        ym1 = py1[i*h+j];
       }
     }
 
@@ -86,18 +86,18 @@ static void kernel(pbsize_t w, pbsize_t h,
       real yp1 = 0;
       real yp2 = 0;
       for (idx_t i = w - 1; i >= 0; i--) {
-        y2[i][j] = a7 * tp1 + a8 * tp2 + b1 * yp1 + b2 * yp2;
+        py2[i*h+j] = a7 * tp1 + a8 * tp2 + b1 * yp1 + b2 * yp2;
         tp2 = tp1;
-        tp1 = imgOut[i][j];
+        tp1 = pimgOut[i*h+j];
         yp2 = yp1;
-        yp1 = y2[i][j];
+        yp1 = py2[i*h+j];
       }
     }
 
 #pragma omp target teams distribute parallel for collapse(2) 
     for (idx_t i = 0; i < w; i++)
       for (idx_t j = 0; j < h; j++)
-        imgOut[i][j] = c2 * (y1[i][j] + y2[i][j]);
+        pimgOut[i*h+j] = c2 * (py1[i*h+j] + py2[i*h+j]);
   }
 }
 
