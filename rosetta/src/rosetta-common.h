@@ -98,18 +98,17 @@ namespace rosetta {
 
 	// TODO: filter out duplicates; may result in ambiguous operator= errors. Or use make it explicit which counter uses which type (e.g. std::in_place_index)
 	// TODO: make extendable
-	using duration_t = std::variant<std::monostate, common_duration_t // lowest common denominator
-		,
-		std::chrono::high_resolution_clock::duration // for wall time
-		,
+	using duration_t = std::variant<
+		std::monostate, 
+		common_duration_t ,// lowest common denominator
+	//	std::chrono::duration<float, std::chrono::seconds::period>,
+		std::chrono::high_resolution_clock::duration, // for wall time
 		usage_duration_t // for user/kernel time
 #ifdef ROSETTA_PPM_NVIDIA
-		,
-		std::chrono::duration<double, std::chrono::milliseconds::period> // Used by CUDA events
+		,std::chrono::duration<float, std::chrono::milliseconds::period> // Used by CUDA events
 #endif
 #ifdef ROSETTA_PLATFORM_NVIDIA
-		,
-		std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
+		,std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
 #endif
 	>;
 

@@ -16,7 +16,7 @@ runtime = NamedSentinel('runtime')
 compiletime = NamedSentinel('compiletime')
 
 class Param:
-    def __init__(self,name,choices=None,evaltime=None,*args):
+    def __init__(self,name,min=None,max=None, verify=None,train=None,ref=None,  choices=None,evaltime=None,*args):
         self.name = name
         self.choices=choices
         self.allow_compiletime = None
@@ -39,10 +39,13 @@ class Param:
 
 
 
+
 class GenParam(Param):
     """Parameter used to generate benchmarks (e.g. real=float or double); All possible combinations are selected"""
     def __init__(self,*args,**kwargs):
          super().__init__(*args,**kwargs)
+
+
 
 
 class SizeParam(GenParam):

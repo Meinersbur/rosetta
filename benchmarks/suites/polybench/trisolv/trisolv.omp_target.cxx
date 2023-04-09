@@ -6,19 +6,22 @@
 static void kernel(pbsize_t n,
                    multarray<real, 2> L, real x[], real b[]) {
     real *Ldata = &L[0][0];
+
 #pragma omp target data map(to:Ldata[0:n*n],b[0:n]) map(from:x[0:n]) 
                        {
 
 
                            for (idx_t i = 0; i < n; i++) {
-                               real sum = 0;
-#pragma omp target teams distribute parallel for \
-             reduction(+ : sum)
+                               real sum = 0; // TODO: Keep sum on device
+#pragma omp target teams distribute parallel for  reduction(+ : sum) map(tofrom:sum)
                                for (idx_t j = 0; j < i; j++)
                                    sum += L[i][j] * x[j];
-#pragma omp target
+#pragma omp target map(to:sum)
                                x[i] = (b[i] - sum) / L[i][i];
                            }
+
+
+
 
 
                        }

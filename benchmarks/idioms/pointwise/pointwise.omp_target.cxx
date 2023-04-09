@@ -4,7 +4,7 @@
 
 
 static void kernel(pbsize_t n, real *A) {
-#pragma omp target teams distribute parallel for simd map(from: A[0:n])
+#pragma omp target teams distribute parallel for simd map(tofrom: A[0:n])
   for (idx_t i = 0; i < n; i += 1)
     A[i] += 42;
 }

@@ -1,7 +1,8 @@
 // BUILD: add_benchmark(cuda,
-// BUILD:               GenParam('real',choices=['float','double', 'long double']),
-// BUILD:               TuneParam('threadsPerBlock')
-// BUILD:               )
+// BUILD:               GenParam('real',compiletime,choices=['float','double','long double']),
+// BUILD:               SizeParam('n',runtime,verify=129,train=1024,ref=1024*1024,min=0),
+// BUILD:               TuneParam('threadsPerBlock',runtime)
+// BUILD:              )
 
 #include <rosetta.h>
 

@@ -1,15 +1,15 @@
 // BUILD: add_benchmark(ppm=omp_target)
 
 #include <rosetta.h>
-
+  
 
 static void kernel(pbsize_t m, pbsize_t n, multarray<real, 2> A, real s[], real q[], real p[], real r[]) {
     real *Adata  = &A[0][0];
 
-#pragma omp target data map(to:Adata[0:n*m],q[0:m],r[0:n]) map(from:s[0:m],q[0:n])
-  {
+#pragma omp target data map(to:Adata[0:n*m],p[0:m],r[0:n]) map(from:s[0:m],q[0:n])
+  { 
 
-#pragma omp target teams distribute parallel for nowait
+#pragma omp target teams distribute parallel for // nowait (nowait makes libomp.so crash)
     for (idx_t i = 0; i < n; i++) {
       q[i] = 0;
       for (idx_t j = 0; j < m; j++)

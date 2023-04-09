@@ -1,6 +1,6 @@
 // BUILD: add_benchmark(ppm=omp_task)
 
-#include "rosetta.h"
+#include <rosetta.h>
 
 
 static void kernel(pbsize_t n, multarray<real, 1> data) {

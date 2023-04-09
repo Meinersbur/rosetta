@@ -12,12 +12,13 @@ static void kernel(pbsize_t m, pbsize_t n,
                    real stddev[]) {
     real *pdata = &data[0][0];
     real *pcorr = &corr[0][0];
-
-#pragma omp target data map(from:pdata[0:n*m]) map(to:mean[0:m],stddev[0:m],pcorr[0:m*m])
-  {
     real eps = 0.1;
+     
+#pragma omp target data map(to:pdata[0:n*m]) map(from:mean[0:m],stddev[0:m],pcorr[0:m*m]) map(to:n,m, eps)
+  {
 
-#pragma omp target teams distribute parallel for
+
+#pragma omp target teams distribute parallel for default(none) dist_schedule(static) schedule(static) firstprivate(m,n,mean,pdata)
     for (idx_t j = 0; j < m; j++) {
       mean[j] = 0.0;
       for (idx_t i = 0; i < n; i++)
@@ -25,7 +26,7 @@ static void kernel(pbsize_t m, pbsize_t n,
       mean[j] /= n;
     }
 
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for dist_schedule(static) schedule(static) default(none) firstprivate(m,n,stddev,pdata,mean,eps)
     for (idx_t j = 0; j < m; j++) {
       stddev[j] = 0.0;
       for (idx_t i = 0; i < n; i++)
@@ -41,7 +42,7 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
     /* Center and reduce the column vectors. */
-#pragma omp target teams distribute parallel for collapse(2) 
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static) schedule(static)  default(none) firstprivate(n,m,pdata,mean,stddev)
     for (idx_t i = 0; i < n; i++)
       for (idx_t j = 0; j < m; j++) {
         pdata[i*m+j] -= mean[j];
@@ -50,7 +51,7 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
       /* Calculate the m * m correlation matrix. */
-#pragma omp target teams distribute parallel for
+#pragma omp target teams distribute parallel for dist_schedule(static) schedule(static) default(none) firstprivate(m,n,pcorr,pdata)
     for (idx_t i = 0; i < m - 1; i++) {
       pcorr[i*m+i] = 1.0;
       for (idx_t j = i + 1; j < m; j++) {
@@ -63,7 +64,6 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 #pragma omp target 
       pcorr[(m - 1)*m+(m - 1)] = 1.0;
-
   }
 }
 

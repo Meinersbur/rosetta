@@ -48,7 +48,7 @@ import dateutil
 #TODO: dataclass
 class BenchResult:
     categorical_cols = ['program', 'ppm', 'buildtype', 'configname', 'timestamp']
-    numerical_cols = ['walltime']
+    numerical_cols = ['count', 'walltime', 'usertime', 'kerneltime' , 'ompwtime', 'cupti', 'cupti_compute', 'cupti_todev', 'cupti_fromdev']
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         # self.bench=bench
@@ -97,19 +97,25 @@ def get_column_data(result: BenchResult, colname: str):
         return result.buildtype
     if colname == "configname":
         return first_defined(result.configname, "") #FIXME: "defaultbuild" is just placeholder
-    if colname == "walltime":
-        return result.durations.get("walltime")
     if colname == "timestamp":
         return result.timestamp
+    if colname == "count":
+        return result.count
+    if colname in BenchResult.numerical_cols:
+        return result.durations.get(colname)
     assert False, "TODO: Add to switch of use getattr"
 
 def get_summary_data(result: BenchResultSummary, colname: str):
+    if colname == "count":
+        return result.count
     return get_column_data(result, colname)
 
 
 def getColumnFormatter(colname: str):
     if colname == 'program':
         return program_formatter
+    elif   colname == 'count':
+        return None
     elif colname in BenchResult.numerical_cols:
         return duration_formatter() # TOOD: Get best/worst
     return None
@@ -177,6 +183,7 @@ def getHTMLFromatter(col: str):
     def str_html_formatter(v):
         return html.escape(str(v))
     def duration_formatter(stat):
+        #print(col)
         assert isinstance(stat,Statistic)
         v = stat.mean
         if v >= 1:
@@ -188,9 +195,11 @@ def getHTMLFromatter(col: str):
         if v * 1000 * 1000 * 1000 >= 1:
             return f'{v*1000*1000*1000:.2f}<span class="timeunit">ns</span>'
 
+    if col == 'count':
+        return str_html_formatter
     if col in BenchResult.numerical_cols:
         return duration_formatter
-    return str_html_formatter
+    return str_html_formatter #TODO: Return None, the equivalent of str_html_formatter should by applied by default
 
 
 
@@ -559,6 +568,7 @@ def getMeasureDisplayStr(s: str):
             'ppm': "PPM",
             'buildtype':  "Buildtype",
             'configname': "Configuration",
+            'count': "# Samples",
             'walltime': "Wall", 
             'usertime': "User", 
             'kerneltime': "Kernel",
@@ -808,9 +818,13 @@ class AllResultsSection(ReportSection):
             for col in columns:
                 if col in compare_columns:
                     for i, resulttuple in enumerate(row): 
-                        yield f'<td>{formatColumnVal(col, get_summary_data(row[i], col))}</td>'
+                        yield f'<td>{formatColumnVal(col,get_summary_data(row[i], col))}</td>'
                 else:
-                    yield f'<td>{getHTMLFromatter(col)( get_summary_data(rowsummery, col))}</td>'
+                    summarydata = get_summary_data(rowsummery, col)
+                    if summarydata:
+                        yield f'<td>{getHTMLFromatter(col)(summarydata)}</td>'
+                    else:
+                        yield '<td>???</td>'
             yield "</tr>"
         yield "</table>"
 

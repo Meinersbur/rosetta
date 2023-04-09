@@ -20,11 +20,18 @@
 //#include <charconv>
 //#endif
 
-#if ROSETTA_PLATFORM_NVIDIA
+#if ROSETTA_PPM_NVIDIA
 #include <cuda.h>
+#endif 
+
+#if ROSETTA_PLATFORM_NVIDIA
 #include <cupti.h>
 #include <stdio.h>
 #endif
+
+#if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
+#include <omp.h>
+#endif 
 
 
 
@@ -734,10 +741,6 @@ public:
 
 public:
   explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath, std::chrono::seconds max_duration) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) , max_duration(max_duration) {}
-  // ~BenchmarkRun() {
-  //   if (verifyout)
-  //        verifyout.close();
-  // }
 
   void run(std::string program, int n) {
     startTime = std::chrono::steady_clock::now();
@@ -751,8 +754,9 @@ public:
 
     {
       State state{this};
-
+ 
 #if ROSETTA_PLATFORM_NVIDIA
+      //printf("## Platform_NVIDIA\n");
       // TODO: exclude cupti time from startTime
 
       // subscribe to CUPTI callbacks
@@ -790,6 +794,30 @@ public:
       CUPTI_CALL(cuptiGetTimestamp(&cuptiStart));
       startTimestamp = cuptiStart;
 #endif
+
+
+
+
+
+#if ROSETTA_PPM_OPENMP_TARGET
+#if defined (__clang__) || (defined(__GNUC__) && (__GNUC__ >= 12))
+    auto default_device=  omp_get_default_device();
+    auto num_devices = omp_get_num_devices();
+    auto cur_device = omp_get_device_num();
+    std::cout << "OpenMP Target default device = " << default_device << ", current device = " << cur_device << "  of " << num_devices << " devices\n";
+#endif 
+   //auto numProps =  omp_get_num_interop_properties(omp_ipr_fr_id);
+#endif 
+
+#if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
+    auto tickduration = omp_get_wtick();
+    std::cout << "OpenMP Wall tick = " << tickduration << "\n";
+#endif 
+
+
+
+
+
       preinitRSS = getMaxRSS();
 
       // TODO: make flexible, this is just on way to find a run function
@@ -823,6 +851,7 @@ public:
   std::chrono::high_resolution_clock::time_point startWall;
   usage_duration_t startUser;   // in seconds; TODO: use native type
   usage_duration_t startKernel; // in seconds; TODO: use native type
+  double startOmpWtime; // in seconds
 
 #if ROSETTA_PPM_CUDA
   cudaEvent_t startCuda;
@@ -846,7 +875,6 @@ public:
   memory_t lastRSS = 0;
 
   void start() {
-    // printf("start\n");
     assert(!started && "Must not interleave interation scope");
     started = true;
 
@@ -871,6 +899,11 @@ public:
 
     startWall = std::chrono::high_resolution_clock::now();
     std::tie(startUser, startKernel) = ProcessCPUUsage();
+
+#if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
+    startOmpWtime = omp_get_wtime();
+#endif 
+
 #if ROSETTA_PPM_CUDA
     cudaEventRecord(startCuda);
 #endif
@@ -894,6 +927,12 @@ public:
 
     auto stopWall = std::chrono::high_resolution_clock::now();
     auto [stopUser, stopKernel] = ProcessCPUUsage();
+
+#if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
+    auto stopOmpWtime = omp_get_wtime();
+    auto durationOmpWtime  =stopOmpWtime - startOmpWtime;
+#endif 
+
 
 #if ROSETTA_PPM_CUDA
     BENCH_CUDA_TRY(cudaEventRecord(stopCuda));
@@ -932,10 +971,13 @@ public:
 
     IterationMeasurement m;
     m.values[WallTime] = durationWall;
-    m.values[UserTime] = std::chrono::duration<double, std::chrono::seconds::period>(durationUser);
-    m.values[KernelTime] = std::chrono::duration<double, std::chrono::seconds::period>(durationKernel);
+    m.values[UserTime] = durationUser;
+    m.values[KernelTime] = durationKernel;
+#if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
+    m.values[OpenMPWTime] = std::chrono::duration<decltype(durationOmpWtime), std::chrono::seconds::period>( durationOmpWtime);
+#endif 
 #if ROSETTA_PPM_CUDA
-    m.values[AccelTime] = std::chrono::duration<double, std::chrono::milliseconds::period>(durationCuda);
+    m.values[AccelTime] = std::chrono::duration<decltype(durationCuda), std::chrono::milliseconds::period>(durationCuda);
 #endif
 #if ROSETTA_PLATFORM_NVIDIA
     if (firstEvent <= lastEvent)
@@ -1342,8 +1384,9 @@ const char *getMeasureDesc(Measure m) {
   case CuptiTransferToHost:
     return "Nvprof D->H time";
   }
-  abort();
+return "<measure description missing>";
 }
+
 
 extern const char *bench_name;
 extern int64_t bench_default_problemsize;
@@ -1353,7 +1396,7 @@ extern const char *bench_buildtype;
 // TODO: make singleton?
 struct Rosetta {
   static constexpr const char *measureDesc[MeasureCount] = {"Wall Clock", "User", "Kernel", "GPU"};
-  static constexpr const char *measureName[MeasureCount] = {"walltime", "usertime", "kerneltime", "openmp", "acceltime", "cupti", "cupti_compute", "cupti_todev", "cupti_fromdev"};
+  static constexpr const char *measureName[MeasureCount] = {"walltime", "usertime", "kerneltime", "ompwtime", "acceltime", "cupti", "cupti_compute", "cupti_todev", "cupti_fromdev"};
 
   static std::string escape(std::string s) {
     return s; // TODO

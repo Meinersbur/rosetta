@@ -26,11 +26,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(OPENMP_OFFLOADING_CFLAGS  "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie" CACHE STRING "Compiler arguments for OpenMP offloading")
   set(OPENMP_OFFLOADING_LDFLAGS "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie" CACHE STRING "Linker arguments for OpenMP offloading")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  # TODO: Don't fix -march=sm_80
+  message("CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(OPENMP_OFFLOADING_CFLAGS
-      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70"
+      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_80"
       CACHE STRING "Compiler arguments for OpenMP offloading")
   set(OPENMP_OFFLOADING_LDFLAGS
-      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_70;-lomptarget;-v"
+      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_80;-lomptarget;-v"
       CACHE STRING "Linker arguments for OpenMP offloading")
 endif ()
 

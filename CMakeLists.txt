@@ -417,22 +417,24 @@ add_subdirectory(benchmarks)
 
 # Maintanance #################################################################
 
-add_format_target(
-  CLANG_RGLOB
-    benchmarks/*.cxx
-    benchmarks/*.cu
-    benchmarks/*.h
-    rosetta/*.h
-    rosetta/*.cpp
-  PY_RGLOB
-    rosetta/src/*.py
-    rosetta/tests/*.py
-  CMAKE
-    CMakeLists.txt
-  CMAKE_RGLOB
-    rosetta/CMakeLists.txt
-    rosetta/cmake/*.cmake
-)
+if (NOT ROSETTA_MAINTAINER_MODE)
+  add_format_target(
+    CLANG_RGLOB
+      benchmarks/*.cxx
+      benchmarks/*.cu
+      benchmarks/*.h
+      rosetta/*.h
+      rosetta/*.cpp
+    PY_RGLOB
+      rosetta/src/*.py
+      rosetta/tests/*.py
+    CMAKE
+      CMakeLists.txt
+    CMAKE_RGLOB
+      rosetta/CMakeLists.txt
+      rosetta/cmake/*.cmake
+  )
+endif ()
 
 
 

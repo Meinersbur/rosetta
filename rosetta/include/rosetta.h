@@ -367,7 +367,7 @@ public:
 enum Measure {
   WallTime,
   UserTime,
-  KernelTime, // TODO:
+  KernelTime, 
   OpenMPWTime,
   AccelTime,             // CUDA Event
   Cupti,                 // CUPTI duration from first to last event
