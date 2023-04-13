@@ -97,6 +97,7 @@ endif ()
 if (NOT DEFINED ROSETTA_PPM_CUDA)
   set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
   check_language(CUDA)
+  find_package(CUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
   endif ()
@@ -104,6 +105,7 @@ elseif (ROSETTA_PPM_CUDA)
   set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
   check_language(CUDA)
   enable_language(CUDA)
+  find_package(CUDAToolkit)
   if (NOT CMAKE_CUDA_COMPILER)
     message(FATAL_ERROR "CUDA enabled but no CUDA not found")
   endif ()
@@ -132,16 +134,18 @@ endif ()
 
 if (CMAKE_CUDA_COMPILER)
   # only for CUDA_VERSION
-  find_package(CUDA REQUIRED)
+  #find_package(CUDA REQUIRED)
   find_package(Thrust REQUIRED CONFIG)
   thrust_create_target(Thrust) # https://github.com/NVIDIA/thrust/blob/main/thrust/cmake/README.md
 endif ()
+
+#message(FATAL_ERROR "Stop here")
 
 # For Nvidia platform
 if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit)
 elseif (ROSETTA_PLATFORM_NVIDIA)
-  find_package(CUDAToolkit REQUIRED)
+	find_package(CUDAToolkit REQUIRED COMPONENTS cuPTI)
 endif ()
 
 # OpenCL

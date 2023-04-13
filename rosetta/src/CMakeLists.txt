@@ -42,10 +42,13 @@ if (ROSETTA_PPM_CUDA)
     # TODO: Introspection
     target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CXX,CUDA>:-fno-exceptions>)
   endif ()
+  target_compile_options(rosetta-cuda INTERFACE "-fPIE")
+  target_link_libraries(rosetta-cuda PUBLIC CUDA::cudart)
 
   # https://forums.developer.nvidia.com/t/how-to-setup-a-cmake-project-with-cuda-debugging-support-in-vscode-ubuntu-20-04-nvidia-rtx-2080-max-q-driver-470-cuda-toolkit-11-5/213140/6
   # FIXME: Should really be a user setting, but the default CMAKE_CUDA_FLAGS_DEBUG doesn't have it.
- # target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:$<$<CONFIG:Debug,RelWithDebInfo>:-G>>) # Ensure device-side bug info
+  # target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:$<$<CONFIG:Debug,RelWithDebInfo>:-G>>) # Ensure device-side bug info
+  
 
   enable_platform_nvidia(rosetta-cuda)
 endif ()

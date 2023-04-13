@@ -17,6 +17,7 @@
 // TODO: ROSETTA_PLATFORM_NVIDIA
 // TODO: Get out of header
 #if ROSETTA_PPM_CUDA
+#include <cuda.h>
 #include <cuda_runtime_api.h>
 #endif
 #if ROSETTA_PPM_CUDA || ROSETTA_PLATFORM_NVIDIA
