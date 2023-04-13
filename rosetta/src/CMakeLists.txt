@@ -21,6 +21,7 @@ if (ROSETTA_PPM_SERIAL)
   target_compile_features(rosetta-serial PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-serial PUBLIC ROSETTA_PPM_SERIAL=1)
   target_include_directories(rosetta-serial PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
+  set_property(TARGET rosetta-serial PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
   if (HAS_INCLUDE_CHARCONV_FLOAT)
     target_compile_definitions(rosetta-serial PUBLIC HAS_INCLUDE_CHARCONV_FLOAT=1)
   endif ()
@@ -42,13 +43,9 @@ if (ROSETTA_PPM_CUDA)
     # TODO: Introspection
     target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CXX,CUDA>:-fno-exceptions>)
   endif ()
-  target_compile_options(rosetta-cuda INTERFACE "-fPIE")
+  target_compile_options(rosetta-cuda INTERFACE "-fPIE") # WORKAROUND:  relocation R_X86_64_32 against `.rodata.str1.1' can not be used when making a PIE object; recompile with -fPIE (clang enforces -pie by default)
+  set_property(TARGET rosetta-cuda PROPERTY POSITION_INDEPENDENT_CODE ON) # Should be CMake's way to avoid above error, but doesn't work
   target_link_libraries(rosetta-cuda PUBLIC CUDA::cudart)
-
-  # https://forums.developer.nvidia.com/t/how-to-setup-a-cmake-project-with-cuda-debugging-support-in-vscode-ubuntu-20-04-nvidia-rtx-2080-max-q-driver-470-cuda-toolkit-11-5/213140/6
-  # FIXME: Should really be a user setting, but the default CMAKE_CUDA_FLAGS_DEBUG doesn't have it.
-  # target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:$<$<CONFIG:Debug,RelWithDebInfo>:-G>>) # Ensure device-side bug info
-  
 
   enable_platform_nvidia(rosetta-cuda)
 endif ()
@@ -60,6 +57,7 @@ if (ROSETTA_PPM_OPENMP_PARALLEL)
   target_compile_definitions(rosetta-openmp-parallel PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_PARALLEL=1)
   target_include_directories(rosetta-openmp-parallel PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-parallel PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+  #set_property(TARGET rosetta-openmp-parallel PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TASK)
@@ -69,6 +67,7 @@ if (ROSETTA_PPM_OPENMP_TASK)
   target_compile_definitions(rosetta-openmp-task PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TASK=1)
   target_include_directories(rosetta-openmp-task PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-task PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+  #set_property(TARGET rosetta-openmp-task PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
 endif ()
 
 if (ROSETTA_PPM_OPENMP_TARGET)
@@ -78,5 +77,6 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   target_compile_definitions(rosetta-openmp-target PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1)
   target_include_directories(rosetta-openmp-target PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
   target_link_libraries(rosetta-openmp-target PUBLIC OpenMP::OpenMP_Offload_C OpenMP::OpenMP_Offload_CXX)
+  #set_property(TARGET rosetta-openmp-target PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
   enable_platform_nvidia(rosetta-openmp-target)
 endif ()
