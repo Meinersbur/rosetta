@@ -450,6 +450,9 @@ file(
 # -*- coding: utf-8 -*-
 
 import sys
+if not sys.version_info >= (3, 9):
+    print('Requires python 3.9 or later', file=sys.stderr)
+    sys.exit(1)
 sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 
 import pathlib
@@ -487,6 +490,9 @@ file(
 # -*- coding: utf-8 -*-
 
 import sys
+if not sys.version_info >= (3, 9):
+    print('Requires python 3.9 or later', file=sys.stderr)
+    sys.exit(1)
 sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 
 import pathlib
@@ -524,6 +530,9 @@ file(
 # -*- coding: utf-8 -*-
 
 import sys
+if not sys.version_info >= (3, 9):
+    print('Requires python 3.9 or later', file=sys.stderr)
+    sys.exit(1)
 sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 
 import pathlib

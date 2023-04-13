@@ -16,7 +16,7 @@ runtime = NamedSentinel('runtime')
 compiletime = NamedSentinel('compiletime')
 
 class Param:
-    def __init__(self,name,min=None,max=None, verify=None,train=None,ref=None,  choices=None,evaltime=None,*args):
+    def __init__(self,name,*args,min=None,max=None, verify=None,train=None,ref=None,  choices=None,evaltime=None):
         self.name = name
         self.choices=choices
         self.allow_compiletime = None
@@ -25,7 +25,7 @@ class Param:
         for a in itertools.chain(  ensure_list(evaltime),args):
             if a == compiletime :
                 self.allow_compiletime = True
-            elif a == compiletime:
+            elif a == runtime:
                 self.allow_runtime=True
             else:
                 raise Exception(f"Unexpected parameter {a}")

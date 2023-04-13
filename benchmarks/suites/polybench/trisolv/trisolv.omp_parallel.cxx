@@ -12,9 +12,7 @@ static void kernel(pbsize_t n,
              reduction(+ : sum)
     for (idx_t j = 0; j < i; j++)
       sum += L[i][j] * x[j];
-     //   sum +=  L[i][j];
    x[i] = (b[i] - sum) / L[i][i];
-   // x[i] =  1 +sum;
   }
 }
 

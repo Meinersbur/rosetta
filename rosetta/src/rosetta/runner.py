@@ -51,7 +51,13 @@ def do_run(bench, args, resultfile, timestamp=None):
     args.append(f'--xmlout={resultfile}')
     if timestamp:
         args.append(f'--timestamp={timestamp.isoformat(sep = " ")}')
-    print("Executing", shjoin([exe] + args))
+    #print("Executing", shjoin([exe] + args))
+
+    invoke.diag(exe, *args, 
+                setenv={'OMP_TARGET_OFFLOAD':'mandatory'} # TODO: Make configurable per-PPM
+                ) 
+    return 
+
     #p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     p = subprocess.Popen([exe] + args)
     #stdout = p.stdout.read()

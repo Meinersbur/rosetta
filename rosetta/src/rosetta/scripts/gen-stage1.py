@@ -1,5 +1,11 @@
-#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+import sys
+if not sys.version_info >= (3, 9):
+    print("Requires python 3.9 or later", file=sys.stderr)
+    sys.exit(1)
+
+
 
 import argparse
 import configparser
@@ -7,7 +13,6 @@ import importlib
 import pathlib
 import re
 from io import StringIO
-import itertools 
 import importlib.util
 
 from rosetta.util.support import *

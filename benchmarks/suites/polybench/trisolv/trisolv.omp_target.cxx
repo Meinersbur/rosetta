@@ -13,14 +13,12 @@ static void kernel(pbsize_t n,
 
                            for (idx_t i = 0; i < n; i++) {
                                real sum = 0; // TODO: Keep sum on device
-#pragma omp target teams distribute parallel for  reduction(+ : sum) map(tofrom:sum)
+#pragma omp target teams distribute parallel for reduction(+ : sum) map(tofrom:sum)
                                for (idx_t j = 0; j < i; j++)
                                    sum += L[i][j] * x[j];
 #pragma omp target map(to:sum)
                                x[i] = (b[i] - sum) / L[i][i];
                            }
-
-
 
 
 
