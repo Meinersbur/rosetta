@@ -93,7 +93,10 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
         args = [exepath, f'--verify', f'--verifyfile={testoutpath}']
         if problemsizefile:
             args.append(f'--problemsizefile={problemsizefile}')
-        invoke.call(*args, return_stdout=True, print_command=True)
+        invoke.diag(*args, return_stdout=True, print_command=True,
+                    setenv={'OMP_TARGET_OFFLOAD':'mandatory'} # TODO: Confugurable per-PPM
+                    )
+
 
         with refpath.open() as fref, testoutpath.open() as ftest:
             while True:
