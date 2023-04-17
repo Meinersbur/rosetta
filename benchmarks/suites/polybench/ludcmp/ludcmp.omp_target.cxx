@@ -13,44 +13,39 @@ static void kernel(pbsize_t n, multarray<real, 2> A, real b[], real x[], real y[
     {
 #define AccA(i,j) (pA[(i)*n+(j)])
         int k = 0;
-        for (int l = 0; l < 4; l += 1) {
         for (idx_t i = 0; i < n; i++) {
-
-           
-                fprintf(stderr, "a l=%d i=%d, k=%d\n", l, i,k);
+                fprintf(stderr, "a i=%d, k=%d\n", i,k);
                 for (idx_t j = 0; j < i; j++) {
                     real w1 = 0;
-#pragma omp target 
-                    w = 0;
-                    // k+=1;
-
-
-//#pragma omp target teams distribute parallel  for  dist_schedule(static) firstprivate(i, j, n, pA) schedule(static) reduction(+  : w)   default(none)  defaultmap(none) 
-//                    for (idx_t k = 0; k < j; k++)
-//                        w -= AccA(i, k) * AccA(k, j);
-// k+=1;
-#pragma omp target
-                   AccA(i, j) = (AccA(i, j) + w) / AccA(j, j);
+//#pragma omp target
+                    w1 = 0;
+                     k+=1;
+#pragma omp target teams distribute parallel  for  dist_schedule(static) firstprivate(i, j, n, pA) schedule(static) reduction(+  : w1)   default(none)  map(tofrom:w1) defaultmap(none)
+                    for (idx_t k = 0; k < j; k++)
+                        w1 -= AccA(i, k) * AccA(k, j);
+ 		k+=1;
+#pragma omp target map(to:w1,i,j,n) map(tofrom:pA[0:n*n],b[0:n])  defaultmap(none)
+                   AccA(i, j) = (AccA(i, j) + w1) / AccA(j, j);
                    k+=1;
                 }
-            }
+
        
-#if 0
-fprintf(stderr, "b i=%d\n",i);
+#if 1
+//fprintf(stderr, "b i=%d\n",i);
             for (idx_t j = i; j < n; j++) {
                 real w2 = 0;
 #pragma omp target teams distribute parallel  for  dist_schedule(static)  default(none) firstprivate(i, j, n, pA) schedule(static) reduction(+ : w2) map(tofrom:w2) defaultmap(none)
                 for (idx_t k = 0; k < i; k++) 
                       w2 -= AccA(i, k) * AccA(k, j);
-#pragma omp target  map(to:w2)
+#pragma omp target  map(to:w2,i,j,n) map(tofrom:pA[0:n*n],b[0:n])  defaultmap(none)
                 AccA(i,j) += w2;
             }
 #endif
         }
 
-#if 0
+#if 1
         for (idx_t i = 0; i < n; i++) {
-            fprintf(stderr, "c i=%d\n",i);
+            //fprintf(stderr, "c i=%d\n",i);
 
             real w3 = 0;
 #pragma omp target teams distribute parallel  for  dist_schedule(static)  default(none) firstprivate(i, n, pA, y) schedule(static) reduction(+:w3) map(tofrom:w3) defaultmap(none)
@@ -62,13 +57,13 @@ fprintf(stderr, "b i=%d\n",i);
 
   
         for (idx_t i = n - 1; i >= 0; i--) {
-            fprintf(stderr, "d i=%d\n",i);
+            //fprintf(stderr, "d i=%d\n",i);
 
             real w4 = 0;
 #pragma omp target teams distribute parallel  for  dist_schedule(static)  default(none) firstprivate(i, n, pA, x) schedule(static) reduction(+: w4) map(tofrom:w4)
             for (idx_t j = i + 1; j < n; j++) 
                     w4 -= AccA(i, j) * x[j];
-#pragma omp target map(to:w4)
+#pragma omp target map(to:w4,i,n) map(to:y[0:n],pA[0:n*n]) map(tofrom:x[0:n])   defaultmap(none)
             x[i] = (y[i] + w4) / AccA(i,i);
         }
 #endif 

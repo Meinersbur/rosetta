@@ -145,7 +145,7 @@ endif ()
 if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit)
 elseif (ROSETTA_PLATFORM_NVIDIA)
-	find_package(CUDAToolkit REQUIRED COMPONENTS cuPTI)
+	find_package(CUDAToolkit REQUIRED)
 endif ()
 
 # OpenCL
@@ -286,7 +286,24 @@ set(_nvidia_enabled_default OFF)
 if (TARGET CUDA::cudart)
   set(_nvidia_enabled_default ON)
 endif ()
-option(ROSETTA_PLATFORM_NVIDIA "Enable NVIDIA CUDA Toolkit/SDK as a platorm" ${_nvidia_enabled_default})
+option(ROSETTA_PLATFORM_NVIDIA "Enable NVIDIA CUPTI Performance Measurements" ${_nvidia_enabled_default})
+
+
+set(_papi_enabled_default OFF)
+if (False)
+  set(_papi_enabled_default ON)
+endif ()
+option(ROSETTA_PLATFORM_PAPI "Enable Performance-API Measurements (Not implemented)" ${_papi_enabled_default})
+
+
+set(_ompwtime_enabled_default OFF)
+if (OPENMP_FOUND)
+  set(_ompwtime_enabled_default ON)
+endif ()
+option(ROSETTA_PLATFORM_OPENMP "Enable omp_get_wtime Measurements (Not implemented)" ${_ompwtime_enabled_default})
+
+
+
 
 set(_opencl_enabled_default OFF)
 if (OpenCL_FOUND)

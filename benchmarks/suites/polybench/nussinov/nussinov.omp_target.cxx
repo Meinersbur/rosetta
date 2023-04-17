@@ -40,14 +40,16 @@ static void kernel(pbsize_t n, real seq[], multarray<real, 2> table) {
 static void kernel(pbsize_t n, real seq[], multarray<real, 2> table) {
     real *tabledata = &(table[0][0]); 
 
-#pragma omp target data  map(to:seq[n]) map(tofrom:tabledata[0:n*n])
+  real q = 0;
+#pragma omp target data  map(to:seq[n]) map(tofrom:tabledata[0:n*n]) map(alloc:q)
     {
         for (idx_t w = n; w < 2 * n - 1; ++w) { // wavefronting
-#pragma omp target teams distribute parallel for 
+#pragma omp target teams distribute parallel for
             for (idx_t j = std::max (0, w - ((idx_t)n - 1)); j < std::min(n, n + w - ((idx_t)n - 1)); ++j) {
                 idx_t i = ((idx_t)n - 1) + j - w;
 
-       
+                if (i < 0 || i >= n || j < 0 || j>=n) continue;
+
                     real maximum = tabledata[i * n + j];
 
                     if (j - 1 >= 0)
@@ -69,8 +71,8 @@ static void kernel(pbsize_t n, real seq[], multarray<real, 2> table) {
                         maximum = std::max(maximum, tabledata[i * n + k] + tabledata[(k + 1) * n + j]);
 
 
-                    tabledata[i * n + j] = maximum;
-                
+                  tabledata[i * n + j] = maximum;
+                 //q = maximum;
             }
         }
     }
