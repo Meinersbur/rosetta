@@ -9,10 +9,8 @@ from .common import *
 from .util.cmdtool import *
 from .util.support import *
 from .common import *
-from .runner import Benchmark,get_problemsizefile,get_problemsize
+from .runner import Benchmark, get_problemsizefile, get_problemsize
 from . import runner, registry
-
-
 
 
 def get_refpath(bench, refdir, problemsizefile):
@@ -22,28 +20,23 @@ def get_refpath(bench, refdir, problemsizefile):
     return refpath
 
 
-
 def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
-    refpath = get_refpath(bench, refdir=refdir,  problemsizefile=problemsizefile)
-
-
-
+    refpath = get_refpath(bench, refdir=refdir, problemsizefile=problemsizefile)
 
     # Get the reference implementation
     # TODO : Use the one from reference builddir if any
     refbench = bench.comparable .reference
-
 
     if refpath.exists():
         # Reference output already exists; check that it is the latest
         benchstat = refbench.exepath.stat()
         refstat = refpath.stat()
         if benchstat.st_mtime < refstat.st_mtime:
-            print(f"Reference output of {refbench.exepath} ({benchstat.st_mtime}) already exists at {refpath} ({refstat.st_mtime}) and is up-to-date")
+            print(
+                f"Reference output of {refbench.exepath} ({benchstat.st_mtime}) already exists at {refpath} ({refstat.st_mtime}) and is up-to-date")
             return
         print(f"Reference output {refpath} is out-of-date")
         refpath.unlink()
-
 
     # Invoke reference executable and write to file
     args = [refbench.exepath, f'--verify', f'--verifyfile={refpath}']
@@ -55,7 +48,6 @@ def ensure_reffile(bench: Benchmark, refdir, problemsizefile):
         assert refpath.is_file()
 
     print(f"Reference output of {bench.name} written to {refpath}")
-
 
 
 def ensure_reffiles(refdir, problemsizefile, filterfunc=None, srcdir=None):
@@ -70,8 +62,6 @@ def ensure_reffiles(refdir, problemsizefile, filterfunc=None, srcdir=None):
 def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
     problemsizefile = get_problemsizefile(
         srcdir=srcdir, problemsizefile=problemsizefile)
-
-
 
     refdir.mkdir(exist_ok=True, parents=True)
 
@@ -89,14 +79,12 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
         testoutpath = request_tempfilename(
             subdir='verify', prefix=f'{e.name}_{e.ppm}_{pbsize}', suffix='.testout')
 
-
         args = [exepath, f'--verify', f'--verifyfile={testoutpath}']
         if problemsizefile:
             args.append(f'--problemsizefile={problemsizefile}')
         invoke.diag(*args, return_stdout=True, print_command=True,
-                    setenv={'OMP_TARGET_OFFLOAD':'mandatory'} # TODO: Confugurable per-PPM
+                    setenv={'OMP_TARGET_OFFLOAD': 'mandatory'}  # TODO: Confugurable per-PPM
                     )
-
 
         with refpath.open() as fref, testoutpath.open() as ftest:
             while True:
@@ -140,7 +128,7 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                 if refname is not None and testname is not None and refname != testname:
                     die(f"Array names {refname} and {testname} disagree")
 
-                errsfound  = 0
+                errsfound = 0
                 for i, (refv, testv) in enumerate(zip(refdata, testdata)):
                     coord = [str((i // prod(refshape[0:j])) % refshape[j])
                              for j in range(0, refdim)]
@@ -163,15 +151,16 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                         reld = 0 if absd == 0 else math.inf
                     else:
                         reld = absd / mid
-                    #if refv != absd :
+                    # if refv != absd :
                     if reld > 1e-4:  # TODO: Don't hardcode difference
                         if errsfound == 0:
                             print(f"While comparing {refpath} and {testoutpath}:")
-                        print( f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
+                        print(
+                            f"Array data mismatch: {refname}{coord} = {refv} != {testv} = {testname}{coord} (Delta: {absd}  Relative: {reld})")
                         errsfound += 1
 
                     if errsfound >= 20:
-                        die (f"Found at least {errsfound} differences; output considered incorrect")
+                        die(f"Found at least {errsfound} differences; output considered incorrect")
 
         if errsfound:
             die(f"Found {errsfound} output differences; output considered incorrect")

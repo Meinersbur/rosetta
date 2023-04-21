@@ -19,12 +19,16 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   #set(OPENMP_OFFLOADING_CFLAGS  "-foffload=default" CACHE STRING "Compiler arguments for OpenMP offloading")
   #set(OPENMP_OFFLOADING_LDFLAGS "-foffload=default" CACHE STRING "Linker arguments for OpenMP offloading")
   # Look for OFFLOAD_TARGET_NAMES in `g++ -v` to get otpions
-  
+
   # CUDA doesn't like extra protections that gcc adds by default (-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector)
   # -no-pie: https://bugs.launchpad.net/ubuntu/+source/gcc-10/+bug/1907812
   # TODO: Introspection
-  set(OPENMP_OFFLOADING_CFLAGS  "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie" CACHE STRING "Compiler arguments for OpenMP offloading")
-  set(OPENMP_OFFLOADING_LDFLAGS "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie" CACHE STRING "Linker arguments for OpenMP offloading")
+  set(OPENMP_OFFLOADING_CFLAGS
+      "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie"
+      CACHE STRING "Compiler arguments for OpenMP offloading")
+  set(OPENMP_OFFLOADING_LDFLAGS
+      "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie"
+      CACHE STRING "Linker arguments for OpenMP offloading")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # TODO: Don't fix -march=sm_80
   message("CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
@@ -67,12 +71,14 @@ if (HAVE_PRAGMA_OMP_TARGET)
   target_link_libraries(OpenMP::OpenMP_Offload_CXX INTERFACE OpenMP::OpenMP_CXX)
   set_property(TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_COMPILE_OPTIONS ${_offload_required_cflags})
   set_property(
-    TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_LINK_OPTIONS ${_offload_openmp_flags} ${_offload_required_ldflags}
+    TARGET OpenMP::OpenMP_Offload_CXX PROPERTY INTERFACE_LINK_OPTIONS ${_offload_openmp_flags}
+                                               ${_offload_required_ldflags}
   )# FIXME: OpenMP_CXX_FLAGS (-fopenmp) already be added by target_link_libraries
 
   add_library(OpenMP::OpenMP_Offload_C INTERFACE IMPORTED)
   target_link_libraries(OpenMP::OpenMP_Offload_C INTERFACE OpenMP::OpenMP_C)
   set_property(TARGET OpenMP::OpenMP_Offload_C PROPERTY INTERFACE_COMPILE_OPTIONS ${_offload_required_cflags})
-  set_property(TARGET OpenMP::OpenMP_Offload_C PROPERTY INTERFACE_LINK_OPTIONS ${_offload_openmp_flags} ${_offload_required_ldflags})
+  set_property(TARGET OpenMP::OpenMP_Offload_C PROPERTY INTERFACE_LINK_OPTIONS ${_offload_openmp_flags}
+                                                        ${_offload_required_ldflags})
 
 endif ()

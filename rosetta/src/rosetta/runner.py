@@ -53,10 +53,10 @@ def do_run(bench, args, resultfile, timestamp=None):
         args.append(f'--timestamp={timestamp.isoformat(sep = " ")}')
     #print("Executing", shjoin([exe] + args))
 
-    invoke.diag(exe, *args, 
-                setenv={'OMP_TARGET_OFFLOAD':'mandatory'} # TODO: Make configurable per-PPM
-                ) 
-    return 
+    invoke.diag(exe, *args,
+                setenv={'OMP_TARGET_OFFLOAD': 'mandatory'}  # TODO: Make configurable per-PPM
+                )
+    return
 
     #p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     p = subprocess.Popen([exe] + args)
@@ -76,13 +76,11 @@ def do_run(bench, args, resultfile, timestamp=None):
     return resultfile
 
 
-def run_gbench(bench, problemsizefile, resultfile,timestamp):
+def run_gbench(bench, problemsizefile, resultfile, timestamp):
     args = []
     if problemsizefile:
         args.append(f'--problemsizefile={problemsizefile}')
-    return do_run(bench=bench, args=args, resultfile=resultfile,timestamp=timestamp)
-
-
+    return do_run(bench=bench, args=args, resultfile=resultfile, timestamp=timestamp)
 
 
 def get_problemsizefile(srcdir=None, problemsizefile=None):
@@ -105,9 +103,6 @@ def get_problemsize(bench: Benchmark, problemsizefile: pathlib.Path):
     config.read(problemsizefile)
     n = config.getint(bench.name, 'n')
     return n
-
-
-
 
 
 def make_resultssubdir(within):
@@ -139,15 +134,8 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
             thisresultdir /= configname
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
         results .append(run_gbench(
-            e, problemsizefile=problemsizefile, resultfile=thisresultdir,timestamp=timestamp))
-    return results,resultssubdir
-
-
-
-
-
-
-
+            e, problemsizefile=problemsizefile, resultfile=thisresultdir, timestamp=timestamp))
+    return results, resultssubdir
 
 
 if __name__ == '__main__':

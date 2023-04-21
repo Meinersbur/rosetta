@@ -39,7 +39,7 @@
 
 
 static void kernel(pbsize_t n, real seq[], multarray<real, 2> table) {
-   // table.dump();
+  // table.dump();
 
 #pragma scop
   for (idx_t i = n - 1; i >= 0; i--) {
@@ -61,8 +61,8 @@ static void kernel(pbsize_t n, real seq[], multarray<real, 2> table) {
       for (idx_t k = i + 1; k < j; k++)
         table[i][j] = std::max(table[i][j], table[i][k] + table[k + 1][j]);
 
-      //fprintf(stderr, "i=%d,j=%d\n",i,j);
-      //table.dump();
+      // fprintf(stderr, "i=%d,j=%d\n",i,j);
+      // table.dump();
     }
   }
 #pragma endscop

@@ -10,36 +10,39 @@ static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A,
                    multarray<real, 2> B,
                    multarray<real, 2> tmp) {
-    real *pC = &C[0][0];
-    real *pA = &A[0][0];
-    real *pB = &B[0][0];
-    real *ptmp = &tmp[0][0];
+  real *pC = &C[0][0];
+  real *pA = &A[0][0];
+  real *pB = &B[0][0];
+  real *ptmp = &tmp[0][0];
 
-#pragma omp target data map(from:pC[0:m*n])  map(to:pA[0:m*m],pB[0:m*n]) map(alloc:ptmp[0:m*n]) 
+#pragma omp target data map(from                                                        \
+                            : pC [0:m * n]) map(to                                      \
+                                                : pA [0:m * m], pB [0:m * n]) map(alloc \
+                                                                                  : ptmp [0:m * n])
   {
-#define AccC(x,y) (pC[(x)*n+(y)])
-#define AccA(x,y) (pA[(x)*m+(y)])
-#define AccB(x,y) (pB[(x)*n+(y)])
-#define Acctmp(x,y) (ptmp[(x)*n+(y)])
+#define AccC(x, y) (pC[(x)*n + (y)])
+#define AccA(x, y) (pA[(x)*m + (y)])
+#define AccB(x, y) (pB[(x)*n + (y)])
+#define Acctmp(x, y) (ptmp[(x)*n + (y)])
 
-#pragma omp target teams distribute parallel for collapse(2) dist_schedule (static) schedule(static) default(none) firstprivate(m, n, alpha, beta,  pA, pB, ptmp)
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static) schedule(static) default(none) firstprivate(m, n, alpha, beta, pA, pB, ptmp)
     for (idx_t i = 0; i < m; i++)
       for (idx_t j = 0; j < n; j++) {
-        Acctmp(i,j) = 0;
+        Acctmp(i, j) = 0;
         for (idx_t k = 0; k < i; k++)
-            Acctmp(i,j) += AccB(k,j) * AccA(i,k);
+          Acctmp(i, j) += AccB(k, j) * AccA(i, k);
       }
 
-#pragma omp target teams distribute parallel for  collapse(2) dist_schedule (static)  schedule(static) default(none) firstprivate(m, n, alpha, beta, pC, pA, pB, ptmp)
+#pragma omp target teams distribute parallel for collapse(2) dist_schedule(static) schedule(static) default(none) firstprivate(m, n, alpha, beta, pC, pA, pB, ptmp)
     for (idx_t i = 0; i < m; i++)
       for (idx_t j = 0; j < n; j++)
-          AccC(i,j) = beta * AccC(i,j) + alpha * AccB(i,j) * AccA(i,i) + alpha * Acctmp(i,j);
+        AccC(i, j) = beta * AccC(i, j) + alpha * AccB(i, j) * AccA(i, i) + alpha * Acctmp(i, j);
 
-#pragma omp target teams distribute parallel for  collapse(2) default(none) firstprivate(m, n, alpha, beta, pC, pA, pB, ptmp)
+#pragma omp target teams distribute parallel for collapse(2) default(none) firstprivate(m, n, alpha, beta, pC, pA, pB, ptmp)
     for (idx_t j = 0; j < n; j++)
       for (idx_t k = 0; k < m - 1; k++)
         for (idx_t i = k + 1; i < m; i++)
-            AccC(k,j) += alpha * AccB(i,j) * AccA(i,k);
+          AccC(k, j) += alpha * AccB(i, j) * AccA(i, k);
   }
 }
 

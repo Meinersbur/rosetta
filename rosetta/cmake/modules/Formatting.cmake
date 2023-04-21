@@ -76,7 +76,7 @@ function (add_format_target)
       OUTPUT "${_stamp}"
       DEPENDS "${abspath}"
       COMMAND cmake-format --check --line-width 120 --separate-ctrl-name-with-space true --enable-markup false
-               --output-encoding utf-8 --line-ending unix "${abspath}"
+              --output-encoding utf-8 --line-ending unix "${abspath}"
       VERBATIM
       COMMENT "Check format of ${file}")
 

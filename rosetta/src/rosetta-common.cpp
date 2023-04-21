@@ -14,7 +14,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <iomanip>
 
 //#if HAS_INCLUDE_CHARCONV
 //#include <charconv>
@@ -22,7 +21,7 @@
 
 #if ROSETTA_PPM_NVIDIA
 #include <cuda.h>
-#endif 
+#endif
 
 #if ROSETTA_PLATFORM_NVIDIA
 #include <cupti.h>
@@ -31,7 +30,7 @@
 
 #if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
 #include <omp.h>
-#endif 
+#endif
 
 
 
@@ -67,14 +66,14 @@ int InitializeStreams() {
 
 
 static double to_seconds(const duration_t &lhs) {
-    return std::visit(
-        [](const auto &lhs) {
-            using T = std::remove_const_t<std::remove_reference_t<decltype(lhs)>>;
-            if constexpr (!std::is_same_v<T, std::monostate>)
-                return std::chrono::duration_cast<std::chrono::duration<double>>(lhs).count();
-            return 0.0;
-        },
-        lhs);
+  return std::visit(
+      [](const auto &lhs) {
+        using T = std::remove_const_t<std::remove_reference_t<decltype(lhs)>>;
+        if constexpr (!std::is_same_v<T, std::monostate>)
+          return std::chrono::duration_cast<std::chrono::duration<double>>(lhs).count();
+        return 0.0;
+      },
+      lhs);
 }
 
 
@@ -128,8 +127,6 @@ BENCHMARK_NORETURN static void DiagnoseAndExit(const char *msg) {
   std::cerr << "ERROR: " << msg << std::endl;
   std::exit(EXIT_FAILURE);
 }
-
-
 
 
 
@@ -712,9 +709,6 @@ void run(State &state, int pbsize);
 
 
 
-
-
-
 class BenchmarkRun {
   friend class Rosetta;
   friend class dyn_array_base;
@@ -740,7 +734,7 @@ public:
   bool isBenchRun() const { return !verify; }
 
 public:
-  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath, std::chrono::seconds max_duration) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath) , max_duration(max_duration) {}
+  explicit BenchmarkRun(bool verify, int exactRepeats, std::filesystem::path verifyoutpath, std::chrono::seconds max_duration) : verify(verify), exactRepeats(exactRepeats), verifyoutpath(verifyoutpath), max_duration(max_duration) {}
 
   void run(std::string program, int n) {
     startTime = std::chrono::steady_clock::now();
@@ -754,10 +748,10 @@ public:
 
     {
       State state{this};
- 
+
 #if ROSETTA_PLATFORM_NVIDIA
-      //printf("## Platform_NVIDIA\n");
-      // TODO: exclude cupti time from startTime
+      // printf("## Platform_NVIDIA\n");
+      //  TODO: exclude cupti time from startTime
 
       // subscribe to CUPTI callbacks
       // CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)getTimestampCallback, &trace));
@@ -797,24 +791,20 @@ public:
 
 
 
-
-
 #if ROSETTA_PPM_OPENMP_TARGET
-#if defined (__clang__) || (defined(__GNUC__) && (__GNUC__ >= 12))
-    auto default_device=  omp_get_default_device();
-    auto num_devices = omp_get_num_devices();
-    auto cur_device = omp_get_device_num();
-    std::cout << "OpenMP Target default device = " << default_device << ", current device = " << cur_device << "  of " << num_devices << " devices\n";
-#endif 
-   //auto numProps =  omp_get_num_interop_properties(omp_ipr_fr_id);
-#endif 
+#if defined(__clang__) || (defined(__GNUC__) && (__GNUC__ >= 12))
+      auto default_device = omp_get_default_device();
+      auto num_devices = omp_get_num_devices();
+      auto cur_device = omp_get_device_num();
+      std::cout << "OpenMP Target default device = " << default_device << ", current device = " << cur_device << "  of " << num_devices << " devices\n";
+#endif
+      // auto numProps =  omp_get_num_interop_properties(omp_ipr_fr_id);
+#endif
 
 #if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
-    auto tickduration = omp_get_wtick();
-    std::cout << "OpenMP Wall tick = " << tickduration << "\n";
-#endif 
-
-
+      auto tickduration = omp_get_wtick();
+      std::cout << "OpenMP Wall tick = " << tickduration << "\n";
+#endif
 
 
 
@@ -851,7 +841,7 @@ public:
   std::chrono::high_resolution_clock::time_point startWall;
   usage_duration_t startUser;   // in seconds; TODO: use native type
   usage_duration_t startKernel; // in seconds; TODO: use native type
-  double startOmpWtime; // in seconds
+  double startOmpWtime;         // in seconds
 
 #if ROSETTA_PPM_CUDA
   cudaEvent_t startCuda;
@@ -902,7 +892,7 @@ public:
 
 #if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
     startOmpWtime = omp_get_wtime();
-#endif 
+#endif
 
 #if ROSETTA_PPM_CUDA
     cudaEventRecord(startCuda);
@@ -930,8 +920,8 @@ public:
 
 #if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
     auto stopOmpWtime = omp_get_wtime();
-    auto durationOmpWtime  =stopOmpWtime - startOmpWtime;
-#endif 
+    auto durationOmpWtime = stopOmpWtime - startOmpWtime;
+#endif
 
 
 #if ROSETTA_PPM_CUDA
@@ -974,8 +964,8 @@ public:
     m.values[UserTime] = durationUser;
     m.values[KernelTime] = durationKernel;
 #if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
-    m.values[OpenMPWTime] = std::chrono::duration<decltype(durationOmpWtime), std::chrono::seconds::period>( durationOmpWtime);
-#endif 
+    m.values[OpenMPWTime] = std::chrono::duration<decltype(durationOmpWtime), std::chrono::seconds::period>(durationOmpWtime);
+#endif
 #if ROSETTA_PPM_CUDA
     m.values[AccelTime] = std::chrono::duration<decltype(durationCuda), std::chrono::milliseconds::period>(durationCuda);
 #endif
@@ -996,74 +986,74 @@ public:
   }
 
   int computeMoreIterations() {
-      // When verifying, always do exactly one iteration
-      // TODO: supersede by exactRepeats
-    if (verify)     
+    // When verifying, always do exactly one iteration
+    // TODO: supersede by exactRepeats
+    if (verify)
       return 1 - measurements.size();
-    
 
 
-// If the number of iterations was specified on the command line, use that 
-      if (exactRepeats >= 1) 
-          return exactRepeats - measurements.size();
-      
+
+    // If the number of iterations was specified on the command line, use that
+    if (exactRepeats >= 1)
+      return exactRepeats - measurements.size();
 
 
-      auto now = std::chrono::steady_clock::now();
-      auto elapsed = now - startTime; 
-      auto avgDuration =std::chrono::duration<double> (  to_seconds (now - firstIterTime ) /  measurements.size());
 
-      // Estimate how many iterations we can do before max elapsed is exceeded.
-      // Note: max_duration includes startup time (firstIterTime - startTime)
-    // auto iters_to_elapse =  std::floor(  (max_duration -  (firstIterTime - startTime)  ) / avgDuration)  ; 
-     auto iters_before_elapse =  std::floor( ( max_duration - elapsed ) / avgDuration );
-     size_t howManyMoreIterations = (iters_before_elapse <= 0)? 0 : std::llround(iters_before_elapse);
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = now - startTime;
+    auto avgDuration = std::chrono::duration<double>(to_seconds(now - firstIterTime) / measurements.size());
 
-     // If time has elapsed, no more iterations to do
-     if (howManyMoreIterations == 0)
-         return 0;
+    // Estimate how many iterations we can do before max elapsed is exceeded.
+    // Note: max_duration includes startup time (firstIterTime - startTime)
+    // auto iters_to_elapse =  std::floor(  (max_duration -  (firstIterTime - startTime)  ) / avgDuration)  ;
+    auto iters_before_elapse = std::floor((max_duration - elapsed) / avgDuration);
+    size_t howManyMoreIterations = (iters_before_elapse <= 0) ? 0 : std::llround(iters_before_elapse);
 
-     // If we are stable enough, finish earlier.
-     // Get at least 5 measurements before any statistical significance
-     // FIXME: Isnt' that quite low? Make configurable
-     if (measurements.size() >= 5) {
-         // TODO: Remove cold runs?
-         std::vector<double> vals;
-         vals.reserve(measurements.size());
-         for (auto&& m : measurements) {
-             vals.push_back(to_seconds(m.values[WallTime]));
-         }
-         Statistic stat{ vals.data(), vals.size() };
+    // If time has elapsed, no more iterations to do
+    if (howManyMoreIterations == 0)
+      return 0;
 
-         // Stop if goal has been reached
-         // Goal: 95%-CI within 0.01 == 1% of mean
-         // TODO: Make configurable
-         if (stat.relerr() <= 0.01) 
-             return 0;
-         
+    // If we are stable enough, finish earlier.
+    // Get at least 5 measurements before any statistical significance
+    // FIXME: Isnt' that quite low? Make configurable
+    if (measurements.size() >= 5) {
+      // TODO: Remove cold runs?
+      std::vector<double> vals;
+      vals.reserve(measurements.size());
+      for (auto &&m : measurements) {
+        vals.push_back(to_seconds(m.values[WallTime]));
+      }
+      Statistic stat{vals.data(), vals.size()};
 
-         auto iters_until_stable = std::max<size_t>( stat.min_more_samples_rel(0.05), 1); // Note: the ratio is more optimistic here (90% instead 95%)
-         howManyMoreIterations = std::min(howManyMoreIterations, iters_until_stable);
-     } else {
-         howManyMoreIterations = std::min(howManyMoreIterations, 5 - measurements.size()  );
-     }
+      // Stop if goal has been reached
+      // Goal: 95%-CI within 0.01 == 1% of mean
+      // TODO: Make configurable
+      if (stat.relerr() <= 0.01)
+        return 0;
 
-      return howManyMoreIterations;    
+
+      auto iters_until_stable = std::max<size_t>(stat.min_more_samples_rel(0.05), 1); // Note: the ratio is more optimistic here (90% instead 95%)
+      howManyMoreIterations = std::min(howManyMoreIterations, iters_until_stable);
+    } else {
+      howManyMoreIterations = std::min(howManyMoreIterations, 5 - measurements.size());
+    }
+
+    return howManyMoreIterations;
   }
 
 
   int refresh() {
-      switch (measurements.size()) {
-      case 0:
-          postinitRSS = getMaxRSS();
-          firstIterTime = std::chrono::steady_clock::now();
-          return 1;    // Ensure that we can measure firstRSS (and emit verify data if enabled) after first iteration
-      case 1:
-          firstRSS = getMaxRSS();
-          break;
-      }
+    switch (measurements.size()) {
+    case 0:
+      postinitRSS = getMaxRSS();
+      firstIterTime = std::chrono::steady_clock::now();
+      return 1; // Ensure that we can measure firstRSS (and emit verify data if enabled) after first iteration
+    case 1:
+      firstRSS = getMaxRSS();
+      break;
+    }
 
-    auto howManyMoreIterations =  computeMoreIterations();
+    auto howManyMoreIterations = computeMoreIterations();
     assert(howManyMoreIterations >= 0);
     measurements.reserve(measurements.size() + howManyMoreIterations);
     return howManyMoreIterations;
@@ -1308,9 +1298,6 @@ struct duration_formatter {
 
 
 
-
-
-
 static std::string formatDuration(duration_t duration) {
   std::ostringstream buf;
   if (std::holds_alternative<std::monostate>(duration))
@@ -1384,7 +1371,7 @@ const char *getMeasureDesc(Measure m) {
   case CuptiTransferToHost:
     return "Nvprof D->H time";
   }
-return "<measure description missing>";
+  return "<measure description missing>";
 }
 
 
@@ -1472,7 +1459,7 @@ struct Rosetta {
         cxml << R"(<benchmarks>)" << std::endl;
         cxml << R"(  <benchmark name=")" << escape(program) << R"(" n=")" << n << "\" cold_iterations=\"" << startMeasures << "\" peak_alloc=\"" << executor.peakAllocatedBytes << "\" ppm=\"" << ppm_variant << '\"';
         if (!timestamp.empty())
-            cxml << " timestamp=\"" << escape(timestamp) << '\"';
+          cxml << " timestamp=\"" << escape(timestamp) << '\"';
         if (strlen(rosetta_configname) >= 1)
           cxml << " configname=\"" << escape(rosetta_configname) << '\"';
         if (strlen(bench_buildtype) >= 1)
@@ -1726,30 +1713,28 @@ int main(int argc, char *argv[]) {
         i += 1;
       }
       verifyfile = *val;
-    }
-    else if (name == "xmlout") {
-        if (!val.has_value() && i <= argc) {
-            val = argv[i];
-            i += 1;
-        }
-        xmlout = *val;
-    }
-    else if (name == "timestamp") {
-        // Timestamp to log when the benchmarking was invoked,
-        // So all benchmark get the same timestamp
-        assert(val.has_value() || i <= argc);
-        if (!val.has_value() && i <= argc) {
-            val = argv[i];
-            i += 1;
-        }
-        timestamp = *val;
+    } else if (name == "xmlout") {
+      if (!val.has_value() && i <= argc) {
+        val = argv[i];
+        i += 1;
+      }
+      xmlout = *val;
+    } else if (name == "timestamp") {
+      // Timestamp to log when the benchmarking was invoked,
+      // So all benchmark get the same timestamp
+      assert(val.has_value() || i <= argc);
+      if (!val.has_value() && i <= argc) {
+        val = argv[i];
+        i += 1;
+      }
+      timestamp = *val;
     } else if (name == "max-duration") {
-        assert(val.has_value() || i <= argc);
-        if (!val.has_value() && i <= argc) {
-            val = argv[i];
-            i += 1;
-        }
-        max_duration =  std::chrono::seconds( parseInt( *val));
+      assert(val.has_value() || i <= argc);
+      if (!val.has_value() && i <= argc) {
+        val = argv[i];
+        i += 1;
+      }
+      max_duration = std::chrono::seconds(parseInt(*val));
     } else {
       assert(!"unknown switch");
     }

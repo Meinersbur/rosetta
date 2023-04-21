@@ -139,21 +139,17 @@ class Statistic:
         if (k * n - 1) % d == 0:
             return self._samples[(k * n - 1) // d]
         i1 = (k * n - 1) // d
-        i2 = i1+1
-        return (self._samples[i1] + self._samples[i2])/2
-
+        i2 = i1 + 1
+        return (self._samples[i1] + self._samples[i2]) / 2
 
     def quartile(self, k: int):
         return self.quantile(k, 4)
 
-
     def decile(self, k: int):
         return self.quantile(k, 10)
 
-
     def percentile(self, k: int):
         return self.quantile(k, 100)
-
 
     @property
     def midrange(self):
@@ -212,7 +208,7 @@ class Statistic:
 
     @property
     def range(self):
-        if self.count==0:
+        if self.count == 0:
             return 0
         return self.maximum - self.minimum
 
@@ -239,26 +235,26 @@ class Statistic:
         median = self.median
         return sum(abs(x - median) for x in self._vals) / self.count
 
-
     # Symmetric confidence interval around mean, assuming normal distributed samples
     # TODO: Asymetric confidence interval; Runtimes are usually non-symmetric; can normalize using log (changes mean to geomen)
     # See also (for ratios): https://www.scribbr.com/statistics/t-test/#what-type-of-t-test-should-i-use
     # TODO: Rename
+
     def abserr(self, ratio=0.95):
 
         n = self.count
         if n < 2:
-            return None # Concept not defined with just one value
+            return None  # Concept not defined with just one value
 
         import scipy.stats as stats
-        mean = self.mean 
-        q = 1 - (1 - ratio) / 2 # Two-sided
-        abserr =  stats.t.ppf(q, 
-                                          loc=mean, # Middle point
-                                          df=n-1, 
-                                          scale=self.stddev / math.sqrt(n) # Standard error of the mean
-                                          ) - mean
-        assert abserr>=0
+        mean = self.mean
+        q = 1 - (1 - ratio) / 2  # Two-sided
+        abserr = stats.t.ppf(q,
+                             loc=mean,  # Middle point
+                             df=n - 1,
+                             scale=self.stddev / math.sqrt(n)  # Standard error of the mean
+                             ) - mean
+        assert abserr >= 0
         return abserr
 
         assert ratio == 0.95, r"Only two-sided 95% confidence interval supported atm"
@@ -275,12 +271,10 @@ class Statistic:
         if c is None:
             c = Statistic.studentt_density_95[-1][1]
 
-        return c * self.corrected_variance  / math.sqrt(n)
-
-
+        return c * self.corrected_variance / math.sqrt(n)
 
     def relerr(self, ratio=0.95):
-        mean = self.mean # Mean is actually unknown
+        mean = self.mean  # Mean is actually unknown
         if not mean:
             return None
         return self.abserr(ratio=ratio) / self.mean

@@ -4,9 +4,8 @@
 from .util.support import *
 
 
-
 class BuildConfig:
-    def __init__(self, name, ppm, cmake_arg, cmake_def, compiler_arg, compiler_def, is_predefined=False,usecur=False):
+    def __init__(self, name, ppm, cmake_arg, cmake_def, compiler_arg, compiler_def, is_predefined=False, usecur=False):
         self.name = name
         self.ppm = set(ppm)
         self.cmake_arg = cmake_arg
@@ -14,7 +13,7 @@ class BuildConfig:
         self.compiler_arg = compiler_arg
         self.compiler_def = compiler_def
         self.is_predefined = is_predefined
-        
+
         # Use the previous configuration instead of defining a new one
         self.usecur = usecur
 
@@ -56,5 +55,3 @@ class BuildConfig:
 
 def make_buildconfig(name, ppm, cmake_arg, cmake_def, compiler_arg, compiler_def):
     return BuildConfig(name, ppm, cmake_arg, cmake_def, compiler_arg, compiler_def)
-
-    

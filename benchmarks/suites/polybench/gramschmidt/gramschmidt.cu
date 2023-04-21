@@ -4,15 +4,14 @@
 
 #include <rosetta.h>
 #include <thrust/device_ptr.h>
-#include <thrust/reduce.h>
-#include <thrust/transform_reduce.h>
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-#include <thrust/for_each.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
+#include <thrust/functional.h>
+#include <thrust/host_vector.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 
 
 static unsigned num_blocks(int num, int factor) {
@@ -94,7 +93,6 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 
-
     wrapped_R[k * n + k] = std::sqrt(sum);
 
 
@@ -102,14 +100,13 @@ static void kernel(pbsize_t m, pbsize_t n,
     kernel_R<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(m, n, A, R, Q, k);
     kernel_A<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(m, n, A, R, Q, k);
   }
-
 }
 
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t m = pbsize;              // 1200
-    pbsize_t n = pbsize - pbsize / 6; // 1000
+  pbsize_t m = pbsize;              // 1200
+  pbsize_t n = pbsize - pbsize / 6; // 1000
 
 
   auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");

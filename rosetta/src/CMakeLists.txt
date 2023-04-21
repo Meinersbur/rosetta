@@ -1,4 +1,17 @@
-set(_common_sources "rosetta-common.cpp" "rosetta-stat.cpp" "cdflib.cpp" "stdtr.c" "ndtr.c" "ndtri.c" "incbet.c" "incbi.c" "mtherr.c" "const.c" "gamma.c" "polevl.c" "igam.c")
+set(_common_sources
+    "rosetta-common.cpp"
+    "rosetta-stat.cpp"
+    "cdflib.cpp"
+    "stdtr.c"
+    "ndtr.c"
+    "ndtri.c"
+    "incbet.c"
+    "incbi.c"
+    "mtherr.c"
+    "const.c"
+    "gamma.c"
+    "polevl.c"
+    "igam.c")
 
 function (enable_platform_nvidia target)
   if (NOT ROSETTA_PLATFORM_NVIDIA)
@@ -10,9 +23,10 @@ function (enable_platform_nvidia target)
   target_link_libraries("${target}" PUBLIC CUDA::cudart CUDA::cupti CUDA::cuda_driver)
   # message("CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
   target_include_directories("${target}" PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
-  target_include_directories("${target}" PUBLIC "${CUDAToolkit_LIBRARY_ROOT}/extras/CUPTI/include") # For unknown reasons on JLSE
+  target_include_directories("${target}" PUBLIC "${CUDAToolkit_LIBRARY_ROOT}/extras/CUPTI/include"
+  )# For unknown reasons on JLSE
 
-   # set_target_properties("${target}" PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  # set_target_properties("${target}" PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 endfunction ()
 
 if (ROSETTA_PPM_SERIAL)
@@ -43,8 +57,12 @@ if (ROSETTA_PPM_CUDA)
     # TODO: Introspection
     target_compile_options(rosetta-cuda PUBLIC $<$<COMPILE_LANGUAGE:CXX,CUDA>:-fno-exceptions>)
   endif ()
-  target_compile_options(rosetta-cuda INTERFACE "-fPIE") # WORKAROUND:  relocation R_X86_64_32 against `.rodata.str1.1' can not be used when making a PIE object; recompile with -fPIE (clang enforces -pie by default)
-  set_property(TARGET rosetta-cuda PROPERTY POSITION_INDEPENDENT_CODE ON) # Should be CMake's way to avoid above error, but doesn't work
+  target_compile_options(
+    rosetta-cuda INTERFACE "-fPIE")
+
+  # WORKAROUND:  relocation R_X86_64_32 against `.rodata.str1.1' can not be used when making a PIE object; recompile with -fPIE (clang enforces -pie by default)
+  set_property(TARGET rosetta-cuda PROPERTY POSITION_INDEPENDENT_CODE ON
+  )# Should be CMake's way to avoid above error, but doesn't work
   target_link_libraries(rosetta-cuda PUBLIC CUDA::cudart)
 
   enable_platform_nvidia(rosetta-cuda)

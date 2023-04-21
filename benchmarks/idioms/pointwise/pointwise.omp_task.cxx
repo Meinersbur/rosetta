@@ -11,7 +11,7 @@ static void kernel(pbsize_t n, real A[]) {
 #pragma omp taskloop
       for (idx_t i = 0; i < n; i += 1)
         A[i] += 42;
-#pragma omp taskwait 
+#pragma omp taskwait
     }
   }
 }

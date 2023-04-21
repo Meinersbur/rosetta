@@ -5,7 +5,6 @@
 
 
 
-
 #ifdef BENCHMARK_OS_WINDOWS
 
 #define NOMINMAX 1
@@ -30,28 +29,28 @@
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 NTSTATUS(NTAPI *_NtQueryVirtualMemory)
 (
-	HANDLE ProcessHandle,
-	PVOID BaseAddress,
-	int MemoryInformationClass,
-	PVOID MemoryInformation,
-	SIZE_T MemoryInformationLength,
-	PSIZE_T ReturnLength);
+    HANDLE ProcessHandle,
+    PVOID BaseAddress,
+    int MemoryInformationClass,
+    PVOID MemoryInformation,
+    SIZE_T MemoryInformationLength,
+    PSIZE_T ReturnLength);
 #define NtQueryVirtualMemory _NtQueryVirtualMemory
 #define MemoryWorkingSetInformation 0x1
 typedef struct _MEMORY_WORKING_SET_BLOCK {
-	ULONG_PTR Protection : 5;
-	ULONG_PTR ShareCount : 3;
-	ULONG_PTR Shared : 1;
-	ULONG_PTR Node : 3;
+  ULONG_PTR Protection : 5;
+  ULONG_PTR ShareCount : 3;
+  ULONG_PTR Shared : 1;
+  ULONG_PTR Node : 3;
 #ifdef _WIN64
-	ULONG_PTR VirtualPage : 52;
+  ULONG_PTR VirtualPage : 52;
 #else
-	ULONG VirtualPage : 20;
+  ULONG VirtualPage : 20;
 #endif
 } MEMORY_WORKING_SET_BLOCK, *PMEMORY_WORKING_SET_BLOCK;
 typedef struct _MEMORY_WORKING_SET_INFORMATION {
-	ULONG_PTR NumberOfEntries;
-	MEMORY_WORKING_SET_BLOCK WorkingSetInfo[1];
+  ULONG_PTR NumberOfEntries;
+  MEMORY_WORKING_SET_BLOCK WorkingSetInfo[1];
 } MEMORY_WORKING_SET_INFORMATION, *PMEMORY_WORKING_SET_INFORMATION;
 
 #else
@@ -78,54 +77,54 @@ struct Rosetta;
 
 
 
-
 namespace rosetta {
 
 
 
-
 #if defined(BENCHMARK_OS_WINDOWS)
-	using usage_duration_t = std::chrono::duration<ULONGLONG, std::ratio_multiply<std::chrono::nanoseconds::period, std::ratio<100, 1>>>;
+using usage_duration_t = std::chrono::duration<ULONGLONG, std::ratio_multiply<std::chrono::nanoseconds::period, std::ratio<100, 1>>>;
 #else
-	using usage_duration_t = std::chrono::microseconds;
+using usage_duration_t = std::chrono::microseconds;
 #endif
 
 
 
-	using common_duration_t = std::chrono::duration<double, std::chrono::seconds::period>;
+using common_duration_t = std::chrono::duration<double, std::chrono::seconds::period>;
 
 
 
-	// TODO: filter out duplicates; may result in ambiguous operator= errors. Or use make it explicit which counter uses which type (e.g. std::in_place_index)
-	// TODO: make extendable
-	using duration_t = std::variant<
-		std::monostate, 
-		common_duration_t ,// lowest common denominator
-	//	std::chrono::duration<float, std::chrono::seconds::period>,
-		std::chrono::high_resolution_clock::duration, // for wall time
-		usage_duration_t // for user/kernel time
+// TODO: filter out duplicates; may result in ambiguous operator= errors. Or use make it explicit which counter uses which type (e.g. std::in_place_index)
+// TODO: make extendable
+using duration_t = std::variant<
+    std::monostate,
+    common_duration_t,                            // lowest common denominator
+                                                  //	std::chrono::duration<float, std::chrono::seconds::period>,
+    std::chrono::high_resolution_clock::duration, // for wall time
+    usage_duration_t                              // for user/kernel time
 #ifdef ROSETTA_PPM_NVIDIA
-		,std::chrono::duration<float, std::chrono::milliseconds::period> // Used by CUDA events
+    ,
+    std::chrono::duration<float, std::chrono::milliseconds::period> // Used by CUDA events
 #endif
 #ifdef ROSETTA_PLATFORM_NVIDIA
-		,std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
+    ,
+    std::chrono::duration<uint64_t, std::chrono::nanoseconds::period> // Used by cupti
 #endif
-	>;
+    >;
 
-	class IterationMeasurement {
-		friend class Iteration;
-		template <typename I>
-		friend class Iterator;
-		friend class State;
-		friend struct :: Rosetta;
-		friend class Scope;
-		friend class ::BenchmarkRun;
+class IterationMeasurement {
+  friend class Iteration;
+  template <typename I>
+  friend class Iterator;
+  friend class State;
+  friend struct ::Rosetta;
+  friend class Scope;
+  friend class ::BenchmarkRun;
 
-	public:
-	private:
-		// TODO: Make extendable (register user measures in addition to predefined ones)
-		duration_t values[MeasureCount];
-	};
-} // namespace rosetta 
+public:
+private:
+  // TODO: Make extendable (register user measures in addition to predefined ones)
+  duration_t values[MeasureCount];
+};
+} // namespace rosetta
 
 #endif /* ROSETTA_COMMON_H */

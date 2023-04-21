@@ -6,7 +6,6 @@ if not sys.version_info >= (3, 9):
     sys.exit(1)
 
 
-
 import argparse
 import configparser
 import pathlib

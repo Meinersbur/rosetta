@@ -2,11 +2,10 @@
 
 from .util.support import *
 from .common import *
-from .runner import Benchmark,do_run
-from  . import  runner
+from .runner import Benchmark, do_run
+from . import runner
 from .evaluator import load_resultfiles
 from . import registry
-
 
 
 def custom_bisect_left(lb, ub, func):
@@ -23,7 +22,7 @@ def custom_bisect_left(lb, ub, func):
             continue
         if result > 0:
             # Go larger, keep candidate as possible result
-            assert lb < mid , "Require the bisect range to become smaller"
+            assert lb < mid, "Require the bisect range to become smaller"
             lb = mid
             continue
         # exact match?
@@ -87,4 +86,3 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
     with problemsizefile.open(mode='w+') as f:
         for line in problemsizecontent:
             print(line, file=f)
-

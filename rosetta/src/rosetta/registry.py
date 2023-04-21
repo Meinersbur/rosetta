@@ -9,64 +9,59 @@ from .util.support import *
 from .common import *
 
 
-
-
-
 runtime = NamedSentinel('runtime')
 compiletime = NamedSentinel('compiletime')
 
+
 class Param:
-    def __init__(self,name,*args,min=None,max=None, verify=None,train=None,ref=None,  choices=None,evaltime=None):
+    def __init__(self, name, *args, min=None, max=None, verify=None, train=None, ref=None, choices=None, evaltime=None):
         self.name = name
-        self.choices=choices
+        self.choices = choices
         self.allow_compiletime = None
         self.allow_runtime = None
 
-        for a in itertools.chain(  ensure_list(evaltime),args):
-            if a == compiletime :
+        for a in itertools.chain(ensure_list(evaltime), args):
+            if a == compiletime:
                 self.allow_compiletime = True
             elif a == runtime:
-                self.allow_runtime=True
+                self.allow_runtime = True
             else:
                 raise Exception(f"Unexpected parameter {a}")
 
         if self.allow_compiletime is None and self.allow_runtime is None:
-             self.allow_compiletime =True
-             self.allow_runtime=True
+            self.allow_compiletime = True
+            self.allow_runtime = True
 
-        self.allow_compiletime = first_defined(self.allow_compiletime,False)
-        self.allow_runtime = first_defined(self.allow_runtime,False)
-
-
+        self.allow_compiletime = first_defined(self.allow_compiletime, False)
+        self.allow_runtime = first_defined(self.allow_runtime, False)
 
 
 class GenParam(Param):
     """Parameter used to generate benchmarks (e.g. real=float or double); All possible combinations are selected"""
-    def __init__(self,*args,**kwargs):
-         super().__init__(*args,**kwargs)
 
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class SizeParam(GenParam):
     """Parameter to generate benchmarks that differ in the working set size; Its value is probed to be as large as possible without violating constraints
-    
+
     One one size parameter allowed: 'n'
     """
-    def __init__(self,*args,**kwargs):
-         super().__init__(*args,**kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
 class RealtypeParam(GenParam):
     """For selecting the floating point precision"""
 
 
-
 class TuneParam(Param):
     """Parameter that does not have an influence on the output; Its value is tuned to optimize a criterium (usually minimize execution time) under constraints"""
-    def __init__(self,*args,**kwargs):
-         super().__init__(*args,**kwargs)
 
-
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class UnsizedBenchmark:
@@ -79,34 +74,33 @@ class SizedBenchmark:
     pass
 
 
-
 class ComparableBenchmark:
     """Set of benchmarks that are expected to compute the same result, PPM and TuneParam may very, but not GenParams or SizeParam"""
-    def __init__(self,basename,params=[]):
+
+    def __init__(self, basename, params=[]):
         self.benchmarks = []
         self.basename = basename
-        assert all( not issubclass(p,TuneParam) for p in params )
+        assert all(not issubclass(p, TuneParam) for p in params)
         self.params = params
 
-
-    def add(self,benchmark):
+    def add(self, benchmark):
         self.benchmarks.append(benchmark)
 
-    @property 
+    @property
     def reference(self):
         """Return the executable that computes the reference output"""
         for b in self.benchmarks:
-            if b.ppm == 'serial': # TODO: Make configurable
+            if b.ppm == 'serial':  # TODO: Make configurable
                 return b
         log.warn(f"No reference found for {self.basename}; using {self.benchmarks[0]}")
         return self.benchmarks[0]
-
 
 
 # TOOD: Rename: TunedBenchmark(?)
 # TOOD: Fixed static parameters?
 class Benchmark:
     """A benchmark executable with fixed static parameters"""
+
     def __init__(self, basename, target, exepath, buildtype, ppm, configname, sources=None,
                  benchpropfile=None, compiler=None, compilerflags=None, pbsize=None, benchlistfile=None, is_ref=None, params=[]):
         self.basename = basename
@@ -123,19 +117,18 @@ class Benchmark:
         self.benchlistfile = benchlistfile
         self.is_ref = is_ref
 
-        # The set of comparable benchmarks   it belongs to 
+        # The set of comparable benchmarks   it belongs to
         self.comparable = None
-
 
     @property
     def name(self):
         return self.basename
 
- 
 
-class TunedBenchmark: 
+class TunedBenchmark:
     """Benchmark with fixed static and dynamic parameters"""
-    def __init__(self,executable:Benchmark):
+
+    def __init__(self, executable: Benchmark):
         self.executable = executable
 
 
@@ -144,7 +137,6 @@ import_is_ref = None
 benchmarks: typing.List[Benchmark] = []
 
 comparables = []
-
 
 
 def register_benchmark(basename, target, exepath, buildtype, ppm, configname,
@@ -162,11 +154,10 @@ def register_benchmark(basename, target, exepath, buildtype, ppm, configname,
         comparable = c
         break
     else:
-        comparable  = ComparableBenchmark(basename=basename)
+        comparable = ComparableBenchmark(basename=basename)
         comparables.append(comparable)
     bench.comparable = comparable
     comparable.add(bench)
-
 
 
 def load_register_file(filename, is_ref=False):
@@ -184,8 +175,6 @@ def load_register_file(filename, is_ref=False):
     finally:
         benchlistfile = None
         import_is_ref = None
-
-
 
 
 # TODO: Use global contenxt manager from support

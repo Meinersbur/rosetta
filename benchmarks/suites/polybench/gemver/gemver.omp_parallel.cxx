@@ -4,12 +4,8 @@
 
 
 
-
-
-
-
 static void kernel(pbsize_t n, real alpha, real beta,
-    multarray<real, 2> A, real u1[], real v1[], real u2[], real v2[], real w[], real x[], real y[], real z[]) {
+                   multarray<real, 2> A, real u1[], real v1[], real u2[], real v2[], real w[], real x[], real y[], real z[]) {
 #pragma omp parallel default(none) firstprivate(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z)
   {
 #pragma omp for collapse(2) schedule(static)

@@ -8,11 +8,12 @@ static void kernel(pbsize_t n,
   for (idx_t i = 0; i < n; i++) {
     real sum = 0;
 #pragma omp parallel for schedule(static) default(none) \
-             firstprivate(i, x, L) \
-             reduction(+ : sum)
+    firstprivate(i, x, L)                               \
+        reduction(+                                     \
+                  : sum)
     for (idx_t j = 0; j < i; j++)
       sum += L[i][j] * x[j];
-   x[i] = (b[i] - sum) / L[i][i];
+    x[i] = (b[i] - sum) / L[i][i];
   }
 }
 

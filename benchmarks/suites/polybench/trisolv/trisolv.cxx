@@ -45,17 +45,17 @@ static void kernel(pbsize_t n,
       x[i] -= L[i][j] * x[j];
     x[i] /= L[i][i];
   }
-#else 
-    for (idx_t i = 0; i < n; i++) {
-        real  sum =  0;
-        for (idx_t j = 0; j < i; j++)
-            sum += L[i][j] * x[j];
-       //    sum += L[i][j];
+#else
+  for (idx_t i = 0; i < n; i++) {
+    real sum = 0;
+    for (idx_t j = 0; j < i; j++)
+      sum += L[i][j] * x[j];
+    //    sum += L[i][j];
 
-        x[i] = (  b[i] - sum) / L[i][i];
-      //  x[i] = 1 +sum;
-    }
-#endif 
+    x[i] = (b[i] - sum) / L[i][i];
+    //  x[i] = 1 +sum;
+  }
+#endif
 #pragma endscop
 }
 

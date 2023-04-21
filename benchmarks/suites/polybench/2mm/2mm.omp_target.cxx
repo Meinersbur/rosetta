@@ -4,42 +4,42 @@
 
 
 
-
-
 static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl,
                    real alpha, real beta,
                    multarray<real, 2> tmp,
                    multarray<real, 2> A,
                    multarray<real, 2> B, multarray<real, 2> C, multarray<real, 2> D) {
 
-real *Adata = &A[0][0];
-real *Bdata = &B[0][0];
-real *Cdata = &C[0][0];
-real *Ddata = &D[0][0];
-real *tmpdata = &tmp[0][0];
+  real *Adata = &A[0][0];
+  real *Bdata = &B[0][0];
+  real *Cdata = &C[0][0];
+  real *Ddata = &D[0][0];
+  real *tmpdata = &tmp[0][0];
 
-#pragma omp target data map (to:Adata[0:ni*nk],Bdata[0:nk*nj],Cdata[0:nj*nl]) \
-map(tofrom:Ddata[0:ni*nl]) \
-map(alloc:tmpdata[0:ni*nj])
-{
-
-#pragma omp target teams distribute parallel for collapse(2)
-  for (idx_t i = 0; i < ni; i++)
-    for (idx_t j = 0; j < nj; j++) {
-      tmpdata[i*nj+j] = 0;
-      for (idx_t k = 0; k < nk; ++k)
-        tmpdata[i*nj + j] += alpha * Adata[i*nk+k] * Bdata[k*nj+j];
-    }
+#pragma omp target data map(to                                                         \
+                            : Adata [0:ni * nk], Bdata [0:nk * nj], Cdata [0:nj * nl]) \
+    map(tofrom                                                                         \
+        : Ddata [0:ni * nl])                                                           \
+        map(alloc                                                                      \
+            : tmpdata [0:ni * nj])
+  {
 
 #pragma omp target teams distribute parallel for collapse(2)
-  for (idx_t i = 0; i < ni; i++)
-    for (idx_t j = 0; j < nl; j++) {
-      Ddata[i*nl+j] *= beta;
-      for (idx_t k = 0; k < nj; ++k)
-        Ddata[i*nl+j] += tmpdata[i*nj+k] * Cdata[k*nl+j];
-    }
+    for (idx_t i = 0; i < ni; i++)
+      for (idx_t j = 0; j < nj; j++) {
+        tmpdata[i * nj + j] = 0;
+        for (idx_t k = 0; k < nk; ++k)
+          tmpdata[i * nj + j] += alpha * Adata[i * nk + k] * Bdata[k * nj + j];
+      }
 
-}
+#pragma omp target teams distribute parallel for collapse(2)
+    for (idx_t i = 0; i < ni; i++)
+      for (idx_t j = 0; j < nl; j++) {
+        Ddata[i * nl + j] *= beta;
+        for (idx_t k = 0; k < nj; ++k)
+          Ddata[i * nl + j] += tmpdata[i * nj + k] * Cdata[k * nl + j];
+      }
+  }
 }
 
 

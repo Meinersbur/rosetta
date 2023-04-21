@@ -2,15 +2,14 @@
 
 #include <rosetta.h>
 
-#include <thrust/reduce.h>
-#include <thrust/transform_reduce.h>
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-#include <thrust/for_each.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
+#include <thrust/functional.h>
+#include <thrust/host_vector.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 
 
 struct cast_real : public thrust::unary_function<real, real> {

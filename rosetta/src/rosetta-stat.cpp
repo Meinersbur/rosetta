@@ -3,8 +3,8 @@
 
 #include "cdflib.hpp"
 
-#include <cmath>
 #include <cassert>
+#include <cmath>
 
 
 #if 0
@@ -17,7 +17,7 @@ extern "C" {
         return std::isfinite(x);
     };
 }
-#endif 
+#endif
 
 
 
@@ -25,46 +25,43 @@ using namespace rosetta;
 
 
 
-
-
-double Statistic:: stddev() {
-    return std::sqrt(variance());
-} 
-
-
-
-
-static double t_compute(double ratio, double stddev, double count) {
-    assert(count >= 1);
-
-    double  p = 1 - (1 - ratio) / 2 ;// Two-sided, symmetric
-    double scale  = stddev   / std::sqrt(count);
-
-    int which = 2;
-    double q=1-p;
-
-#if 0
-    double t =    stdtri(count-1, p);
-#else
-    double t;
-    double bound;
-    int status=-1;
-    double df = count -1;
-    cdft(&which, &p,& q,& t,& df,& status,&bound);
-    assert(status == 0 && "Expect CDF to succeed");
-#endif
-    assert(t >= 0 && "spread cannot be negative");
-
-    return t*scale ;
+double Statistic::stddev() {
+  return std::sqrt(variance());
 }
 
 
 
-double  Statistic:: abserr(double ratio ) {
-    if (_count <2)
-        return 0;  // Spread not defined with just one value
+static double t_compute(double ratio, double stddev, double count) {
+  assert(count >= 1);
 
-    return t_compute(ratio,this->stddev(), _count );
+  double p = 1 - (1 - ratio) / 2; // Two-sided, symmetric
+  double scale = stddev / std::sqrt(count);
+
+  int which = 2;
+  double q = 1 - p;
+
+#if 0
+    double t =    stdtri(count-1, p);
+#else
+  double t;
+  double bound;
+  int status = -1;
+  double df = count - 1;
+  cdft(&which, &p, &q, &t, &df, &status, &bound);
+  assert(status == 0 && "Expect CDF to succeed");
+#endif
+  assert(t >= 0 && "spread cannot be negative");
+
+  return t * scale;
+}
+
+
+
+double Statistic::abserr(double ratio) {
+  if (_count < 2)
+    return 0; // Spread not defined with just one value
+
+  return t_compute(ratio, this->stddev(), _count);
 #if 0
     double stddev = this->stddev();
     double scale  = stddev   / std::sqrt(_count);
@@ -87,98 +84,98 @@ double  Statistic:: abserr(double ratio ) {
 
 
 static double t_estimate_count(double abserr, double ratio, double stddev, double prev_est_count) {
-    double scale  = stddev   /std:: sqrt(prev_est_count);
+  double scale = stddev / std::sqrt(prev_est_count);
 
-    int which = 3;
-    double p =  1 - (1 - ratio) / 2 ;// Two-sided, symmetric
-    double q =1-p ;
-    double t = abserr/scale;
-    double df ;
-    int status=-1 ;
-    double bound ;
-    cdft(&which,  &p,& q,& t,& df,& status,&bound);
+  int which = 3;
+  double p = 1 - (1 - ratio) / 2; // Two-sided, symmetric
+  double q = 1 - p;
+  double t = abserr / scale;
+  double df;
+  int status = -1;
+  double bound;
+  cdft(&which, &p, &q, &t, &df, &status, &bound);
 
-    // Impossible to fulfil
-    if (status == 2) 
-        return INFINITY;
+  // Impossible to fulfil
+  if (status == 2)
+    return INFINITY;
 
-    assert(status == 0 && "Expect CDF to succeed");
-    return df + 1;
+  assert(status == 0 && "Expect CDF to succeed");
+  return df + 1;
 }
 
 // abserr =   t(ratio) * stddev / sqrt(n)
-// abserr * sqrt(n) = t(ratio) * stddev 
+// abserr * sqrt(n) = t(ratio) * stddev
 // n = ( t(ratio) * stddev  / abserr )^2
 
 
-size_t Statistic:: min_more_samples(double abserr, double ratio ) {
-    assert(abserr > 0);
-    assert(0 < ratio && ratio < 1 );
-    assert(_count >= 2 && "Need at least 2 samples to get an estimate");
+size_t Statistic::min_more_samples(double abserr, double ratio) {
+  assert(abserr > 0);
+  assert(0 < ratio && ratio < 1);
+  assert(_count >= 2 && "Need at least 2 samples to get an estimate");
 
-    double stddev = this->stddev();
+  double stddev = this->stddev();
 
-    double p =  1 - (1 - ratio) / 2 ;// Two-sided, symmetric
-    double approx_n =   sqr( ndtri(p) * stddev / abserr ); 
+  double p = 1 - (1 - ratio) / 2; // Two-sided, symmetric
+  double approx_n = sqr(ndtri(p) * stddev / abserr);
 
-    // Student-t distribution is more spread out than normal distribution, hence this is a lower bound
-    assert(approx_n <= 1 || t_compute(ratio, stddev,approx_n ) >=  abserr);
-
-
-    if (approx_n +0.5 >= SIZE_MAX)
-        return SIZE_MAX;
-
-    // Search for the exact probability boundary
-    // TODO: Since we are looking for an underapproximation anyway, approx_n could be sufficient
-    size_t base = std::llround( std::floor(approx_n));
-    size_t lower = base;
-    size_t k = 1;
+  // Student-t distribution is more spread out than normal distribution, hence this is a lower bound
+  assert(approx_n <= 1 || t_compute(ratio, stddev, approx_n) >= abserr);
 
 
-    // If the error is already within limit return 0. Otherwise, return at least 1
-    if (lower <= _count) {
-        if ( t_compute(ratio, stddev,_count ) <= abserr)
-            return 0;
-        base = _count;
-        lower = _count + 1;
-        k = 2;
+  if (approx_n + 0.5 >= SIZE_MAX)
+    return SIZE_MAX;
+
+  // Search for the exact probability boundary
+  // TODO: Since we are looking for an underapproximation anyway, approx_n could be sufficient
+  size_t base = std::llround(std::floor(approx_n));
+  size_t lower = base;
+  size_t k = 1;
+
+
+  // If the error is already within limit return 0. Otherwise, return at least 1
+  if (lower <= _count) {
+    if (t_compute(ratio, stddev, _count) <= abserr)
+      return 0;
+    base = _count;
+    lower = _count + 1;
+    k = 2;
+  }
+
+
+
+  size_t upper;
+  for (;; k *= 2) {
+    upper = base + k;
+    if (t_compute(ratio, stddev, upper) < abserr) {
+      upper -= 1;
+      break;
     }
 
+    // Some cutoff
+    if (k >= SIZE_MAX / 2)
+      return SIZE_MAX;
+
+    lower = upper;
+  }
 
 
-    size_t upper;
-    for (; ; k*=2) {
-         upper =  base + k;
-         if (t_compute(ratio, stddev, upper) < abserr) {
-             upper -= 1;
-             break;
-         }        
 
-       // Some cutoff
-       if (k >= SIZE_MAX /2)
-           return SIZE_MAX ;
+  while (true) {
+    if (lower == upper)
+      return lower - _count;
 
-       lower =upper;
+    size_t mid = (lower + upper + 1) / 2; // FIXME: possible overflow
+    double t = t_compute(ratio, stddev, mid);
+
+    if (t < abserr) {
+      // mid is too large, look for something smaller
+      upper = mid - 1;
+      continue;
     }
 
-
-
-    while (true) {
-        if (lower  == upper)
-            return lower - _count;
-
-        size_t mid = (lower + upper + 1) / 2; // FIXME: possible overflow
-        double t = t_compute(ratio, stddev,mid );
-
-        if ( t < abserr ) {
-            // mid is too large, look for something smaller
-            upper  = mid - 1;
-            continue;
-        }
-
-        // 
-        lower = mid  ; 
-    }
+    //
+    lower = mid;
+  }
 
 #if 0
 
@@ -286,16 +283,5 @@ size_t Statistic:: min_more_samples(double abserr, double ratio ) {
   if (result >= INT_MAX)
       return INT_MAX;
   return std::lround ( result);
-#endif 
+#endif
 }
-
-
-
-
-
-
-
-
-
-
-

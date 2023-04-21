@@ -6,10 +6,12 @@
 
 static void kernel(pbsize_t tsteps, pbsize_t n,
                    multarray<real, 3> A, multarray<real, 3> B) {
-    real *pA = &A[0][0][0];
-    real *pB = &B[0][0][0];
+  real *pA = &A[0][0][0];
+  real *pB = &B[0][0][0];
 
-#pragma omp target data map(to:pA[0:n*n*n])  map(from:pB[0:n*n*n])
+#pragma omp target data map(to                           \
+                            : pA [0:n * n * n]) map(from \
+                                                    : pB [0:n * n * n])
   {
 
     for (idx_t t = 1; t <= tsteps; t++) {
@@ -17,23 +19,17 @@ static void kernel(pbsize_t tsteps, pbsize_t n,
 #pragma omp target teams distribute parallel for collapse(3) dist_schedule(static) schedule(static)
       for (idx_t i = 1; i < n - 1; i++)
         for (idx_t j = 1; j < n - 1; j++)
-          for (idx_t k = 1; k < n - 1; k++) 
-            pB[(i*n+j)*n+k] = (pA[((i + 1)*n+j)*n+k] - 2 * pA[(i*n+j)*n+k] + pA[((i - 1)*n+j)*n+k]) / 8 + (pA[(i*n+(j + 1))*n+k] - 2 * pA[(i*n+j)*n+k] + pA[(i*n+(j - 1))*n+k]) / 8 + (pA[(i*n+j)*n+(k + 1)] - 2 * pA[(i*n+j)*n+k] + pA[(i*n+j)*n+(k - 1)]) / 8 + pA[(i*n+j)*n+k];
-          
+          for (idx_t k = 1; k < n - 1; k++)
+            pB[(i * n + j) * n + k] = (pA[((i + 1) * n + j) * n + k] - 2 * pA[(i * n + j) * n + k] + pA[((i - 1) * n + j) * n + k]) / 8 + (pA[(i * n + (j + 1)) * n + k] - 2 * pA[(i * n + j) * n + k] + pA[(i * n + (j - 1)) * n + k]) / 8 + (pA[(i * n + j) * n + (k + 1)] - 2 * pA[(i * n + j) * n + k] + pA[(i * n + j) * n + (k - 1)]) / 8 + pA[(i * n + j) * n + k];
 
 
 
-#pragma omp  target teams distribute parallel for  collapse(3) dist_schedule(static) schedule(static)
+#pragma omp target teams distribute parallel for collapse(3) dist_schedule(static) schedule(static)
       for (idx_t i = 1; i < n - 1; i++)
         for (idx_t j = 1; j < n - 1; j++)
-          for (idx_t k = 1; k < n - 1; k++) 
-            pA[(i*n+j)*n+k] = (pB[((i + 1)*n+j)*n+k] - 2 * pB[(i*n+j)*n+k] + pB[((i - 1)*n+j)*n+k]) / 8 + (pB[(i*n+(j + 1))*n+k] - 2 * pB[(i*n+j)*n+k] + pB[(i*n+(j - 1))*n+k]) / 8 + (pB[(i*n+j)*n+(k + 1)] - 2 * pB[(i*n+j)*n+k] + pB[(i*n+j)*n+(k - 1)]) / 8 + pB[(i*n+j)*n+k];
-          
-
+          for (idx_t k = 1; k < n - 1; k++)
+            pA[(i * n + j) * n + k] = (pB[((i + 1) * n + j) * n + k] - 2 * pB[(i * n + j) * n + k] + pB[((i - 1) * n + j) * n + k]) / 8 + (pB[(i * n + (j + 1)) * n + k] - 2 * pB[(i * n + j) * n + k] + pB[(i * n + (j - 1)) * n + k]) / 8 + (pB[(i * n + j) * n + (k + 1)] - 2 * pB[(i * n + j) * n + k] + pB[(i * n + j) * n + (k - 1)]) / 8 + pB[(i * n + j) * n + k];
     }
-
-
-
   }
 }
 

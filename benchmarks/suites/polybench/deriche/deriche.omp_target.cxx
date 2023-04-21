@@ -10,10 +10,10 @@ static void kernel(pbsize_t w, pbsize_t h,
                    multarray<real, 2> imgOut,
                    multarray<real, 2> y1,
                    multarray<real, 2> y2) {
-    real *pimgIn = &imgIn[0][0];
-    real *pimgOut = &imgOut[0][0];
-    real *py1 = &y1[0][0];
-    real *py2 = &y2[0][0];
+  real *pimgIn = &imgIn[0][0];
+  real *pimgOut = &imgOut[0][0];
+  real *py1 = &y1[0][0];
+  real *py2 = &y2[0][0];
 
   real k = (1 - std::exp(-alpha)) * (1 - std::exp(-alpha)) / (1 + 2 * alpha * std::exp(-alpha) - std::exp(2 * alpha));
   real a1 = k;
@@ -28,7 +28,11 @@ static void kernel(pbsize_t w, pbsize_t h,
   real b2 = -std::exp(-2 * alpha);
   real c1 = 1, c2 = 1;
 
-#pragma omp target data map(to:pimgIn[0:w*h])   map(from:pimgOut[0:w*h])    map(alloc:py1[0:w*h])  map(alloc:py2[0:w*h]) 
+#pragma omp target data map(to                                                                          \
+                            : pimgIn [0:w * h]) map(from                                                \
+                                                    : pimgOut [0:w * h]) map(alloc                      \
+                                                                             : py1 [0:w * h]) map(alloc \
+                                                                                                  : py2 [0:w * h])
   {
 
 #pragma omp target teams distribute parallel for
@@ -37,10 +41,10 @@ static void kernel(pbsize_t w, pbsize_t h,
       real ym2 = 0;
       real xm1 = 0;
       for (idx_t j = 0; j < h; j++) {
-        py1[i*h+j] = a1 * pimgIn[i*h+j] + a2 * xm1 + b1 * ym1 + b2 * ym2;
-        xm1 = pimgIn[i*h+j];
+        py1[i * h + j] = a1 * pimgIn[i * h + j] + a2 * xm1 + b1 * ym1 + b2 * ym2;
+        xm1 = pimgIn[i * h + j];
         ym2 = ym1;
-        ym1 = py1[i*h+j];
+        ym1 = py1[i * h + j];
       }
     }
 
@@ -51,18 +55,18 @@ static void kernel(pbsize_t w, pbsize_t h,
       real xp1 = 0;
       real xp2 = 0;
       for (idx_t j = h - 1; j >= 0; j--) {
-        py2[i*h+j] = a3 * xp1 + a4 * xp2 + b1 * yp1 + b2 * yp2;
+        py2[i * h + j] = a3 * xp1 + a4 * xp2 + b1 * yp1 + b2 * yp2;
         xp2 = xp1;
-        xp1 = pimgIn[i*h+j];
+        xp1 = pimgIn[i * h + j];
         yp2 = yp1;
-        yp1 = py2[i*h+j];
+        yp1 = py2[i * h + j];
       }
     }
 
-#pragma omp target teams distribute parallel for  collapse(2)
+#pragma omp target teams distribute parallel for collapse(2)
     for (idx_t i = 0; i < w; i++)
       for (idx_t j = 0; j < h; j++) {
-        pimgOut[i*h+j] = c1 * (py1[i*h+j] + py2[i*h+j]);
+        pimgOut[i * h + j] = c1 * (py1[i * h + j] + py2[i * h + j]);
       }
 
 #pragma omp target teams distribute parallel for
@@ -71,10 +75,10 @@ static void kernel(pbsize_t w, pbsize_t h,
       real ym1 = 0;
       real ym2 = 0;
       for (idx_t i = 0; i < w; i++) {
-        py1[i*h+j] = a5 * pimgOut[i*h+j] + a6 * tm1 + b1 * ym1 + b2 * ym2;
-        tm1 = pimgOut[i*h+j];
+        py1[i * h + j] = a5 * pimgOut[i * h + j] + a6 * tm1 + b1 * ym1 + b2 * ym2;
+        tm1 = pimgOut[i * h + j];
         ym2 = ym1;
-        ym1 = py1[i*h+j];
+        ym1 = py1[i * h + j];
       }
     }
 
@@ -86,18 +90,18 @@ static void kernel(pbsize_t w, pbsize_t h,
       real yp1 = 0;
       real yp2 = 0;
       for (idx_t i = w - 1; i >= 0; i--) {
-        py2[i*h+j] = a7 * tp1 + a8 * tp2 + b1 * yp1 + b2 * yp2;
+        py2[i * h + j] = a7 * tp1 + a8 * tp2 + b1 * yp1 + b2 * yp2;
         tp2 = tp1;
-        tp1 = pimgOut[i*h+j];
+        tp1 = pimgOut[i * h + j];
         yp2 = yp1;
-        yp1 = py2[i*h+j];
+        yp1 = py2[i * h + j];
       }
     }
 
-#pragma omp target teams distribute parallel for collapse(2) 
+#pragma omp target teams distribute parallel for collapse(2)
     for (idx_t i = 0; i < w; i++)
       for (idx_t j = 0; j < h; j++)
-        pimgOut[i*h+j] = c2 * (py1[i*h+j] + py2[i*h+j]);
+        pimgOut[i * h + j] = c2 * (py1[i * h + j] + py2[i * h + j]);
   }
 }
 

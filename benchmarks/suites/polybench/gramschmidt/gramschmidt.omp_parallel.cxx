@@ -5,7 +5,6 @@
 
 
 
-
 #if 0
 void kernel_polly(pbsize_t m, pbsize_t n,
     real A[128][128], real  R[128][128], real  Q[128][128]) {
@@ -49,7 +48,8 @@ static void kernel(pbsize_t m, pbsize_t n,
     // https://en.wikipedia.org/wiki/Gram–Schmidt_process#Numerical_stability
     // Generate fakedata that is not that similar to each other
 #pragma omp parallel for schedule(static) default(none) firstprivate(k, m, A) \
-                     reduction(+: sum)
+    reduction(+                                                               \
+              : sum)
     for (idx_t i = 0; i < m; i++) {
       //#pragma omp critical
       // printf("%lu %d: sqr(%g) = %g\n",k,i,A[i][k],sqr(A[i][k]) );
@@ -82,9 +82,9 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 void run(State &state, pbsize_t pbsize) {
-    pbsize_t m = pbsize;              // 1200
-    pbsize_t n = pbsize - pbsize / 6; // 1000
-  
+  pbsize_t m = pbsize;              // 1200
+  pbsize_t n = pbsize - pbsize / 6; // 1000
+
 
   auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
   auto R = state.allocate_array<real>({n, n}, /*fakedata*/ false, /*verify*/ true, "R");

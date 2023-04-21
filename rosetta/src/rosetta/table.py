@@ -120,9 +120,6 @@ def align_decimal(s):
     return StrAlign(s, printlength(s))
 
 
-
-
-
 def str_concat(*args):
     return StrConcat(args=args)
 
@@ -150,9 +147,6 @@ def normalize(s):
 
 def default_formatter(v):
     return str(v)
-
-
-
 
 
 # TODO: Support subcolumns

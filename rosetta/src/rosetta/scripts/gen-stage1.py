@@ -6,7 +6,6 @@ if not sys.version_info >= (3, 9):
     sys.exit(1)
 
 
-
 import argparse
 import configparser
 import importlib
@@ -17,7 +16,7 @@ import importlib.util
 
 from rosetta.util.support import *
 import rosetta.runner as runner
-import rosetta.registry  as registry
+import rosetta.registry as registry
 
 
 buildre = re.compile(r'^\s*//\s*BUILD\:(?P<script>.*)$')
@@ -43,13 +42,6 @@ def unindent(slist, amount):
 def global_unintent(slist):
     gindent = compute_global_indent(slist)
     yield from unindent(slist, gindent)
-
-
-
-
-
-
-
 
 
 def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, filter=None):
@@ -103,15 +95,14 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 scriptdir = buildfile.parent
                 relbuildfile = buildfile.relative_to(scriptdir)
 
-                def add_benchmark(*args, sources=None, basename=None, ppm=None,params=None):
+                def add_benchmark(*args, sources=None, basename=None, ppm=None, params=None):
                     for a in args:
                         if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target'}:
                             ppm = a
-                        elif isinstance(a,registry.GenParam) or  isinstance(a,registry.SizeParam) or  isinstance(a,registry.TuneParam)  :
+                        elif isinstance(a, registry.GenParam) or isinstance(a, registry.SizeParam) or isinstance(a, registry.TuneParam):
                             params = (params or []) + [a]
                         else:
                             die(f"Unknown argument to add_benchmark in {buildfile}: {a}")
-
 
                     if sources is not None:
                         mysources = []
@@ -137,10 +128,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     pbsize = config.getint(basename, 'n')
 
                     bench = runner.Benchmark(basename=basename, target=target, exepath=None, ppm=ppm,
-                                             configname=configname, buildtype=None, sources=mysources, pbsize=pbsize,params=params)
+                                             configname=configname, buildtype=None, sources=mysources, pbsize=pbsize, params=params)
                     benchs.append(bench)
-
-
 
                 globals['add_benchmark'] = add_benchmark
                 globals['__file__'] = relbuildfile
@@ -148,9 +137,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 globals['GenParam'] = registry. GenParam
                 globals['SizeParam'] = registry. SizeParam
                 globals['TuneParam'] = registry.  TuneParam
-                globals['runtime'] =  registry. runtime
-                globals['compiletime'] =  registry. compiletime
-
+                globals['runtime'] = registry. runtime
+                globals['compiletime'] = registry. compiletime
 
                 # Common PPMs for convenience
                 globals['serial'] = 'serial'
@@ -166,17 +154,17 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
     if configdepfiles:
         print("if (NOT ROSETTA_MAINTAINER_MODE)", file=out)
 
-        print ("# Build instructions were found in these", file=out)
+        print("# Build instructions were found in these", file=out)
         print("  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
         print('"' + ';'.join(pyescape(s)
               for s in configdepfiles) + '")', file=out)
-        
+
         print("# These were searched for build instructions", file=out)
         print("  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
         print('"' + ';'.join(pyescape(s)
-              for s in  potentialbuildfiles if s not in configdepfiles ) + '")', file=out)
-        
-        print("endif ()",file=out)
+              for s in potentialbuildfiles if s not in configdepfiles) + '")', file=out)
+
+        print("endif ()", file=out)
         print(file=out)
 
     for bench in benchs:
@@ -210,7 +198,8 @@ def main():
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--configname')
     # TODO: More extensive filter mechanisms
-    parser.add_argument('--filter-include','--filter', action='append', help="Only look into filenames that contain this substring")
+    parser.add_argument('--filter-include', '--filter', action='append',
+                        help="Only look into filenames that contain this substring")
     args = parser.parse_args()
 
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir,

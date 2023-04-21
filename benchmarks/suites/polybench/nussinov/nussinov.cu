@@ -23,12 +23,12 @@ struct AtomicMax<double> {
     unsigned long long int dstval = *dstptr;
 
     while (1) {
-        // Special attention for NaN where every comparison is False. If dstval is already NaN, we are done. Otherwise, set it to newval (which can be NaN) and come back here.
-        if (isnan(__longlong_as_double(dstval)))
-            return;
+      // Special attention for NaN where every comparison is False. If dstval is already NaN, we are done. Otherwise, set it to newval (which can be NaN) and come back here.
+      if (isnan(__longlong_as_double(dstval)))
+        return;
 
       // Values can only get larger.
-      if (__longlong_as_double(dstval) >= __longlong_as_double(newval) )
+      if (__longlong_as_double(dstval) >= __longlong_as_double(newval))
         return;
 
       auto assumed = dstval;
@@ -52,13 +52,12 @@ struct AtomicMax<double> {
 
 
 
-
 // Dynamic programming wavefront
 __global__ void kernel_max_score(pbsize_t n, real seq[], real table[], real oldtable[], idx_t w) {
   idx_t j = blockDim.x * blockIdx.x + threadIdx.x;
-  idx_t i = ((idx_t)n-1) +j-w; 
+  idx_t i = ((idx_t)n - 1) + j - w;
 
-  if (0 <= i && i < n && i+1 <= j && j < n) {
+  if (0 <= i && i < n && i + 1 <= j && j < n) {
     real maximum = table[i * n + j];
 
     if (j - 1 >= 0)
@@ -67,30 +66,30 @@ __global__ void kernel_max_score(pbsize_t n, real seq[], real table[], real oldt
       maximum = max(maximum, table[(i + 1) * n + j]);
 
     if (j - 1 >= 0 && i + 1 < n) {
-        auto upd = table[(i + 1) * n + (j - 1)];
+      auto upd = table[(i + 1) * n + (j - 1)];
 
       /* don't allow adjacent elements to bond */
-        if (i < j - 1)
-            upd += (seq[i] + seq[j] == 3) ? (real)1 : (real)0;
+      if (i < j - 1)
+        upd += (seq[i] + seq[j] == 3) ? (real)1 : (real)0;
 
-        maximum = max(maximum, upd);
+      maximum = max(maximum, upd);
     }
 
     for (idx_t k = i + 1; k < j; k++)
       maximum = max(maximum, table[i * n + k] + table[(k + 1) * n + j]);
 
-  //  AtomicMax<real>::set_if_larger(table[i * n + j], maximum);
+    //  AtomicMax<real>::set_if_larger(table[i * n + j], maximum);
     table[i * n + j] = maximum;
   }
 }
 
 
 
-static void kernel(pbsize_t n, real seq[], real table[],  real oldtable[]) {
+static void kernel(pbsize_t n, real seq[], real table[], real oldtable[]) {
   const unsigned threadsPerBlock = 32;
 
-  for (idx_t w = n; w < 2*n-1; ++w) { // wavefronting 
-    kernel_max_score<<<num_blocks(n,threadsPerBlock), threadsPerBlock>>>(n, seq, table,oldtable, w);
+  for (idx_t w = n; w < 2 * n - 1; ++w) { // wavefronting
+    kernel_max_score<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, seq, table, oldtable, w);
   }
 }
 
@@ -113,7 +112,7 @@ void run(State &state, pbsize_t pbsize) {
     BENCH_CUDA_TRY(cudaMemcpy(dev_seq, seq.data(), n * sizeof(real), cudaMemcpyHostToDevice));
     BENCH_CUDA_TRY(cudaMemcpy(dev_table, table.data(), n * n * sizeof(real), cudaMemcpyHostToDevice));
     BENCH_CUDA_TRY(cudaMemcpy(dev_oldtable, dev_table, n * n * sizeof(real), cudaMemcpyDeviceToDevice));
-    kernel(n, dev_seq, dev_table, dev_oldtable );
+    kernel(n, dev_seq, dev_table, dev_oldtable);
     BENCH_CUDA_TRY(cudaMemcpy(table.data(), dev_table, n * n * sizeof(real), cudaMemcpyDeviceToHost));
 
     BENCH_CUDA_TRY(cudaDeviceSynchronize());

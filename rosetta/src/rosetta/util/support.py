@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import types
+import functools
 import shlex
 import platform
 import itertools
@@ -13,7 +15,7 @@ import shutil
 import sys
 import stat
 from pathlib import Path
-import logging as log 
+import logging as log
 from functools import cached_property
 import math
 import inspect
@@ -175,17 +177,17 @@ def mkpath(path):
         return None
     if isinstance(path, pathlib.Path):
         return path
-    if isinstance(path,tempfile.TemporaryDirectory):
+    if isinstance(path, tempfile.TemporaryDirectory):
         return pathlib.Path(path.name)
     return pathlib.Path(path)
 
 
 def mkpurepath(path):
     if isinstance(path, pathlib.Path):
-            return pathlib.PurePath(path)
+        return pathlib.PurePath(path)
     if isinstance(path, pathlib.PurePath):
         return path
-    if isinstance(path,tempfile.TemporaryDirectory):
+    if isinstance(path, tempfile.TemporaryDirectory):
         return pathlib.PurePath(path.name)
     return pathlib.PurePath(path)
 
@@ -211,9 +213,9 @@ def first_defined(*args, fallback=None):
 def ensure_list(v):
     if v is None:
         return []
-    if isinstance(v,list):
+    if isinstance(v, list):
         return v
-    if isinstance(v,tuple) or isinstance(v,set) :
+    if isinstance(v, tuple) or isinstance(v, set):
         return list(v)
     return [v]
 
@@ -354,7 +356,6 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
-
 def die(msg):
     log.critical(msg)
     sys.exit(1)
@@ -403,39 +404,34 @@ def removesuffix(s: str, suffix: str):
     return s
 
 
-
-
-
-
-
-class Tee :
-    def __init__(self, _fd1, _fd2) :
+class Tee:
+    def __init__(self, _fd1, _fd2):
         self.fd1 = _fd1
         self.fd2 = _fd2
 
-    #def __del__(self) :
+    # def __del__(self) :
     #    if self.fd1 != sys.stdout and self.fd1 != sys.stderr :
     #        self.fd1.close()
     #    if self.fd2 != sys.stdout and self.fd2 != sys.stderr :
     #        self.fd2.close()
 
-    def write(self, text) :
+    def write(self, text):
         self.fd1.write(text)
         self.fd2.write(text)
 
-    def flush(self) :
+    def flush(self):
         self.fd1.flush()
         self.fd2.flush()
 
     def close(self):
-        if self.fd1 != sys.stdout and self.fd1 != sys.stderr :
+        if self.fd1 != sys.stdout and self.fd1 != sys.stderr:
             self.fd1.close()
-        if self.fd2 != sys.stdout and self.fd2 != sys.stderr :
+        if self.fd2 != sys.stdout and self.fd2 != sys.stderr:
             self.fd2.close()
 
 
 # math.prod only available in Python 3.8
-#def prod(iter):
+# def prod(iter):
 #    result = 1
 #    for v in iter:
 #        result *= v
@@ -443,29 +439,23 @@ class Tee :
 prod = math.prod
 
 
-
-import functools
-import types
-
-
-
 class cached_generator:
     """Like functools.cached_property, but converts a generator to a list to be only evaluated once"""
+
     def __init__(self, func):
         if inspect.isgeneratorfunction(func):
-            # TODO: Would be nice if the first invocation would not iterate everything immediately. 
+            # TODO: Would be nice if the first invocation would not iterate everything immediately.
             def newfunc(self):
                 retval = func(self)
-                retval =  list (retval)
+                retval = list(retval)
                 return retval
-            return   functools.cached_property.__init__(self,newfunc)
-        return functools.cached_property.__init__(self,func)
+            return functools.cached_property.__init__(self, newfunc)
+        return functools.cached_property.__init__(self, func)
 
     def __set_name__(self, owner, name):
-        return functools.cached_property.__set_name__(self,owner,name)
+        return functools.cached_property.__set_name__(self, owner, name)
 
     def __get__(self, instance, owner=None):
-        return functools.cached_property.__get__(self,instance,owner)
+        return functools.cached_property.__get__(self, instance, owner)
 
     __class_getitem__ = classmethod(functools.GenericAlias)
-

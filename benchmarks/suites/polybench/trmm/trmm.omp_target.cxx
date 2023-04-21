@@ -7,25 +7,27 @@
 static void kernel(pbsize_t n, pbsize_t m,
                    real alpha,
                    multarray<real, 2> B, multarray<real, 2> A) {
-    real *pB = &B[0][0];
-    real *pA = &A[0][0];
+  real *pB = &B[0][0];
+  real *pA = &A[0][0];
 
 
-#pragma omp target data map(tofrom:pB[0:m*n])  map(to:pA[0:n*m])  
+#pragma omp target data map(tofrom                 \
+                            : pB [0:m * n]) map(to \
+                                                : pA [0:n * m])
   {
-#define AccB(i,j) (pB[(i)*n+(j)])
-#define AccA(i,j) (pA[(i)*m+(j)])
+#define AccB(i, j) (pB[(i)*n + (j)])
+#define AccA(i, j) (pA[(i)*m + (j)])
 
-#pragma omp target teams distribute parallel for  default(none) firstprivate(n, m, alpha, pB, pA)
+#pragma omp target teams distribute parallel for default(none) firstprivate(n, m, alpha, pB, pA)
     for (idx_t j = 0; j < n; j++)
       for (idx_t i = 0; i < m; i++)
         for (idx_t k = i + 1; k < m; k++)
-          AccB(i,j) += AccA(k,i) * AccB(k,j);
+          AccB(i, j) += AccA(k, i) * AccB(k, j);
 
 #pragma omp target teams distribute parallel for collapse(2) dist_schedule(static) schedule(static) default(none) firstprivate(n, m, alpha, pB)
     for (idx_t i = 0; i < m; i++)
       for (idx_t j = 0; j < n; j++)
-        AccB(i,j) *= alpha;
+        AccB(i, j) *= alpha;
   }
 }
 

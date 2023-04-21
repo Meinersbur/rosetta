@@ -8,6 +8,8 @@ from .util.support import mkpath
 
 # TODO: enough precision for nanoseconds?
 # TODO: Use alternative duration class
+
+
 def parse_time(s: str):
     if s.endswith("ns"):
         return float(s[:-2]) / 1000000000
@@ -35,27 +37,26 @@ def parse_memsize(s: str):
     return int(s)
 
 
-
-
 mytempdir = None
 globalctxmgr = contextlib.ExitStack()
-
 
 
 def request_tempdir(subdir=None):
     global mytempdir
     global tempdirhandle
     if not mytempdir:
-        tempdirhandle = tempfile.TemporaryDirectory(prefix=f'rosetta-')  # TODO: Option to not delete / keep in current directory
+        # TODO: Option to not delete / keep in current directory
+        tempdirhandle = tempfile.TemporaryDirectory(prefix=f'rosetta-')
         mytempdir = mkpath(globalctxmgr.enter_context(tempdirhandle))
+
         def clear_tempdirhandle():
-                # Ensure we don't try to reuse the same (deleted) tempdir
-                global mytempdir
-                mytempdir= None
+            # Ensure we don't try to reuse the same (deleted) tempdir
+            global mytempdir
+            mytempdir = None
         globalctxmgr.callback(clear_tempdirhandle)
 
     #print(f"Tempdir is: {mytempdir}")
-    if subdir :
+    if subdir:
         subtmpdir = mytempdir / subdir
         subtmpdir.mkdir(exist_ok=True)
         return subtmpdir

@@ -31,9 +31,9 @@ def add_boolean_argument(parser, name, default=None, dest=None, help=None):
         onhelptext = "Enable " + help
         offhelptext = "Disable " + help
         if default is True:
-            onhelptext+= " (default)"
+            onhelptext += " (default)"
         if default is False:
-            offhelptext+= " (default)"
+            offhelptext += " (default)"
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--' + name, dest=destname, action='store_true', help=onhelptext)

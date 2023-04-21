@@ -1,15 +1,15 @@
 // BUILD: add_benchmark(ppm=serial,sources=[__file__, "gramschmidt-common.cxx"])
 
 #include "gramschmidt-common.h"
-#include <rosetta.h>
 #include <assert.h>
+#include <rosetta.h>
 
 
 static real sqr(real v) { return v * v; }
 
 static void kernel(pbsize_t m, pbsize_t n,
                    multarray<real, 2> A, multarray<real, 2> R, multarray<real, 2> Q) {
-    assert(n <= m && "Matrix needs sufficient rank");
+  assert(n <= m && "Matrix needs sufficient rank");
 
 #pragma scop
   for (idx_t k = 0; k < n; k++) {
@@ -34,8 +34,8 @@ static void kernel(pbsize_t m, pbsize_t n,
 
 
 void run(State &state, pbsize_t pbsize) {
-    // The original Polybench gramschmidt uses n > m, which necessarily made vectors linearly dependent and therefore orthogonalization ill-defined.   
-    pbsize_t m = pbsize;              // 1200
+  // The original Polybench gramschmidt uses n > m, which necessarily made vectors linearly dependent and therefore orthogonalization ill-defined.
+  pbsize_t m = pbsize;              // 1200
   pbsize_t n = pbsize - pbsize / 6; // 1000
 
 

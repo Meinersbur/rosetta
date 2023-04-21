@@ -7,11 +7,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <type_traits>
 #include <variant>
-#include <iomanip>
 
 
 // TODO: ROSETTA_PLATFORM_NVIDIA
@@ -35,7 +35,6 @@
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
-
 
 
 
@@ -89,7 +88,6 @@ template <int64_t... DIMLENGTHS>
 struct _make_dimlengths<0, DIMLENGTHS...> {
   using type = _dimlengths<DIMLENGTHS...>;
 };
-
 
 
 
@@ -227,9 +225,6 @@ public:
 
 
 
-
-
-
 template <typename T /*Elt type*/, int Togo /*coordinates to go*/>
 class _multarray_partial_subscript {
   static_assert(Togo > 1, "Specialization for more-coordinates-to-come");
@@ -281,38 +276,39 @@ public:
 
 
 
-static const char * indent(int amount) {
-    static const char *whitespace =
-"                                                                                "; // 80 spaces
- assert(amount >= 0);
-    assert (amount <= 80);
-    return &whitespace[80 - amount];
+static const char *indent(int amount) {
+  static const char *whitespace =
+      "                                                                                "; // 80 spaces
+  assert(amount >= 0);
+  assert(amount <= 80);
+  return &whitespace[80 - amount];
 }
 
-template<typename T>
-void dumpArray(T *data,std::tuple<int64_t,int64_t> DimLengths, const char *d) {
-    size_t dlen = d ? strlen(d) : 0; // TODO: d should be taken from the allocation call
-    for (int i = 0; i < std::get<0>(DimLengths); i += 1) {
-        if (i == 0) {
-            if (d)
-                std::cerr << d << " = [ ";
-            else
-                std::cerr << "[ ";
-        }
-        else { 
-            if (d)
-                std::cerr << indent(dlen) << "     ";
-            else 
-                std::cerr << "  ";
-        }
-        for (int j = 0; j < std::get<1>(DimLengths); j += 1) {
-                if (j > 0) std::cerr << " ";
-                std::cerr <<  std::setw(4)  << data[i *std::get<1>(DimLengths) + j ] ;
-        }
-        if (i!=std::get<0>(DimLengths)-1)
-        std::cerr << "\n"; else 
-        std::cerr << " ]" << std::endl;
+template <typename T>
+void dumpArray(T *data, std::tuple<int64_t, int64_t> DimLengths, const char *d) {
+  size_t dlen = d ? strlen(d) : 0; // TODO: d should be taken from the allocation call
+  for (int i = 0; i < std::get<0>(DimLengths); i += 1) {
+    if (i == 0) {
+      if (d)
+        std::cerr << d << " = [ ";
+      else
+        std::cerr << "[ ";
+    } else {
+      if (d)
+        std::cerr << indent(dlen) << "     ";
+      else
+        std::cerr << "  ";
     }
+    for (int j = 0; j < std::get<1>(DimLengths); j += 1) {
+      if (j > 0)
+        std::cerr << " ";
+      std::cerr << std::setw(4) << data[i * std::get<1>(DimLengths) + j];
+    }
+    if (i != std::get<0>(DimLengths) - 1)
+      std::cerr << "\n";
+    else
+      std::cerr << " ]" << std::endl;
+  }
 }
 
 
@@ -359,7 +355,7 @@ public:
   }
 
   void dump(const char *d) const {
-      dumpArray(data, DimLengths, d);
+    dumpArray(data, DimLengths, d);
   }
 }; // class multarray
 
@@ -368,7 +364,7 @@ public:
 enum Measure {
   WallTime,
   UserTime,
-  KernelTime, 
+  KernelTime,
   OpenMPWTime,
   AccelTime,             // CUDA Event
   Cupti,                 // CUPTI duration from first to last event

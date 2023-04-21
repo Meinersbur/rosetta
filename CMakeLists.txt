@@ -8,12 +8,10 @@ include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
 
-
 set(CMAKE_CTEST_ARGUMENTS "-j")
 set(CTEST_TEST_TARGET_ALIAS check)
-include (CTest)
+include(CTest)
 set_target_properties(check PROPERTIES FOLDER "Self-Testing")
-
 
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
 include(Formatting)
@@ -59,10 +57,10 @@ set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
 set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
 
 # TODO: Better name; "maintainer mode" comes from GNU autotools
-option(ROSETTA_MAINTAINER_MODE "Skip always looking for changed benchmark build instructions (maintainer mode meaning now its the benchmark maintainer's responsibility to invoke CMake when benchmark build instructions change)" OFF)
-
-
-
+option(
+  ROSETTA_MAINTAINER_MODE
+  "Skip always looking for changed benchmark build instructions (maintainer mode meaning now its the benchmark maintainer's responsibility to invoke CMake when benchmark build instructions change)"
+  OFF)
 
 # Dependencies ################################################################
 
@@ -80,7 +78,7 @@ include(FetchContent)
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.3.2
+  GIT_TAG v3.3.2
   #FIND_PACKAGE_ARGS
 )
 FetchContent_MakeAvailable(Catch2)
@@ -91,7 +89,6 @@ endif ()
 if (TARGET Catch2WithMain)
   set_target_properties(Catch2WithMain PROPERTIES FOLDER "Self-Testing")
 endif ()
-
 
 # CUDA
 if (NOT DEFINED ROSETTA_PPM_CUDA)
@@ -114,23 +111,29 @@ endif ()
 # Add -G option to debug flags by default because CMake's default doesn't
 if (CMAKE_CUDA_COMPILER)
   if (NOT ROSETTA_CUDA_IS_FIRST_CONFIG)
-  string(STRIP "${CMAKE_CUDA_FLAGS_DEBUG}" CMAKE_CUDA_FLAGS_DEBUG)
-  string(STRIP "${CMAKE_CUDA_FLAGS_DEBUG_INIT}" CMAKE_CUDA_FLAGS_DEBUG_INIT)
+    string(STRIP "${CMAKE_CUDA_FLAGS_DEBUG}" CMAKE_CUDA_FLAGS_DEBUG)
+    string(STRIP "${CMAKE_CUDA_FLAGS_DEBUG_INIT}" CMAKE_CUDA_FLAGS_DEBUG_INIT)
     message("Is first config '${CMAKE_CUDA_FLAGS_DEBUG}' == '${CMAKE_CUDA_FLAGS_DEBUG_INIT}'")
     if (DEFINED CMAKE_CUDA_FLAGS_DEBUG AND CMAKE_CUDA_FLAGS_DEBUG STREQUAL CMAKE_CUDA_FLAGS_DEBUG_INIT)
-    message("Appending -G to CMAKE_CUDA_FLAGS_DEBUG")
-      set (CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -G" CACHE STRING "Flags used by the CUDA compiler during DEBUG builds." FORCE)
+      message("Appending -G to CMAKE_CUDA_FLAGS_DEBUG")
+      set(CMAKE_CUDA_FLAGS_DEBUG
+          "${CMAKE_CUDA_FLAGS_DEBUG} -G"
+          CACHE STRING "Flags used by the CUDA compiler during DEBUG builds." FORCE)
     endif ()
     string(STRIP "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO}" CMAKE_CUDA_FLAGS_RELWITHDEBINFO)
     string(STRIP "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT}" CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT)
-    if (DEFINED CMAKE_CUDA_FLAGS_RELWITHDEBINFO AND CMAKE_CUDA_FLAGS_RELWITHDEBINFO STREQUAL CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT)
-    message("Appending -G to CMAKE_CUDA_FLAGS_RELWITHDEBINFO")
-      set (CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -G" CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds." FORCE)
+    if (DEFINED CMAKE_CUDA_FLAGS_RELWITHDEBINFO AND CMAKE_CUDA_FLAGS_RELWITHDEBINFO STREQUAL
+                                                    CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT)
+      message("Appending -G to CMAKE_CUDA_FLAGS_RELWITHDEBINFO")
+      set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO
+          "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -G"
+          CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds." FORCE)
     endif ()
   endif ()
-  set(ROSETTA_CUDA_IS_FIRST_CONFIG 1 CACHE INTERNAL "Used to set override CMake's default flags" FORCE)
+  set(ROSETTA_CUDA_IS_FIRST_CONFIG
+      1
+      CACHE INTERNAL "Used to set override CMake's default flags" FORCE)
 endif ()
-
 
 if (CMAKE_CUDA_COMPILER)
   # only for CUDA_VERSION
@@ -145,7 +148,7 @@ endif ()
 if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit)
 elseif (ROSETTA_PLATFORM_NVIDIA)
-	find_package(CUDAToolkit REQUIRED)
+  find_package(CUDAToolkit REQUIRED)
 endif ()
 
 # OpenCL
@@ -180,7 +183,6 @@ if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL
   endif ()
 endif ()
 
-
 # OpenACC
 if (NOT DEFINED ROSETTA_PPM_OPENACC)
   find_package(OpenACC)
@@ -188,14 +190,12 @@ elseif (ROSETTA_PPM_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
 
-
 # MPI
 if (NOT DEFINED ROSETTA_PPM_MPI)
   find_package(MPI)
 elseif (ROSETTA_PPM_MPI)
   find_package(MPI REQUIRED)
 endif ()
-
 
 # Introspection ################################################################
 
@@ -281,13 +281,11 @@ if (CMAKE_CUDA_COMPILER)
 endif ()
 option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
 
-
 set(_nvidia_enabled_default OFF)
 if (TARGET CUDA::cudart)
   set(_nvidia_enabled_default ON)
 endif ()
 option(ROSETTA_PLATFORM_NVIDIA "Enable NVIDIA CUPTI Performance Measurements" ${_nvidia_enabled_default})
-
 
 set(_papi_enabled_default OFF)
 if (False)
@@ -295,15 +293,11 @@ if (False)
 endif ()
 option(ROSETTA_PLATFORM_PAPI "Enable Performance-API Measurements (Not implemented)" ${_papi_enabled_default})
 
-
 set(_ompwtime_enabled_default OFF)
 if (OPENMP_FOUND)
   set(_ompwtime_enabled_default ON)
 endif ()
 option(ROSETTA_PLATFORM_OPENMP "Enable omp_get_wtime Measurements (Not implemented)" ${_ompwtime_enabled_default})
-
-
-
 
 set(_opencl_enabled_default OFF)
 if (OpenCL_FOUND)
@@ -336,7 +330,6 @@ if (MPI_CXX_FOUND)
 endif ()
 option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
 
-
 set(ROSETTA_REALTYPE
     "double"
     CACHE STRING "Which type to prefer for floating-point values ('float', 'double', or 'long double')")
@@ -363,7 +356,6 @@ endif ()
 if (NOT _problemsizefile)
   message(SEND_ERROR "Problem sizes required")
 endif ()
-
 
 # Build #######################################################################
 
@@ -435,29 +427,25 @@ endif ()
 
 add_subdirectory(benchmarks)
 
-
 # Maintanance #################################################################
 
 if (NOT ROSETTA_MAINTAINER_MODE)
   add_format_target(
     CLANG_RGLOB
-      benchmarks/*.cxx
-      benchmarks/*.cu
-      benchmarks/*.h
-      rosetta/*.h
-      rosetta/*.cpp
+    benchmarks/*.cxx
+    benchmarks/*.cu
+    benchmarks/*.h
+    rosetta/*.h
+    rosetta/*.cpp
     PY_RGLOB
-      rosetta/src/*.py
-      rosetta/tests/*.py
+    rosetta/src/*.py
+    rosetta/tests/*.py
     CMAKE
-      CMakeLists.txt
+    CMakeLists.txt
     CMAKE_RGLOB
-      rosetta/CMakeLists.txt
-      rosetta/cmake/*.cmake
-  )
+    rosetta/CMakeLists.txt
+    rosetta/cmake/*.cmake)
 endif ()
-
-
 
 # Run #########################################################################
 
@@ -477,7 +465,7 @@ if not sys.version_info >= (3, 9):
 sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 
 import pathlib
-import rosetta.driver 
+import rosetta.driver
 
 thisscriptdir = pathlib.Path(__file__).parent
 rosetta.driver.driver_main(
@@ -517,7 +505,7 @@ if not sys.version_info >= (3, 9):
 sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 
 import pathlib
-import rosetta.driver 
+import rosetta.driver
 
 thisscriptdir = pathlib.Path(__file__).parent
 rosetta.driver.driver_main(
@@ -557,7 +545,7 @@ if not sys.version_info >= (3, 9):
 sys.path.insert(0, '${CMAKE_SOURCE_DIR}/rosetta/src')
 
 import pathlib
-import rosetta.driver 
+import rosetta.driver
 
 thisscriptdir = pathlib.Path(__file__).parent
 rosetta.driver.driver_main(
@@ -594,7 +582,6 @@ if (_default_build_type)
   # add_custom_target(verify COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
   # COMMENT "Verify all benchmarks ..." USES_TERMINAL VERBATIM ) add_dependencies(verify build ${_references})
 endif ()
-
 
 # Summary #########################################################################
 

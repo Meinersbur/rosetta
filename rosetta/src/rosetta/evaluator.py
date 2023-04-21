@@ -2,9 +2,10 @@
 
 
 """
-Evaluate, compare, and report for a set of resultfile 
+Evaluate, compare, and report for a set of resultfile
 """
 
+import dateutil
 import io
 from collections import defaultdict
 import colorama
@@ -13,7 +14,7 @@ from typing import Iterable
 import html
 import pathlib
 from itertools import count
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from cycler import cycler
 from .util.cmdtool import *
@@ -22,12 +23,6 @@ from .util.support import *
 from .table import *
 from .stat import *
 from .common import *
-
-
-
-
-
-
 
 
 def name_or_list(data):
@@ -42,21 +37,27 @@ def name_or_list(data):
     return data
 
 
-import dateutil
-
-
 #TODO: dataclass
 class BenchResult:
     categorical_cols = ['program', 'ppm', 'buildtype', 'configname', 'timestamp']
-    numerical_cols = ['count', 'walltime', 'usertime', 'kerneltime' , 'ompwtime', 'cupti', 'cupti_compute', 'cupti_todev', 'cupti_fromdev']
+    numerical_cols = [
+        'count',
+        'walltime',
+        'usertime',
+        'kerneltime',
+        'ompwtime',
+        'cupti',
+        'cupti_compute',
+        'cupti_todev',
+        'cupti_fromdev']
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         # self.bench=bench
         self.name = name
         self.ppm = ppm
-        self.buildtype = buildtype 
+        self.buildtype = buildtype
         self.configname = configname
-        self.timestamp = dateutil. parser.parse( timestamp) if isinstance(timestamp,str) else timestamp
+        self.timestamp = dateutil. parser.parse(timestamp) if isinstance(timestamp, str) else timestamp
         self.count = count
         # self.wtime=wtime
         # self.utime=utime
@@ -71,18 +72,19 @@ class BenchResult:
 # TODO: dataclass?
 class BenchResultSummary:
     """A summery of multiple BenchResults with the same API as BenchResult"""
-    def __init__(self, results): # TODO: Detect if any lsit element is itself a BenchResultSummary and expand it
+
+    def __init__(self, results):  # TODO: Detect if any lsit element is itself a BenchResultSummary and expand it
         self.name = name_or_list(unique(r.name for r in results))
         self.ppm = name_or_list(unique(r.ppm for r in results))
         self.buildtype = name_or_list(unique(r.buildtype for r in results))
         self.configname = name_or_list(unique(r.configname for r in results))
-        self.timestamp  = name_or_list(unique(r.timestamp for r in results))
+        self.timestamp = name_or_list(unique(r.timestamp for r in results))
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
         measures = unique(k for r in results for k in r.durations.keys())
-        self.durations = {m: statistic(v for r in results if m in r.durations for v in r.durations[m]._samples ) for m in measures}
-
-
+        self.durations = {
+            m: statistic(
+                v for r in results if m in r.durations for v in r.durations[m]._samples) for m in measures}
 
 
 # TODO: Member of BenchResult
@@ -96,7 +98,7 @@ def get_column_data(result: BenchResult, colname: str):
     if colname == "buildtype":
         return result.buildtype
     if colname == "configname":
-        return first_defined(result.configname, "") #FIXME: "defaultbuild" is just placeholder
+        return first_defined(result.configname, "")  # FIXME: "defaultbuild" is just placeholder
     if colname == "timestamp":
         return result.timestamp
     if colname == "count":
@@ -104,6 +106,7 @@ def get_column_data(result: BenchResult, colname: str):
     if colname in BenchResult.numerical_cols:
         return result.durations.get(colname)
     assert False, "TODO: Add to switch of use getattr"
+
 
 def get_summary_data(result: BenchResultSummary, colname: str):
     if colname == "count":
@@ -114,20 +117,18 @@ def get_summary_data(result: BenchResultSummary, colname: str):
 def getColumnFormatter(colname: str):
     if colname == 'program':
         return program_formatter
-    elif   colname == 'count':
+    elif colname == 'count':
         return None
     elif colname in BenchResult.numerical_cols:
-        return duration_formatter() # TOOD: Get best/worst
+        return duration_formatter()  # TOOD: Get best/worst
     return None
 
 
-
-
-def formatColumnVal(colname:str, val):
+def formatColumnVal(colname: str, val):
     formatter = getColumnFormatter(colname)
     if formatter:
         return formatter(val)
-    return         str(val)
+    return str(val)
 
 
 def path_formatter(v: pathlib.Path):
@@ -177,14 +178,13 @@ def duration_formatter(best=None, worst=None):
     return formatter
 
 
-
-
 def getHTMLFromatter(col: str):
     def str_html_formatter(v):
         return html.escape(str(v))
+
     def duration_formatter(stat):
-        #print(col)
-        assert isinstance(stat,Statistic)
+        # print(col)
+        assert isinstance(stat, Statistic)
         v = stat.mean
         if v >= 1:
             return f'{v:.2f}'
@@ -199,19 +199,19 @@ def getHTMLFromatter(col: str):
         return str_html_formatter
     if col in BenchResult.numerical_cols:
         return duration_formatter
-    return str_html_formatter #TODO: Return None, the equivalent of str_html_formatter should by applied by default
-
-
+    return str_html_formatter  # TODO: Return None, the equivalent of str_html_formatter should by applied by default
 
 
 def getPlaintextFormatter(col: str):
     def timestamp_plaintext_formatter(v):
-        assert isinstance(v,datetime.datetime)
+        assert isinstance(v, datetime.datetime)
         return f'{v.astimezone():%c}'
+
     def str_plaintext_formatter(v):
         return str(v)
+
     def duration_plaintext_formatter(stat):
-        assert isinstance(stat,Statistic)
+        assert isinstance(stat, Statistic)
         v = stat.mean
         if v >= 1:
             return f'{v:.2f}'
@@ -226,20 +226,7 @@ def getPlaintextFormatter(col: str):
         return timestamp_plaintext_formatter
     if col in BenchResult.numerical_cols:
         return duration_plaintext_formatter
-    return  str_plaintext_formatter
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return str_plaintext_formatter
 
 
 def load_resultfiles(resultfiles, filterfunc=None):
@@ -280,60 +267,61 @@ def load_resultfiles(resultfiles, filterfunc=None):
     return results
 
 
+def default_columns(groups, compare_by, always_columns, never_columns):
+    columns = OrderedSet()
+    columns.union_update(always_columns)  # Try to put these to the front
+    columns.union_update(groups.divergent_categories)
+    columns.union_update(groups.nonempty_vals())
+    columns.difference_update(OrderedSet(compare_by).difference(always_columns))
+    columns.difference_update(never_columns)
+    columns = list(columns)
 
-def default_columns(groups,compare_by,always_columns,never_columns):
-        columns = OrderedSet()
-        columns.union_update(always_columns)  # Try to put these to the front
-        columns.union_update(groups.divergent_categories)
-        columns.union_update( groups.nonempty_vals() )
-        columns.difference_update(OrderedSet(compare_by).difference(always_columns) )
-        columns.difference_update( never_columns)
-        columns= list(columns)
-        def enforce_order(x):
-            if x == 'program':
-                return 0
-            if x in BenchResult.categorical_cols:
-                return 1
-            return 2
-        columns.sort(key=enforce_order)
-        return columns
+    def enforce_order(x):
+        if x == 'program':
+            return 0
+        if x in BenchResult.categorical_cols:
+            return 1
+        return 2
+    columns.sort(key=enforce_order)
+    return columns
 
 
-
-def results_compare(results, compare_by=None, group_by=None, compare_val=None, show_groups=None, always_columns=['program'],never_columns=[],columns=None):
-    groups = GroupedBenches(data=results,group_by=group_by,compare_by=compare_by)
+def results_compare(results, compare_by=None, group_by=None, compare_val=None, show_groups=None,
+                    always_columns=['program'], never_columns=[], columns=None):
+    groups = GroupedBenches(data=results, group_by=group_by, compare_by=compare_by)
     compare_by = compare_by or []
 
     if columns is None:
-        columns = default_columns(groups,compare_by=compare_by, always_columns=always_columns,never_columns=never_columns)
+        columns = default_columns(
+            groups,
+            compare_by=compare_by,
+            always_columns=always_columns,
+            never_columns=never_columns)
 
-    compare_columns=set()
+    compare_columns = set()
     if compare_by:
         compare_columns = set(columns) & (set(groups.divergent_compare_keys()) | set(BenchResult.numerical_cols))
 
-    print_comparison(groups, columns= columns,compare_columns=compare_columns )
+    print_comparison(groups, columns=columns, compare_columns=compare_columns)
 
     # Categorical groupings
-    #if group_by is not None:
-    #    group_by = [g for g in group_by if g != compare_by] 
+    # if group_by is not None:
+    #    group_by = [g for g in group_by if g != compare_by]
 
     #grouped_results, all_cmpvals, div_groups = grouping(results, compare_by=compare_by, group_by=group_by)
 
     #common_columns= show_groups or div_groups
     #compare_columns = compare_val
     #more_columns = []
-    #for c in always_columns:
+    # for c in always_columns:
     #    if c not in common_columns and c not in compare_columns:
     #     more_columns.append(c)
     #common_columns = more_columns + common_columns
     #
-    #print_comparison(groups_of_results=grouped_results,
+    # print_comparison(groups_of_results=grouped_results,
     #                 list_of_resultnames=all_cmpvals,
     #                 common_columns=common_columns,
     #                 compare_columns=compare_columns)
-
-
-
 
 
 def compareby(results: Iterable[BenchResult], compare_by: str):
@@ -344,32 +332,35 @@ def compareby(results: Iterable[BenchResult], compare_by: str):
     return results_by_group
 
 
-
 def colsortkey(item, col):
-            if col == 'program':
-                # Return programs alphabetically
-                return item
-            if col == 'ppm':
-                return {  'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4 }.get(item, 5)
-            return 0 # Keep the original order of everything else
+    if col == 'program':
+        # Return programs alphabetically
+        return item
+    if col == 'ppm':
+        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4}.get(item, 5)
+    return 0  # Keep the original order of everything else
 
 
 def sort_keys(key_tuples, compare_by):
     def keyfunc(x):
-        return tuple( colsortkey(e, col) for col, e in zip(compare_by,x)  )
-    return sorted (key_tuples, key=keyfunc)
+        return tuple(colsortkey(e, col) for col, e in zip(compare_by, x))
+    return sorted(key_tuples, key=keyfunc)
 
 
 def sort_results(benchresults):
     # TODO: Should be configurable
     def keyfunc(x):
-        return ( colsortkey(x.name, 'program') , colsortkey(x.configname, 'configname') ,colsortkey(x.configname, 'buildtype') , colsortkey(x.ppm, 'ppm')  )
-    return sorted (benchresults, key=keyfunc)
+        return (colsortkey(x.name, 'program'), colsortkey(x.configname, 'configname'),
+                colsortkey(x.configname, 'buildtype'), colsortkey(x.ppm, 'ppm'))
+    return sorted(benchresults, key=keyfunc)
 
 
 class GroupedBenches:
-    def __init__(self,data,group_by=None,compare_by=None): #TODO: Add another level to make comparable items stay close in the table (and add best/worst color per bucket); How to present in boxplot? 3rd dimension?
-        """Group results into two levels of buckets. 
+    # TODO: Add another level to make comparable items stay close in the table
+    # (and add best/worst color per bucket); How to present in boxplot? 3rd
+    # dimension?
+    def __init__(self, data, group_by=None, compare_by=None):
+        """Group results into two levels of buckets.
 
 group_by buckets are meant to each have its own table for, or if a box blot, having different positions on the x-axis.
 
@@ -379,7 +370,7 @@ If group_by is specified, but compare_by is not, then each group_by bucket has o
 
 If group_by is not specified, but compare_by is, then group by all other (non-compared) benchmark categories.
 
-If both are unspecified, every result gets its own group_by backet with a single compare_by bucket. 
+If both are unspecified, every result gets its own group_by backet with a single compare_by bucket.
         """
 
         # Sort data
@@ -388,26 +379,24 @@ If both are unspecified, every result gets its own group_by backet with a single
         # Special case: No grouping as all, no need to summerize
         if group_by is None and compare_by is None:
             # Each benchmark has its own group with just a single comparison category
-            self.compare_by=[]
+            self.compare_by = []
             self.compare_tuples = [()]
             self.group_by = None
-            self.group_tuples =  [(i,) for i,d  in enumerate(data)]
+            self.group_tuples = [(i,) for i, d in enumerate(data)]
             self.benchgroups = [[d] for d in data]
             self.groupsummary = [d for d in data]
-            return 
+            return
 
-
-        all_compare_keys = OrderedSet(first_defined(compare_by,[])) 
-        all_compare_tuples = OrderedSet(tuple(get_column_data(result, col) for col in all_compare_keys) for result in data)
-        all_compare_tuples = sort_keys(all_compare_tuples,compare_by=all_compare_keys)
+        all_compare_keys = OrderedSet(first_defined(compare_by, []))
+        all_compare_tuples = OrderedSet(tuple(get_column_data(result, col)
+                                        for col in all_compare_keys) for result in data)
+        all_compare_tuples = sort_keys(all_compare_tuples, compare_by=all_compare_keys)
 
         if group_by is None:
-              all_group_keys = OrderedSet(BenchResult.categorical_cols )  .difference(all_compare_keys)
+            all_group_keys = OrderedSet(BenchResult.categorical_cols)  .difference(all_compare_keys)
         else:
-            all_group_keys= group_by          
+            all_group_keys = group_by
         all_group_tuples = OrderedSet(tuple(get_column_data(result, col) for col in all_group_keys) for result in data)
-
-   
 
         # Create the matrix
         # TODO: Consider itertools.groupby (twice)
@@ -422,12 +411,12 @@ If both are unspecified, every result gets its own group_by backet with a single
         benchgroups = [[BenchResultSummary(c) for c in g] for g in group_lists]
         groupsummary = [BenchResultSummary([b for c in g for b in c]) for g in group_lists]
 
-        self.compare_by=all_compare_keys
+        self.compare_by = all_compare_keys
         self.compare_tuples = all_compare_tuples
         self.group_by = all_group_keys
         self.group_tuples = all_group_tuples
-        self.benchgroups  = benchgroups
-        self.groupsummary =groupsummary
+        self.benchgroups = benchgroups
+        self.groupsummary = groupsummary
 
     @property
     def all(self):
@@ -436,10 +425,10 @@ If both are unspecified, every result gets its own group_by backet with a single
                 yield c
 
     def divergent_group_keys(self):
-        return  divergent_keys(self.group_by ,self.group_tuples)
-    
+        return divergent_keys(self.group_by, self.group_tuples)
+
     def divergent_compare_keys(self):
-        return  divergent_keys(self.compare_by,self.compare_tuples)
+        return divergent_keys(self.compare_by, self.compare_tuples)
 
     @property
     def divergent_categories(self):
@@ -447,10 +436,10 @@ If both are unspecified, every result gets its own group_by backet with a single
         for cat in BenchResult.categorical_cols:
             common_val = None
             for g in self.benchgroups:
-                summary = BenchResultSummary( g)
+                summary = BenchResultSummary(g)
                 val = get_column_data(summary, cat)
                 if val is None:
-                    continue 
+                    continue
                 if common_val is None:
                     common_val = val
                 elif val != common_val:
@@ -464,25 +453,16 @@ If both are unspecified, every result gets its own group_by backet with a single
         nonemptykeys = []
         for cat in BenchResult.numerical_cols:
             for benchresult in (b for g in self.benchgroups for b in g):
-                   val = get_column_data(benchresult, cat) 
-                   if val :
-                       nonemptykeys.append(cat)
-                       break
+                val = get_column_data(benchresult, cat)
+                if val:
+                    nonemptykeys.append(cat)
+                    break
         return nonemptykeys
 
 
-
-
-
-
-
-
-
-
-
-def divergent_keys(keys,tuples):
+def divergent_keys(keys, tuples):
     div_keys = []
-    for i,k in enumerate(keys):
+    for i, k in enumerate(keys):
         common_value = None
         has_different_values = False
         for t in tuples:
@@ -500,8 +480,8 @@ def divergent_keys(keys,tuples):
 
 
 def divergent_fields(group_by, results):
-    if group_by is  None:
-        return [] 
+    if group_by is None:
+        return []
 
     show_groups = []
     for col in group_by:
@@ -519,7 +499,6 @@ def divergent_fields(group_by, results):
         if has_different_values:
             show_groups.append(col)
     return show_groups
-
 
 
 def evaluate(resultfiles):
@@ -558,24 +537,20 @@ def evaluate(resultfiles):
     table.print()
 
 
-
-
-
-
 # TODO: Rename: getColumnDisplayString
 def getMeasureDisplayStr(s: str):
     return {'program': "Benchmark",
             'ppm': "PPM",
-            'buildtype':  "Buildtype",
+            'buildtype': "Buildtype",
             'configname': "Configuration",
             'count': "# Samples",
-            'walltime': "Wall", 
-            'usertime': "User", 
+            'walltime': "Wall",
+            'usertime': "User",
             'kerneltime': "Kernel",
             'acceltime': "CUDA Event",
-            'cupti': "nvprof", 
-            'cupti_compute': "nvprof Kernel", 
-            'cupti_todev': "nvprof H->D", 
+            'cupti': "nvprof",
+            'cupti_compute': "nvprof Kernel",
+            'cupti_todev': "nvprof H->D",
             'cupti_fromdev': "nvprof D->H"}.get(s, s)
 
 
@@ -584,51 +559,65 @@ def getPPMDisplayStr(s: str):
             'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s, s)
 
 
-
-def print_comparison(benchgroups:GroupedBenches,columns,compare_columns):
+def print_comparison(benchgroups: GroupedBenches, columns, compare_columns):
     """Print a benchmark result table."""
     table = Table()
 
     # Define the table layout
     for col in columns:
         if col in compare_columns:
-                # Make a supercolumn for value comparisons
-                subcolumns = []
-                table.add_column(col, StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT), pos=StrAlign.CENTER))
-                for  i, resulttuple in enumerate( benchgroups.compare_tuples): 
-                    sol = f"{col}_{i}"
-                    subcolumns.append(sol)
-                    resultname = ','.join( formatColumnVal(ccat, resulttuple[i]) for i,ccat in enumerate(benchgroups.compare_by) )
-                    table.add_column(sol, title=StrAlign(StrColor(resultname, colorama.Style.BRIGHT),  pos=StrAlign.CENTER), formatter=getColumnFormatter(col))
-                table.make_supercolumn(f"{col}", subcolumns)
+            # Make a supercolumn for value comparisons
+            subcolumns = []
+            table.add_column(
+                col,
+                StrAlign(
+                    StrColor(
+                        getMeasureDisplayStr(col),
+                        colorama.Style.BRIGHT),
+                    pos=StrAlign.CENTER))
+            for i, resulttuple in enumerate(benchgroups.compare_tuples):
+                sol = f"{col}_{i}"
+                subcolumns.append(sol)
+                resultname = ','.join(
+                    formatColumnVal(
+                        ccat, resulttuple[i]) for i, ccat in enumerate(
+                        benchgroups.compare_by))
+                table.add_column(
+                    sol,
+                    title=StrAlign(
+                        StrColor(
+                            resultname,
+                            colorama.Style.BRIGHT),
+                        pos=StrAlign.CENTER),
+                    formatter=getColumnFormatter(col))
+            table.make_supercolumn(f"{col}", subcolumns)
         else:
-                table.add_column(col, title=StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Fore.BWHITE),  pos=StrAlign.CENTER), formatter=getColumnFormatter(col))
-
+            table.add_column(
+                col,
+                title=StrAlign(
+                    StrColor(
+                        getMeasureDisplayStr(col),
+                        colorama.Fore.BWHITE),
+                    pos=StrAlign.CENTER),
+                formatter=getColumnFormatter(col))
 
     # Set the table data
-    for rowsummery,row in zip(benchgroups.groupsummary, benchgroups.benchgroups):
+    for rowsummery, row in zip(benchgroups.groupsummary, benchgroups.benchgroups):
         data = dict()
-      
+
         for col in columns:
             if col in compare_columns:
-                for i, resulttuple in enumerate(row): 
+                for i, resulttuple in enumerate(row):
                     val = get_summary_data(row[i], col)
                     data[f"{col}_{i}"] = val
             else:
-                data[col] =  get_summary_data(rowsummery, col)
+                data[col] = get_summary_data(rowsummery, col)
         table.add_row(**data)
 
     table.print()
 
 
-
-
-
-
-
-
-
-def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_cmpval=None,relcompare=True):
+def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baseline_cmpval=None, relcompare=True):
     """Create a results plot
 
 :param groups: The data, grouped
@@ -637,37 +626,36 @@ def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_
 
 :param logscale: If true, use a logarithmic y-axis
 
-:param baseline_cmpval: If set, the compare_tuple the others are compared to; 
+:param baseline_cmpval: If set, the compare_tuple the others are compared to;
                         If not set, show absolute values
 
-:param relcompare: If True, show the ratio between the value and the baseline 
+:param relcompare: If True, show the ratio between the value and the baseline
                    If False, show the different to the baseline value
                    Only meaningful when baseline_cmpval is set
 """
 
     if groups.group_by:
-        label_groups =  groups.group_by
+        label_groups = groups.group_by
     else:
         label_groups = BenchResult.categorical_cols
 
     # Find the diverging categories
-    label_groups = divergent_keys(label_groups, [ tuple( get_summary_data(r, col) for col in label_groups ) for r in  groups. groupsummary])
+    label_groups = divergent_keys(label_groups, [tuple(get_summary_data(r, col)
+                                  for col in label_groups) for r in groups. groupsummary])
     if not label_groups:
         label_groups = ['program']
 
-    def make_group_label(s,g):
-            return ', '.join( getPlaintextFormatter( col)( get_summary_data(s, col)) for col in label_groups )
+    def make_group_label(s, g):
+        return ', '.join(getPlaintextFormatter(col)(get_summary_data(s, col)) for col in label_groups)
 
-    labels = [make_group_label(s,g) for s,g in zip (groups. groupsummary, groups.benchgroups)]
+    labels = [make_group_label(s, g) for s, g in zip(groups. groupsummary, groups.benchgroups)]
 
-
-    
     leftmargin = 1
     rightmargin = 0.5
     numgroups = len(groups.group_tuples)
     if baseline_cmpval:
         # Hide the baseline bar itself, it would but just zero (or one on logscale) anyway
-        compare_tuples_without_baseline = [c for c in groups.compare_tuples if  c  != baseline_cmpval]
+        compare_tuples_without_baseline = [c for c in groups.compare_tuples if c != baseline_cmpval]
     else:
         compare_tuples_without_baseline = groups.compare_tuples
     benchs_per_group = len(compare_tuples_without_baseline)
@@ -678,31 +666,27 @@ def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = [c['color'] for j, c in zip(range(benchs_per_group), prop_cycle)]
 
-
-
-
-
     fig, ax = plt.subplots(figsize=(width, 10))
     fig.subplots_adjust(left=leftmargin / width, right=1 - rightmargin / width, top=0.95, bottom=0.25)
 
-
-    for group_idx, (group_summary, group_data) in  enumerate(zip(groups.groupsummary, groups.benchgroups)):
+    for group_idx, (group_summary, group_data) in enumerate(zip(groups.groupsummary, groups.benchgroups)):
         baseline_idx = None
         if baseline_cmpval:
             # FIXME: What if missing?
-            [(baseline_idx, baseline_result)] = ((i,c) for i,(t,c) in enumerate(zip(groups.compare_tuples , group_data)) if t == baseline_cmpval)
-            baseline_stat = get_column_data(baseline_result,data_col) 
+            [(baseline_idx, baseline_result)] = ((i, c)
+                                                 for i, (t, c) in enumerate(zip(groups.compare_tuples, group_data)) if t == baseline_cmpval)
+            baseline_stat = get_column_data(baseline_result, data_col)
             if not baseline_stat:
                 log.warn(f"No baseline {baseline_cmpval}; skipping group f{group_idx}")
                 continue
             #group_data_without_baseline = [b for i,b in enumerate(group_data) if i!=baseline_compare_idx]
             baseline_mean = baseline_stat.mean
-             
+
         #nonempty_results = [(j,r) for j,r in enumerate(group_data_without_baseline) if r]
         #benchs_this_group = len(nonempty_results)
 
-        for compare_idx, compare_data in enumerate(d for i,d in enumerate( group_data) if i != baseline_idx ):
-            stat = get_column_data(compare_data,data_col)
+        for compare_idx, compare_data in enumerate(d for i, d in enumerate(group_data) if i != baseline_idx):
+            stat = get_column_data(compare_data, data_col)
             if not stat:
                 # No bar for missing measurement
                 continue
@@ -721,17 +705,16 @@ def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_
             #    if abserr is not None:
             #        kwargs['yerr'] = abserr/baseline_mean
 
-
             rel = (compare_idx - benchs_per_group / 2.0 + 0.5) * barwidth
             xpos = group_idx * groupwidth + rel
             if baseline_cmpval:
-                bar = ax.bar(x=xpos, height=val,width=barwidth,color = colors[compare_idx],bottom=1)
+                bar = ax.bar(x=xpos, height=val, width=barwidth, color=colors[compare_idx], bottom=1)
             else:
-                bar = ax.boxplot( stat.samples  , positions=[xpos],
-                             notch=True, showmeans=False, showfliers=True, sym='+',
-                             widths=barwidth,
-                             patch_artist=True,  # fill with color
-                             )
+                bar = ax.boxplot(stat.samples, positions=[xpos],
+                                 notch=True, showmeans=False, showfliers=True, sym='+',
+                                 widths=barwidth,
+                                 patch_artist=True,  # fill with color
+                                 )
 
     if logscale:
         ax.set_yscale('log')
@@ -754,7 +737,7 @@ def results_speedupplot(groups:GroupedBenches, data_col, logscale=True,baseline_
         xlabel='Benchmark',
         ylabel='Walltime [s]',
     )
-    ax.set_yscale('log',base=2)
+    ax.set_yscale('log', base=2)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
@@ -772,24 +755,21 @@ class ReportSection:
 class AllResultsSection(ReportSection):
     name = 'all-results'
     title = "All Results (Table)"
-    
-    def __init__(self, groups,columns=None,compare_columns=[]):
+
+    def __init__(self, groups, columns=None, compare_columns=[]):
         super().__init__()
 
         if columns is None:
-            columns = default_columns(groups,compare_by=[], always_columns=['program'],never_columns=[])
-
+            columns = default_columns(groups, compare_by=[], always_columns=['program'], never_columns=[])
 
         self.groups = groups
         self.columns = columns
-
-
 
     @cached_generator
     def content(self):
         benchgroups = self.groups
         columns = self.columns
-        compare_columns =[]
+        compare_columns = []
 
         yield '<table class="table">'
 
@@ -797,27 +777,30 @@ class AllResultsSection(ReportSection):
         yield "<thead><tr>"
         for col in columns:
             if col in compare_columns:
-                    yield f'<td colspan="{len(columns)}">{getMeasureDisplayStr(col)}</td>'
+                yield f'<td colspan="{len(columns)}">{getMeasureDisplayStr(col)}</td>'
             else:
-                    yield f"<td>{getMeasureDisplayStr(col)}</td>"
+                yield f"<td>{getMeasureDisplayStr(col)}</td>"
         if compare_columns:
             yield "</tr><tr>"
             for col in columns:
                 if col in compare_columns:
-                    for  i, resulttuple in enumerate( benchgroups.compare_tuples): 
-                        resultname = ','.join( formatColumnVal(ccat, resulttuple[i]) for i,ccat in enumerate(benchgroups.compare_by) )
+                    for i, resulttuple in enumerate(benchgroups.compare_tuples):
+                        resultname = ','.join(
+                            formatColumnVal(
+                                ccat, resulttuple[i]) for i, ccat in enumerate(
+                                benchgroups.compare_by))
                         yield f"<td>{resultname}</td>"
                 else:
                     yield f"<td></td>"
         yield "</tr></thead>"
 
         # Emit table data
-        
-        for rowsummery,row in zip(benchgroups.groupsummary, benchgroups.benchgroups):
+
+        for rowsummery, row in zip(benchgroups.groupsummary, benchgroups.benchgroups):
             yield "<tr>"
             for col in columns:
                 if col in compare_columns:
-                    for i, resulttuple in enumerate(row): 
+                    for i, resulttuple in enumerate(row):
                         yield f'<td>{formatColumnVal(col,get_summary_data(row[i], col))}</td>'
                 else:
                     summarydata = get_summary_data(rowsummery, col)
@@ -829,23 +812,18 @@ class AllResultsSection(ReportSection):
         yield "</table>"
 
 
-
 class WalltimePlotSection(ReportSection):
     name = 'walltime-plot'
     title = "Walltime Plot"
 
-    
-    def __init__(self, groups,columns=None,compare_columns=[]):
+    def __init__(self, groups, columns=None, compare_columns=[]):
         super().__init__()
 
         if columns is None:
-            columns = default_columns(groups,compare_by=[], always_columns=['program'],never_columns=[])
+            columns = default_columns(groups, compare_by=[], always_columns=['program'], never_columns=[])
 
         self.groups = groups
         self.columns = columns
-
-
-
 
     @cached_generator
     def content(self):
@@ -853,61 +831,62 @@ class WalltimePlotSection(ReportSection):
         columns = self.columns
         compare_columns = []
 
-        fig = results_speedupplot(benchgroups, data_col='walltime',logscale=False)
+        fig = results_speedupplot(benchgroups, data_col='walltime', logscale=False)
         s = fig_to_svg(fig)
         yield s
- 
 
 
 def fig_to_svg(fig):
-        i = io. StringIO()
-        #plt.savefig(i, format="svg")
-        fig.savefig(i, format='svg')
-        fig.canvas.draw_idle()
-        i.seek(0)
-        s = et.canonicalize(from_file=i) # Remove <?xml> boilerplate
-        return s
+    i = io. StringIO()
+    #plt.savefig(i, format="svg")
+    fig.savefig(i, format='svg')
+    fig.canvas.draw_idle()
+    i.seek(0)
+    s = et.canonicalize(from_file=i)  # Remove <?xml> boilerplate
+    return s
 
 
 class SpeedupPlotSection(ReportSection):
     name = 'speedup-plot'
     title = "Speedup Plot"
 
-    
-    def __init__(self, groups,compare_col,base_cat):
+    def __init__(self, groups, compare_col, base_cat):
         assert groups.compare_by == [compare_col]
 
         super().__init__()
         self.groups = groups
-        self.compare_col=compare_col
+        self.compare_col = compare_col
         self.base_cat = base_cat
-
-
 
     @cached_generator
     def content(self):
         benchgroups = self.groups
 
-        fig = results_speedupplot(benchgroups, data_col='walltime', baseline_cmpval=(self.base_cat,),relcompare=True,logscale=True)
+        fig = results_speedupplot(
+            benchgroups,
+            data_col='walltime',
+            baseline_cmpval=(
+                self.base_cat,
+            ),
+            relcompare=True,
+            logscale=True)
         s = fig_to_svg(fig)
         yield s
- 
-
 
 
 def make_report(results):
     groups = GroupedBenches(data=results)
     resultssec = AllResultsSection(groups)
     resultsplotsec = WalltimePlotSection(groups)
-    sections =  [resultssec, resultsplotsec]
+    sections = [resultssec, resultsplotsec]
 
-    ppms = unique( c.ppm for c in  results  )
-    if len(ppms)>= 2:
-        walltimecompare  = GroupedBenches(data=results,compare_by=['ppm'])
+    ppms = unique(c.ppm for c in results)
+    if len(ppms) >= 2:
+        walltimecompare = GroupedBenches(data=results, compare_by=['ppm'])
         for base in ppms:
-            speedupplotsec = SpeedupPlotSection(walltimecompare,compare_col='ppm',base_cat=base)
+            speedupplotsec = SpeedupPlotSection(walltimecompare, compare_col='ppm', base_cat=base)
             sections.append(speedupplotsec)
-    
+
     yield """
 <!DOCTYPE html>
 <html>
@@ -1002,7 +981,6 @@ def make_report(results):
     for s in sections:
         yield f'<h2 id="{s.name}">{s.title}</h2>'
         yield from s.content
-      
 
     yield """</div>
         </div>
@@ -1011,15 +989,9 @@ def make_report(results):
 """
 
 
-
-
-
-
-def save_report(results,filename):
+def save_report(results, filename):
     filename = mkpath(filename)
 
     with filename.open("w+") as f:
-        for  line in make_report(results):
+        for line in make_report(results):
             print(line, file=f)
-
-

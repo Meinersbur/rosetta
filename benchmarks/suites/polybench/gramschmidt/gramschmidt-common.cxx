@@ -11,7 +11,7 @@ void condition(pbsize_t m, pbsize_t n, multarray<real, 2> A) {
 
       A[i][j] = 0.25;
 #else
-        A[i][j] = (i==j) ? 1 : 0;
+      A[i][j] = (i == j) ? 1 : 0;
 #endif
     }
   }

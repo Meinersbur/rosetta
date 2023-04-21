@@ -1,7 +1,7 @@
 // BUILD: add_benchmark(ppm=omp_parallel)
 
-#include <rosetta.h>
 #include <omp.h>
+#include <rosetta.h>
 
 
 

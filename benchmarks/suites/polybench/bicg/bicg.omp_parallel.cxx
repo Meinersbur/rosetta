@@ -19,7 +19,6 @@ static void kernel(pbsize_t m, pbsize_t n, multarray<real, 2> A, real s[], real 
       for (idx_t i = 0; i < n; i++)
         s[j] += r[i] * A[i][j];
     }
-
   }
 }
 

@@ -2,15 +2,14 @@
 
 #include <rosetta.h>
 
-#include <thrust/reduce.h>
-#include <thrust/transform_reduce.h>
-#include <thrust/iterator/counting_iterator.h>
-#include <thrust/functional.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-#include <thrust/for_each.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
+#include <thrust/for_each.h>
+#include <thrust/functional.h>
+#include <thrust/host_vector.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 
 
 
@@ -23,10 +22,10 @@ struct Lij_times_xj : public thrust::unary_function<real, real> {
   Lij_times_xj(pbsize_t n, thrust::device_ptr<real> L, thrust::device_ptr<real> x, idx_t i) : n(n), L(L), x(x), i(i) {}
 
   __host__ __device__ real operator()(pbsize_t j) const {
-     real v = L[i * n + j] * x[j];    
-    //  real v = L[i * n + j];   
+    real v = L[i * n + j] * x[j];
+    //  real v = L[i * n + j];
 
-      return v;
+    return v;
   }
 };
 
@@ -39,7 +38,7 @@ static void kernel(pbsize_t n, thrust::device_ptr<real> L, thrust::device_ptr<re
             x[i] -= L[i][j] * x[j];
         x[i] /= L[i][i];
     }
-#endif  
+#endif
   //  fprintf(stderr, "Alive!\n");
 
   for (idx_t i = 0; i < n; i++) {
@@ -51,10 +50,10 @@ static void kernel(pbsize_t n, thrust::device_ptr<real> L, thrust::device_ptr<re
         op,
         (real)0,
         thrust::plus<real>());
-    x[i] = (b[i] - sum) / L[i * n + i] ;
-   // fprintf(stderr, "sum = %f\n", sum);
-   // assert(L[0] == host_L[0]);
-   // x[i] = 1 +sum;
+    x[i] = (b[i] - sum) / L[i * n + i];
+    // fprintf(stderr, "sum = %f\n", sum);
+    // assert(L[0] == host_L[0]);
+    // x[i] = 1 +sum;
   }
 
 #if 0
