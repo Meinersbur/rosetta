@@ -56,7 +56,8 @@ def do_run(bench, args, resultfile, timestamp=None):
     invoke.diag(exe, *args,
                 setenv={'OMP_TARGET_OFFLOAD': 'mandatory'}  # TODO: Make configurable per-PPM
                 )
-    return
+    assert resultfile.is_file(), "Expecting result file to be written by benchmark"
+    return resultfile
 
     #p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     p = subprocess.Popen([exe] + args)
@@ -67,7 +68,7 @@ def do_run(bench, args, resultfile, timestamp=None):
     stop = datetime.datetime.now()
     p.wait()  # To let python now as well that it has finished
 
-    assert resultfile.is_file(), "Expecting result file to be written by benchmark"
+    
 
     wtime = max(stop - start, datetime.timedelta(0))
     utime = ru.ru_utime

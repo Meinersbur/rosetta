@@ -520,7 +520,6 @@ def driver_main(
             results = evaluator.load_resultfiles(resultfiles)
 
             if args.evaluate:
-                #evaluator.results_compare(results, compare_by="configname", compare_val=["walltime"])
                 group_by = None
                 if args.group_by is not None:
                     group_by = [s.strip() for s in args.group_by.split(',')]

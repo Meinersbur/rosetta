@@ -275,9 +275,10 @@ class Statistic:
 
     def relerr(self, ratio=0.95):
         mean = self.mean  # Mean is actually unknown
-        if not mean:
+        abserr = self.abserr(ratio=ratio)
+        if mean is None or abserr is None:
             return None
-        return self.abserr(ratio=ratio) / self.mean
+        return self.abserr(ratio=ratio) / mean
 
     # TODO: signal/noise ratio (relative_rmse?)
 

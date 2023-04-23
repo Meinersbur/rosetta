@@ -81,6 +81,7 @@ class BenchResultSummary:
         self.timestamp = name_or_list(unique(r.timestamp for r in results))
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
+        self.count = sum(r.count for r in results)
         measures = unique(k for r in results for k in r.durations.keys())
         self.durations = {
             m: statistic(
