@@ -10,46 +10,6 @@ static unsigned num_blocks(int num, int factor) {
 }
 
 
-template <typename T>
-struct AtomicMax;
-
-template <>
-struct AtomicMax<double> {
-  __device__ static double set_if_larger(double &dst, double val) {
-
-    // Type-prune everything as uint64_t because there is no floating-point version of atomicCAS.
-    unsigned long long int *dstptr = (unsigned long long int *)&dst;
-    unsigned long long int newval = __double_as_longlong(val);
-    unsigned long long int dstval = *dstptr;
-
-    while (1) {
-      // Special attention for NaN where every comparison is False. If dstval is already NaN, we are done. Otherwise, set it to newval (which can be NaN) and come back here.
-      if (isnan(__longlong_as_double(dstval)))
-        return;
-
-      // Values can only get larger.
-      if (__longlong_as_double(dstval) >= __longlong_as_double(newval))
-        return;
-
-      auto assumed = dstval;
-      dstval = atomicCAS(dstptr, assumed, newval);
-
-      // Three possibilities after atomicCAS:
-
-      // 1. Noone interfered and we set the new max value.
-      // if (assumed == dstval) return;
-      // Included in the dstval >= newval test in the next iteration
-
-      // 2. Someone else overwrote dstptr with a value between newval and assumed.
-      // Will continue the loop again, same problem except that dstptr now contains dstval.
-
-      // 3. Someone else overwrote dst with a larger value than newval.
-      // dstval contains that largest value.
-      // Will break the loop at next iteration because dstval >= newval.
-    }
-  }
-};
-
 
 
 // Dynamic programming wavefront

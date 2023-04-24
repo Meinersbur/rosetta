@@ -21,7 +21,7 @@ struct AtomicMin<double> {
     while (1) {
       // Values can only get smaller
       if (__longlong_as_double(old) <= __longlong_as_double(newval))
-        return;
+        return __longlong_as_double(old);
 
       auto assumed = old;
       auto newold = atomicCAS((unsigned long long int *)&dst, assumed, newval);
@@ -29,7 +29,7 @@ struct AtomicMin<double> {
       // Three possibilities:
       // 1. Noone interferred and we set the new min value, even if it was NaN.
       if (assumed == newold)
-        return;
+        return  __longlong_as_double(old);
 
       // 2. Someone else overwrote dst with a value between val and old.
       // Will continue the loop again, same problem except that dst now contains old
