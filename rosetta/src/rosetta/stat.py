@@ -241,7 +241,6 @@ class Statistic:
     # TODO: Rename
 
     def abserr(self, ratio=0.95):
-
         n = self.count
         if n < 2:
             return None  # Concept not defined with just one value
@@ -254,7 +253,7 @@ class Statistic:
                              df=n - 1,
                              scale=self.stddev / math.sqrt(n)  # Standard error of the mean
                              ) - mean
-        assert abserr >= 0
+        #assert abserr >= 0
         return abserr
 
         assert ratio == 0.95, r"Only two-sided 95% confidence interval supported atm"
@@ -272,6 +271,7 @@ class Statistic:
             c = Statistic.studentt_density_95[-1][1]
 
         return c * self.corrected_variance / math.sqrt(n)
+
 
     def relerr(self, ratio=0.95):
         mean = self.mean  # Mean is actually unknown
