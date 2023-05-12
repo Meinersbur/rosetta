@@ -37,7 +37,7 @@ def name_or_list(data):
     return data
 
 
-# TODO: dataclass
+#TODO: dataclass
 class BenchResult:
     categorical_cols = ['program', 'ppm', 'buildtype', 'configname', 'timestamp']
     numerical_cols = [
@@ -50,7 +50,6 @@ class BenchResult:
         'cupti_compute',
         'cupti_todev',
         'cupti_fromdev']
-
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
         # self.bench=bench
@@ -58,7 +57,7 @@ class BenchResult:
         self.ppm = ppm
         self.buildtype = buildtype
         self.configname = configname
-        self.timestamp = dateutil.parser.parse(timestamp) if isinstance(timestamp, str) else timestamp
+        self.timestamp = dateutil. parser.parse(timestamp) if isinstance(timestamp, str) else timestamp
         self.count = count
         # self.wtime=wtime
         # self.utime=utime
@@ -170,16 +169,13 @@ def duration_formatter(best=None, worst=None):
 
         if v >= 1:
             return highlight_extremes(align_decimal(f"{v:.2}")) + StrColor("s",
-                                                                           colorama.Style.DIM) + (
-                str_concat(' ', errstr) if errstr else '')
+                                                                           colorama.Style.DIM) + (str_concat(' ', errstr) if errstr else '')
         if v * 1000 >= 1:
-            return highlight_extremes(align_decimal(f"{v * 1000:.2f}")) + StrColor("ms", colorama.Style.DIM) + errstr
+            return highlight_extremes(align_decimal(f"{v*1000:.2f}")) + StrColor("ms", colorama.Style.DIM) + errstr
         if v * 1000 * 1000 >= 1:
-            return highlight_extremes(align_decimal(f"{v * 1000 * 1000:.2f}")) + StrColor("µs",
-                                                                                          colorama.Style.DIM) + errstr
-        return highlight_extremes(align_decimal(f"{v * 1000 * 1000 * 1000:.2f}")) + \
+            return highlight_extremes(align_decimal(f"{v*1000*1000:.2f}")) + StrColor("µs", colorama.Style.DIM) + errstr
+        return highlight_extremes(align_decimal(f"{v*1000*1000*1000:.2f}")) + \
             StrColor("ns", colorama.Style.DIM) + errstr
-
     return formatter
 
 
@@ -194,11 +190,11 @@ def getHTMLFromatter(col: str):
         if v >= 1:
             return f'{v:.2f}'
         if v * 1000 >= 1:
-            return f'{v * 1000:.2f}<span class="text-dark-emphasis">ms</span>'
+            return f'{v*1000:.2f}<span class="timeunit">ms</span>'
         if v * 1000 * 1000 >= 1:
-            return f'{v * 1000 * 1000:.2f}<span class="text-dark-emphasis">µs</span>'
+            return f'{v*1000*1000:.2f}<span class="timeunit">µs</span>'
         if v * 1000 * 1000 * 1000 >= 1:
-            return f'{v * 1000 * 1000 * 1000:.2f}<span class="text-dark-emphasis">ns</span>'
+            return f'{v*1000*1000*1000:.2f}<span class="timeunit">ns</span>'
 
     if col == 'count':
         return str_html_formatter
@@ -221,11 +217,11 @@ def getPlaintextFormatter(col: str):
         if v >= 1:
             return f'{v:.2f}'
         if v * 1000 >= 1:
-            return f'{v * 1000:.2f} ms'
+            return f'{v*1000:.2f} ms'
         if v * 1000 * 1000 >= 1:
-            return f'{v * 1000 * 1000:.2f} µs'
+            return f'{v*1000*1000:.2f} µs'
         if v * 1000 * 1000 * 1000 >= 1:
-            return f'{v * 1000 * 1000 * 1000:.2f} ns'
+            return f'{v*1000*1000*1000:.2f} ns'
 
     if col == 'timestamp':
         return timestamp_plaintext_formatter
@@ -258,14 +254,13 @@ def load_resultfiles(resultfiles, filterfunc=None):
             time_per_key = defaultdict(lambda: [])
             for b in benchmark:
                 for k, v in b.attrib.items():
-                    time_per_key[k].append(parse_time(v))
+                    time_per_key[k] .append(parse_time(v))
 
             stat_per_key = {}
             for k, data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            item = BenchResult(name=name, ppm=ppm, buildtype=buildtype, timestamp=timestamp, count=count,
-                               durations=stat_per_key,
+            item = BenchResult(name=name, ppm=ppm, buildtype=buildtype, timestamp=timestamp, count=count, durations=stat_per_key,
                                cold_count=cold_count, peak_alloc=peak_alloc, configname=configname, maxrss=maxrss)
             if filterfunc and not filterfunc(item):
                 continue
@@ -288,7 +283,6 @@ def default_columns(groups, compare_by, always_columns, never_columns):
         if x in BenchResult.categorical_cols:
             return 1
         return 2
-
     columns.sort(key=enforce_order)
     return columns
 
@@ -315,15 +309,15 @@ def results_compare(results, compare_by=None, group_by=None, compare_val=None, s
     # if group_by is not None:
     #    group_by = [g for g in group_by if g != compare_by]
 
-    # grouped_results, all_cmpvals, div_groups = grouping(results, compare_by=compare_by, group_by=group_by)
+    #grouped_results, all_cmpvals, div_groups = grouping(results, compare_by=compare_by, group_by=group_by)
 
-    # common_columns= show_groups or div_groups
-    # compare_columns = compare_val
-    # more_columns = []
+    #common_columns= show_groups or div_groups
+    #compare_columns = compare_val
+    #more_columns = []
     # for c in always_columns:
     #    if c not in common_columns and c not in compare_columns:
     #     more_columns.append(c)
-    # common_columns = more_columns + common_columns
+    #common_columns = more_columns + common_columns
     #
     # print_comparison(groups_of_results=grouped_results,
     #                 list_of_resultnames=all_cmpvals,
@@ -351,7 +345,6 @@ def colsortkey(item, col):
 def sort_keys(key_tuples, compare_by):
     def keyfunc(x):
         return tuple(colsortkey(e, col) for col, e in zip(compare_by, x))
-
     return sorted(key_tuples, key=keyfunc)
 
 
@@ -360,7 +353,6 @@ def sort_results(benchresults):
     def keyfunc(x):
         return (colsortkey(x.name, 'program'), colsortkey(x.configname, 'configname'),
                 colsortkey(x.configname, 'buildtype'), colsortkey(x.ppm, 'ppm'))
-
     return sorted(benchresults, key=keyfunc)
 
 
@@ -398,11 +390,11 @@ If both are unspecified, every result gets its own group_by backet with a single
 
         all_compare_keys = OrderedSet(first_defined(compare_by, []))
         all_compare_tuples = OrderedSet(tuple(get_column_data(result, col)
-                                              for col in all_compare_keys) for result in data)
+                                        for col in all_compare_keys) for result in data)
         all_compare_tuples = sort_keys(all_compare_tuples, compare_by=all_compare_keys)
 
         if group_by is None:
-            all_group_keys = OrderedSet(BenchResult.categorical_cols).difference(all_compare_keys)
+            all_group_keys = OrderedSet(BenchResult.categorical_cols)  .difference(all_compare_keys)
         else:
             all_group_keys = group_by
         all_group_tuples = OrderedSet(tuple(get_column_data(result, col) for col in all_group_keys) for result in data)
@@ -455,7 +447,7 @@ If both are unspecified, every result gets its own group_by backet with a single
                     break
             else:
                 continue
-            divcat.append(cat)
+            divcat .append(cat)
         return divcat
 
     def nonempty_vals(self):
@@ -516,7 +508,7 @@ def evaluate(resultfiles):
     stats_per_key = defaultdict(lambda: [])
     for r in results:
         for k, stat in r.durations.items():
-            stats_per_key[k].append(stat)
+            stats_per_key[k] .append(stat)
 
     summary_per_key = {}  # mean of means
     for k, data in stats_per_key.items():
@@ -650,14 +642,14 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
 
     # Find the diverging categories
     label_groups = divergent_keys(label_groups, [tuple(get_summary_data(r, col)
-                                                       for col in label_groups) for r in groups.groupsummary])
+                                  for col in label_groups) for r in groups. groupsummary])
     if not label_groups:
         label_groups = ['program']
 
     def make_group_label(s, g):
         return ', '.join(getPlaintextFormatter(col)(get_summary_data(s, col)) for col in label_groups)
 
-    labels = [make_group_label(s, g) for s, g in zip(groups.groupsummary, groups.benchgroups)]
+    labels = [make_group_label(s, g) for s, g in zip(groups. groupsummary, groups.benchgroups)]
 
     leftmargin = 1
     rightmargin = 0.5
@@ -683,17 +675,16 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
         if baseline_cmpval:
             # FIXME: What if missing?
             [(baseline_idx, baseline_result)] = ((i, c)
-                                                 for i, (t, c) in enumerate(zip(groups.compare_tuples, group_data)) if
-                                                 t == baseline_cmpval)
+                                                 for i, (t, c) in enumerate(zip(groups.compare_tuples, group_data)) if t == baseline_cmpval)
             baseline_stat = get_column_data(baseline_result, data_col)
             if not baseline_stat:
                 log.warn(f"No baseline {baseline_cmpval}; skipping group f{group_idx}")
                 continue
-            # group_data_without_baseline = [b for i,b in enumerate(group_data) if i!=baseline_compare_idx]
+            #group_data_without_baseline = [b for i,b in enumerate(group_data) if i!=baseline_compare_idx]
             baseline_mean = baseline_stat.mean
 
-        # nonempty_results = [(j,r) for j,r in enumerate(group_data_without_baseline) if r]
-        # benchs_this_group = len(nonempty_results)
+        #nonempty_results = [(j,r) for j,r in enumerate(group_data_without_baseline) if r]
+        #benchs_this_group = len(nonempty_results)
 
         for compare_idx, compare_data in enumerate(d for i, d in enumerate(group_data) if i != baseline_idx):
             stat = get_column_data(compare_data, data_col)
@@ -742,13 +733,10 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
 
     # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
     # x.grid(linestyle='--',axis='y')
-    x_label = 'Benchmark'
-    if baseline_cmpval:
-        x_label = f"{x_label} for {baseline_cmpval[0]}"
     ax.set(
         axisbelow=True,  # Hide the grid behind plot objects
-        xlabel=x_label,
-        ylabel='Speedup [times]',
+        xlabel='Benchmark',
+        ylabel='Walltime [s]',
     )
     ax.set_yscale('log', base=2)
     ax.spines['top'].set_visible(False)
@@ -784,15 +772,15 @@ class AllResultsSection(ReportSection):
         columns = self.columns
         compare_columns = []
 
-        yield '<div class="table-responsive"><table class="table table-striped table-hover table-bordered">'
+        yield '<table class="table">'
 
         # Print the table header
-        yield '<thead class="table-dark"><tr>'
+        yield "<thead><tr>"
         for col in columns:
             if col in compare_columns:
-                yield f'<th scope="col" colspan="{len(columns)}">{getMeasureDisplayStr(col)}</th>'
+                yield f'<td colspan="{len(columns)}">{getMeasureDisplayStr(col)}</td>'
             else:
-                yield f'<th scope="col">{getMeasureDisplayStr(col)}</th>'
+                yield f"<td>{getMeasureDisplayStr(col)}</td>"
         if compare_columns:
             yield "</tr><tr>"
             for col in columns:
@@ -802,10 +790,10 @@ class AllResultsSection(ReportSection):
                             formatColumnVal(
                                 ccat, resulttuple[i]) for i, ccat in enumerate(
                                 benchgroups.compare_by))
-                        yield f'<th scope="col">{resultname}</th>'
+                        yield f"<td>{resultname}</td>"
                 else:
-                    yield f"<th></th>"
-        yield "</tr></thead><tbody>"
+                    yield f"<td></td>"
+        yield "</tr></thead>"
 
         # Emit table data
 
@@ -814,15 +802,15 @@ class AllResultsSection(ReportSection):
             for col in columns:
                 if col in compare_columns:
                     for i, resulttuple in enumerate(row):
-                        yield f'<td>{formatColumnVal(col, get_summary_data(row[i], col))}</td>'
+                        yield f'<td>{formatColumnVal(col,get_summary_data(row[i], col))}</td>'
                 else:
                     summarydata = get_summary_data(rowsummery, col)
                     if summarydata:
                         yield f'<td>{getHTMLFromatter(col)(summarydata)}</td>'
                     else:
-                        yield '<td>N/A</td>'
+                        yield '<td>???</td>'
             yield "</tr>"
-        yield "<tbody></table></div>"
+        yield "</table>"
 
 
 class WalltimePlotSection(ReportSection):
@@ -850,8 +838,8 @@ class WalltimePlotSection(ReportSection):
 
 
 def fig_to_svg(fig):
-    i = io.StringIO()
-    # plt.savefig(i, format="svg")
+    i = io. StringIO()
+    #plt.savefig(i, format="svg")
     fig.savefig(i, format='svg')
     fig.canvas.draw_idle()
     i.seek(0)
@@ -867,7 +855,6 @@ class SpeedupPlotSection(ReportSection):
         assert groups.compare_by == [compare_col]
 
         super().__init__()
-        self.title = f"{self.title}: {base_cat}"
         self.groups = groups
         self.compare_col = compare_col
         self.base_cat = base_cat
@@ -902,206 +889,103 @@ def make_report(results):
             sections.append(speedupplotsec)
 
     yield """
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rosetta Report</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <style>
-        .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            z-index: 100; /* Behind the navbar */
-            padding: 48px 0 0; /* Height of navbar */
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Benchmark Report</title>
+	    <style>
+		body {
+			font-family: sans-serif;
+			font-size: 14px;
+			line-height: 1.5;
+			margin: 0;
+			padding: 0;
+		}
+
+        /* CSS grid layout */
+		.container {
+			display: flex;
+			flex-wrap: wrap;
+			margin: 0 auto;
+			padding: 20px;
+            column-gap: 15px;
+            display: grid;
+            grid-template-columns: 15em minmax(0,1fr);
+		}
+
+        /* CSS grid column 1: navigation */
+        .toc-container {  /* Container in which the sticky div can move */
+            display: block;
+            height: 100%;
         }
+		.toc {
+			background-color: #f1f1f1;
+			border-radius: 5px;
+			box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+			flex-basis: 20%;
+            top: 20px;
+			position: sticky;
+		}
+		.toc ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+		.toc li {
+			margin-bottom: 10px;
+		}
 
-        @media (max-width: 767.98px) {
-            .sidebar {
-                top: 5rem;
-            }
+        /* CSS grid column 2: content */
+		.table-container {
+			flex-basis: 80%;
+		}
+		.table {
+			border-collapse: collapse;
+			margin-top: 20px;
+			width: 100%;
+		}
+		.table th,
+		.table td {
+			border: 1px solid #ddd;
+			padding: 8px;
+			text-align: left;
+		}
+		.table th {
+			background-color: #f2f2f2;
+			font-weight: bold;
+		}
+		.table tr:nth-child(even) {
+			background-color: #f9f9f9;
+		}
+
+        .timeunit {
+            color: #AAAAAA;
         }
-
-        .sidebar-sticky {
-            height: calc(100vh - 48px);
-            overflow-x: hidden;
-            overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-        }
-        /*
-         * Navbar
-         */
-
-        .navbar-brand {
-            padding-top: .75rem;
-            padding-bottom: .75rem;
-            background-color: rgba(0, 0, 0, .25);
-            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
-        }
-
-        .navbar .navbar-toggler {
-            top: .25rem;
-            right: 1rem;
-        }
-    </style>
-</head>
-<body>
-<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-5" href="">
-        <i class="bi bi-collection me-2"></i>
-        <span class="fs-5">Rosetta Benchmark</span>
-    </a>
-    <ul class="nav col-12 col-lg-auto my-2 justify-content-center my-md-0 text-white">
-        <li>
-            <a href="https://github.com/Meinersbur/rosetta" class="nav-link fs-5 text-white">
-                <i class="bi bi-github"></i>
-                Code
-            </a>
-        </li>
-    </ul>
-
-</header>
-
-<div class="container-fluid">
-
-    <div class="row">
-        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-            <div class="position-sticky pt-3 sidebar-sticky">
-                <div class="d-flex align-items-center p-2 ps-3 text-decoration-none border-bottom">
-                    <span class="fs-5">Sections</span>
-                </div>
-                <div id="left-menu" class="list-group rounded-0">
-
-			"""
-    for index, s in enumerate(sections):
-        yield f'<a class="list-group-item list-group-item-action" href="#{s.name}_{index}"><span><i class="bi bi-bar-chart-fill me-2"></i> {s.title}</span></a>'
+	</style>
+    </head>
+    <body>
+      <div class="container">
+      <div class="toc-container">
+		<div class="toc">
+			<h2>Sections</h2>
+			<ul>"""
+    for s in sections:
+        yield f'<li><a href="#{s.name}">{s.title}</a></li>'
 
     yield """
-</div>
-            </div>
-        </nav>
+			</ul>
+		</div>
+        </div>
+        <div class="table-container">
+            <h1>Benchmark Report</h1>"""
 
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h2 class="h2">Benchmark Report</h2>
-            </div>
-            <div data-bs-spy="scroll" data-bs-target="#left-menu" data-bs-smooth-scroll="true"
-                 class="scrollspy-example" tabindex="0">
-
-
-"""
-
-    for index, s in enumerate(sections):
-        if index != 0:
-            png_btn = f'<button class="ms-4 btn btn-dark" onclick="exportPngImage(this)"><i class="bi bi-filetype-png me-1"></i> Export to PNG</button>'
-            jpg_btn = f'<button class="ms-2 btn btn-dark" onclick="exportJpgImage(this)"><i class="bi bi-filetype-jpg me-1"></i> Export to JPG</button>'
-            pdf_btn = f'<button class="ms-2 btn btn-dark" onclick="exportPdf(this)"><i class="bi bi-filetype-pdf me-1"></i> Export to PDF</button>'
-            yield f'<h2 class="mt-4" id="{s.name}_{index}">{s.title} {png_btn} {jpg_btn} {pdf_btn}</h2>'
-        else:
-            yield f'<h2 class="mt-4" id="{s.name}_{index}">{s.title}</h2>'
+    for s in sections:
+        yield f'<h2 id="{s.name}">{s.title}</h2>'
         yield from s.content
 
     yield """</div>
-
-        </main>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pdfkit@0.10.0/js/pdfkit.standalone.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/svg-to-pdfkit@0.1.8/source.js"></script>
-
-<script>
-function exportPngImage(clickedButton) {
-  const h2Element = clickedButton.parentNode; // Get the parent h2 element
-  const svgElement = findNextSvgElement(h2Element);
-  domtoimage.toPng(svgElement)
-    .then(function (dataUrl) {
-      var link = document.createElement('a');
-      link.download = 'plot.png';
-      link.href = dataUrl;
-      link.click();
-    })
-    .catch(function (error) {
-      console.error('Error exporting image: ', error);
-    });
-}
-function exportJpgImage(clickedButton) {
-  const h2Element = clickedButton.parentNode; // Get the parent h2 element
-  const svgElement = findNextSvgElement(h2Element);
-  domtoimage.toJpeg(svgElement,{ quality: 0.95 })
-    .then(function (dataUrl) {
-      var link = document.createElement('a');
-      link.download = 'plot.jpeg';
-      link.href = dataUrl;
-      link.click();
-    })
-    .catch(function (error) {
-      console.error('Error exporting image: ', error);
-    });
-}
-function findNextSvgElement(h2Element) {
-    let nextElement = h2Element.nextSibling;
-
-    while (nextElement) {
-        if (nextElement.tagName === 'svg') {
-            return nextElement;
-        }
-        nextElement = nextElement.nextSibling;
-    }
-
-    return null;
-}
-
-const svgToPdfExample = (svg) => {
-    const doc = new window.PDFDocument({size: 'A1', layout: 'landscape'});
-    const chunks = [];
-    const stream = doc.pipe({
-        // writable stream implementation
-        write: (chunk) => chunks.push(chunk),
-        end: () => {
-            const pdfBlob = new Blob(chunks, {
-                type: 'application/octet-stream'
-            });
-            var blobUrl = URL.createObjectURL(pdfBlob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = 'plot.pdf'; // Set the desired filename and extension
-            a.click();
-        },
-        on: (event, action) => {
-        },
-        once: (...args) => {
-        },
-        emit: (...args) => {
-        },
-    });
-
-    window.SVGtoPDF(doc, svg, 0, 0, {
-        preserveAspectRatio: 'xMinYMin meet'
-    });
-
-    doc.end();
-};
-
-function exportPdf(clickedButton) {
-  const h2Element = clickedButton.parentNode; 
-  const svgElement = findNextSvgElement(h2Element);
-    if (svgElement) {
-        svgToPdfExample(svgElement);    
-    } else {
-        console.log('The SVG element does not exist.');
-    }
-}
-</script>
-     
-</body>
+        </div>
+    </body>
 </html>
 """
 
