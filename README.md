@@ -6,7 +6,7 @@ Rosetta is a combinations of a benchmarking framework (think of Google Benchmark
 Benchmarking Framework
 ----------------------
 
-Rosatta includes a framework for benchmarking parallel programs. It currently supports the following parallel programming models (PPMs):
+Rosetta includes a framework for benchmarking parallel programs. It currently supports the following parallel programming models (PPMs):
 
  * Sequential
  * OpenMP fork/join (`#pragma omp parallel for`)
@@ -24,7 +24,7 @@ Support for the following PPMs could be added in the future:
  * UPC
 
 
-Rosatta handles the execution and measurements of the programs it runs. The following platforms are supported:
+Rosetta handles the execution and measurements of the programs it runs. The following platforms are supported:
 
  * Host OS (Wall time, user/kernel time, Max RSS)
    * getrusage
@@ -90,3 +90,32 @@ Comparable Projects
 
  * NAS Parallel Benchmarks
  * [Rodinia](https://rodinia.cs.virginia.edu/doku.php)
+
+
+### Run using Python
+- Create a virtual environment and install necessary packages 
+```shell
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+- Add Thrust in environment variable in `.zshrc`:
+```shell
+export Thrust_DIR=/usr/local/cuda-12/lib64/cmake/thrust
+```
+- Install `cmake` and `ninja-build`:
+```shell
+sudo apt install cmake
+sudo apt-get install ninja-build
+```
+- Using rosetta's own script: 
+```
+python /path/to/rosetta/rosetta.py <subcommand>
+```
+Subcommands are: `build`, `verify`, `bench` and a couple of others which can be listed with `-h`.
+For example:
+```shell
+python rosetta.py -h 
+python rosetta.py --build
+python rosetta.py --bench
+```
