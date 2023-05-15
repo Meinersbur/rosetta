@@ -4,8 +4,7 @@
 
 
 static void kernel(pbsize_t n, real data[]) {
-#pragma omp target teams distribute parallel for map(from \
-                                                     : data [0:n])
+#pragma omp target teams distribute parallel for map(from: data[0:n])
   for (idx_t i = 0; i < n; i += 1)
     data[i] = i;
 }
