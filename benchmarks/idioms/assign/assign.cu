@@ -28,8 +28,6 @@ void run(State &state, pbsize_t pbsize) {
   real *dev_data = state.allocate_dev<real>(n);
 
   for (auto &&_ : state) {
-    BENCH_CUDA_TRY(cudaMemcpy(dev_data, data.data(), n * sizeof(real), cudaMemcpyHostToDevice));
-
     const int threadsPerBlock = 256;
     cuda_assign<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, dev_data);
 
