@@ -5,7 +5,6 @@ import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
-
 rosetta = __import__("rosetta.scripts.gen-stage1")
 if __name__ == '__main__':
     retcode = getattr(rosetta.scripts,'gen-stage1').main()
