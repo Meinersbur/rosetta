@@ -53,6 +53,15 @@ def shcombine(arg=None, args=None):
     return result
 
 
+def cmakequote(arg):
+    """Escape a string for use as a string argument in CMake
+    
+    Ref: https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument
+    """
+    escaped = arg.replace('\\', '\\\\').replace('"', r'\"') 
+    return f'"{escaped}"'
+
+
 # from https://stackoverflow.com/questions/1714027/version-number-comparison-in-python
 def version_cmp(v1, v2):
     def convert_int(v):
