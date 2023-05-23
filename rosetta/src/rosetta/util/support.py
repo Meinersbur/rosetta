@@ -328,6 +328,18 @@ def createfile(filename, contents):
         with open(filename, 'w+')as f:
             print(contents, file=f)
 
+def copy_files(source_folder, destination_folder):
+    try:
+        # Create the destination folder if it doesn't exist
+        if not os.path.exists(destination_folder):
+            os.mkdir(destination_folder)
+        # Recursively copy the files
+        shutil.copytree(source_folder, destination_folder, dirs_exist_ok=True)
+    except Exception as ex:
+        print(f"Error in coping {source_folder} to {destination_folder}: {str(ex)}")
+
+
+
 
 def updatefile(filename, contents):
     """Only write files if it has changed.

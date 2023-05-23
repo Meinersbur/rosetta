@@ -127,14 +127,14 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
 
     results = []
     resultssubdir = make_resultssubdir(within=resultdir)
-    timestamp = datetime. datetime.now(datetime.timezone.utc)
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
     for e in registry.benchmarks:
         thisresultdir = resultssubdir
         configname = e.configname
         if configname:
             thisresultdir /= configname
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
-        results .append(run_gbench(
+        results.append(run_gbench(
             e, problemsizefile=problemsizefile, resultfile=thisresultdir, timestamp=timestamp))
     return results, resultssubdir
 

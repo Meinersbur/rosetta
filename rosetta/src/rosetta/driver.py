@@ -487,7 +487,7 @@ def driver_main(
             prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                              limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-        if args. verify:
+        if args.verify:
             if mode == DriverMode.MANAGEDBUILDDIR:
                 refdir = (refconfig.builddir if refconfig else None) / 'refout'
             else:
@@ -550,4 +550,8 @@ def driver_main(
                     reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
                     if resultsdir := get_resultsdir():
                         reportfile = resultsdir / reportfile
+                # Copy assets folder (js, css, fonts) to the result directory for eliminating CDN dependencies
+                source_folder = "static"
+                destination_folder = os.path.dirname(reportfile)
+                copy_files(source_folder, destination_folder)
                 evaluator.save_report(results, filename=reportfile)
