@@ -550,8 +550,4 @@ def driver_main(
                     reportfile = mkpath(f"report_{now:%Y%m%d_%H%M}.html")
                     if resultsdir := get_resultsdir():
                         reportfile = resultsdir / reportfile
-                # Copy assets folder (js, css, fonts) to the result directory for eliminating CDN dependencies
-                source_folder = "static"
-                destination_folder = os.path.dirname(reportfile)
-                copy_files(source_folder, destination_folder)
                 evaluator.save_report(results, filename=reportfile)

@@ -780,11 +780,7 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
 
     ax.set_xticks([groupwidth * i for i in range(len(labels))])
     ax.set_xticklabels(labels, rotation=20, ha="right", rotation_mode="anchor")
-    # Remove parenthesis from the chart labels
-    handles, labels = ax.get_legend_handles_labels()
-    if len(labels) > 1:
-        labels = [ast.literal_eval(item)[0] for item in labels]
-    ax.legend(labels=labels)
+    ax.legend()
     return fig
 
 
@@ -935,8 +931,9 @@ def make_report(results):
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Rosetta Report</title>
-    <link href="assets/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/bootstrap-icons-1.10.5/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
         .sidebar {
             position: fixed;
@@ -1037,10 +1034,10 @@ def make_report(results):
     </div>
 </div>
 
-<script src="assets/bootstrap.bundle.min.js"></script>
-<script src="assets/dom-to-image.min.js"></script>
-<script src="assets/pdfkit.standalone.js"></script>
-<script src="assets/source.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfkit@0.10.0/js/pdfkit.standalone.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg-to-pdfkit@0.1.8/source.js"></script>
 
 <script>
 function exportPngImage(clickedButton) {
