@@ -4,8 +4,6 @@
 """
 Evaluate, compare, and report for a set of resultfile
 """
-import statistics
-import ast
 import dateutil
 import io
 from collections import defaultdict
