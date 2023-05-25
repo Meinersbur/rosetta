@@ -52,15 +52,59 @@ else ()
   set(_default_build_type)
 endif ()
 
-# TODO: should call something in bin/
-set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
-set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
+
+
+
 
 # TODO: Better name; "maintainer mode" comes from GNU autotools
 option(
   ROSETTA_MAINTAINER_MODE
   "Skip always looking for changed benchmark build instructions (maintainer mode meaning now its the benchmark maintainer's responsibility to invoke CMake when benchmark build instructions change)"
   OFF)
+
+
+# ROSETTA_PPM_* and ROSETTA_PLATFORM_* config parameters can have the following values:
+# ON:        Compile benchmarks of this PPM and fail if dependencies are not met
+# OFF:       Do not compile benchmarks of this PPM and do not search for its dependencies (unless required by another PPM/PLATFORM)
+# undefined: Introspect the environment whether the PPM dependencies are met. 
+#            If all dependencies found: Set the option default to ON, this will be the option's value during the next run of cmake unless overriden by the user
+#            Otherwise:                 Set the option default to OFF, this will be the option's value during the next run of cmake unless overriden by the user
+set(_all_ppms REFERENCE SERIAL CUDA OPENCL OPENMP_PARALLEL OPENMP_TASK OPENMP_TARGET OPENACC MPI)
+set(_all_platforms NVIDIA PAPI OPENMP OMPT)
+
+
+
+set(ROSETTA_PPM_DEFAULT
+  "AUTODETECT"
+  CACHE STRING "Default enabled state of PPMs (ON, OFF, or AUTODETECT)")
+set_property(CACHE ROSETTA_PPM_DEFAULT PROPERTY STRINGS "ON" "OFF" "AUTODETECT")
+
+
+if (NOT ROSETTA_PPM_DEFAULT STREQUAL "AUTODETECT")
+  # Set default option to skip autodetection
+  # If first configuring with autodetect, the PPM variable will undefined and later trigger weak detection of dependencies
+  foreach (_ppm IN LISTS _all_ppms)
+    if (NOT DEFINED ROSETTA_PPM_${_ppm})
+      set(ROSETTA_PPM_${_ppm} ${ROSETTA_PPM_DEFAULT})
+    endif ()
+  endforeach ()
+endif ()
+
+
+set(ROSETTA_PLATFORM_DEFAULT
+  "AUTODETECT"
+  CACHE STRING "Default enabled state of PLATFORMs (ON, OFF, or AUTODETECT)")
+set_property(CACHE ROSETTA_PLATFORM_DEFAULT PROPERTY STRINGS "ON" "OFF" "AUTODETECT")
+
+if (NOT ROSETTA_PLATFORM_DEFAULT STREQUAL "AUTODETECT")
+  foreach (_platform IN LISTS _all_platforms)
+    if (NOT DEFINED ROSETTA_PLATFORM_${_platform})
+      set(ROSETTA_PLATFORM_${_platform} ${ROSETTA_PPM_DEFAULT})
+    endif ()
+  endforeach ()
+endif ()
+
+
 
 # Dependencies ################################################################
 
@@ -104,7 +148,7 @@ elseif (ROSETTA_PPM_CUDA)
   enable_language(CUDA)
   find_package(CUDAToolkit)
   if (NOT CMAKE_CUDA_COMPILER)
-    message(FATAL_ERROR "CUDA enabled but no CUDA not found")
+    message(FATAL_ERROR "CUDA enabled but no CUDA found")
   endif ()
 endif ()
 
@@ -130,9 +174,7 @@ if (CMAKE_CUDA_COMPILER)
           CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds." FORCE)
     endif ()
   endif ()
-  set(ROSETTA_CUDA_IS_FIRST_CONFIG
-      1
-      CACHE INTERNAL "Used to set override CMake's default flags" FORCE)
+  set(ROSETTA_CUDA_IS_FIRST_CONFIG 1 CACHE INTERNAL "Used to override CMake's default flags" FORCE)
 endif ()
 
 if (CMAKE_CUDA_COMPILER)
@@ -141,8 +183,6 @@ if (CMAKE_CUDA_COMPILER)
   find_package(Thrust REQUIRED CONFIG)
   thrust_create_target(Thrust) # https://github.com/NVIDIA/thrust/blob/main/thrust/cmake/README.md
 endif ()
-
-#message(FATAL_ERROR "Stop here")
 
 # For Nvidia platform
 if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
@@ -158,7 +198,8 @@ elseif (ROSETTA_PPM_OPENCL)
   find_package(OpenCL REQUIRED)
 endif ()
 
-# pthreads find_package(Threads REQUIRED)
+# pthreads 
+# find_package(Threads REQUIRED)
 
 # OpenMP
 if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL
@@ -197,25 +238,24 @@ elseif (ROSETTA_PPM_MPI)
   find_package(MPI REQUIRED)
 endif ()
 
+
 # Introspection ################################################################
 
 # pointer restrict
-check_cxx_source_compiles(
-  "
+check_cxx_source_compiles("
         int f(void *restrict x);
         int main(void) {return 0;}
     "
   HAVE_CXX_RESTRICT)
 
-check_cxx_source_compiles(
-  "
+check_cxx_source_compiles("
         int f(void *__restrict x);
         int main(void) {return 0;}
     "
   HAVE_CXX___RESTRICT)
 if (HAVE_CXX_RESTRICT)
   set(KEYWORD_RESTRICT "restrict")
-  elif(HAVE_CXX___RESTRICT)
+elseif (HAVE_CXX___RESTRICT)
   set(KEYWORD_RESTRICT "__restrict")
 else ()
   set(KEYWORD_RESTRICT "")
@@ -227,8 +267,7 @@ check_include_file_cxx(filesystem HAS_INCLUDE_FILESYSTEM)
 check_include_file_cxx(charconv HAS_INCLUDE_CHARCONV)
 
 # g++ >= 11: charconv with float types (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html)
-check_cxx_source_compiles(
-  "
+check_cxx_source_compiles("
 #include <charconv>
 
 template <typename T>
@@ -254,6 +293,7 @@ void foo() {
 "
   HAS_INCLUDE_CHARCONV_FLOAT)
 
+
 # Configuration ###############################################################
 
 set(ROSETTA_RESULTS_DIR
@@ -271,64 +311,53 @@ set(ROSETTA_RANDSEED
     "${_randseed_default}"
     CACHE STRING "Seed for compile-time randomness")
 
-option(ROSETTA_PPM_REFERENCE "Enable reference code; use serial if there is no explicit reference version" ON)
 
-option(ROSETTA_PPM_SERIAL "Enable serial" ON)
 
-set(_cuda_enabled_default OFF)
-if (CMAKE_CUDA_COMPILER)
-  set(_cuda_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
+
+function (handle_enabled_option _type _name _detectionresult _helptext)
+    if (ROSETTA_${_type}_DEFAULT STREQUAL "AUTODETECT")
+      # Force _enabled_default to be a boolean
+      set(_enabled_default OFF)
+      if (_detectionresult)
+        set(_enabled_default ON)
+      endif ()
+    else ()
+      set(_enabled_default ${ROSETTA_${_type}_DEFAULT})
+    endif ()
+    option(ROSETTA_${_type}_${_name} "${_helptext}" ${_enabled_default})
+  endfunction ()
+
+function (handle_ppm_enabled_option _ppm _detectionresult _helptext)
+   handle_enabled_option(PPM "${_ppm}" "${_detectionresult}" "${_helptext}")
+endfunction ()
+function (handle_platform_enabled_option _platform _detectionresult _helptext)
+   handle_enabled_option(PLATFORM "${_platform}" "${_detectionresult}" "${_helptext}")
+endfunction ()
+
+handle_ppm_enabled_option(REFERENCE "ON" "Enable reference code; use serial if there is no explicit reference version")
+handle_ppm_enabled_option(SERIAL "ON" "Enable serial PPM")
+handle_ppm_enabled_option(CUDA "${CMAKE_CUDA_COMPILER}" "Enable CUDA PPM")
+handle_ppm_enabled_option(OPENCL "${OpenCL_FOUND}" "Enable OpenCL PPM")
+handle_ppm_enabled_option(OPENMP_PARALLEL "${OpenMP_CXX_FOUND}" "Enable OpenMP '#pragma omp parallel' PPM")
+handle_ppm_enabled_option(OPENMP_TASK "${OpenMP_CXX_FOUND}" "Enable OpenMP '#pragma omp task' PPM")
+handle_ppm_enabled_option(OPENMP_TARGET "${OpenMPOffload_FOUND}" "Enable OpenMP '#pragma omp target' PPM")
+handle_ppm_enabled_option(OPENMP_TARGET "${OpenACC_CXX_FOUND}" "Enable OpenACC PPM")
+handle_ppm_enabled_option(OPENMP_TARGET "${MPI_CXX_FOUND}" "Enable MPI PPM")
 
 set(_nvidia_enabled_default OFF)
 if (TARGET CUDA::cudart)
   set(_nvidia_enabled_default ON)
 endif ()
-option(ROSETTA_PLATFORM_NVIDIA "Enable NVIDIA CUPTI Performance Measurements" ${_nvidia_enabled_default})
+handle_platform_enabled_option(NVIDIA "${_nvidia_enabled_default}" "Enable NVIDIA CUPTI Performance Measurements")
+handle_platform_enabled_option(PAPI "OFF" "Enable Performance-API Measurements (Not implemented)")
+handle_platform_enabled_option(OPENMP "${OpenMP_CXX_FOUND}" "Enable omp_get_wtime Measurements")
+handle_platform_enabled_option(OMPT "OFF" "Enable ompt interface Measurements (Not implemented)")
 
-set(_papi_enabled_default OFF)
-if (False)
-  set(_papi_enabled_default ON)
-endif ()
-option(ROSETTA_PLATFORM_PAPI "Enable Performance-API Measurements (Not implemented)" ${_papi_enabled_default})
 
-set(_ompwtime_enabled_default OFF)
-if (OPENMP_FOUND)
-  set(_ompwtime_enabled_default ON)
-endif ()
-option(ROSETTA_PLATFORM_OPENMP "Enable omp_get_wtime Measurements (Not implemented)" ${_ompwtime_enabled_default})
 
-set(_opencl_enabled_default OFF)
-if (OpenCL_FOUND)
-  set(_opencl_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENCL "Enable OpenCL PPM" ${_opencl_enabled_default})
 
-set(_openmp_thread_enabled_default OFF)
-if (OpenMP_CXX_FOUND)
-  set(_openmp_thread_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENMP_PARALLEL "Enable OpenMP '#pragma omp parallel' PPM" ${_openmp_thread_enabled_default})
-option(ROSETTA_PPM_OPENMP_TASK "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
 
-set(_openmp_target_enabled_default OFF)
-if (OpenMP_CXX_FOUND AND OpenMPOffload_FOUND)
-  set(_openmp_target_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENMP_TARGET "Enable OpenMP '#pragma omp target' PPM" ${_openmp_target_enabled_default})
 
-set(_openacc_enabled_default OFF)
-if (OpenACC_CXX_FOUND)
-  set(_openacc_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
-
-set(_mpi_enabled_default OFF)
-if (MPI_CXX_FOUND)
-  set(_mpi _enabled_default ON)
-endif ()
-option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
 
 set(ROSETTA_REALTYPE
     "double"
@@ -357,6 +386,7 @@ if (NOT _problemsizefile)
   message(SEND_ERROR "Problem sizes required")
 endif ()
 
+
 # Build #######################################################################
 
 add_custom_target(references)
@@ -377,9 +407,11 @@ function (rosetta_add_reference basename pbsize)
   add_dependencies(references "reference-${basename}")
 endfunction ()
 
+
 # Library ----------------------------------------------------------------------
 
 add_subdirectory(rosetta)
+
 
 # Benchmarks -------------------------------------------------------------------
 
@@ -427,6 +459,7 @@ endif ()
 
 add_subdirectory(benchmarks)
 
+
 # Maintanance #################################################################
 
 if (NOT ROSETTA_MAINTAINER_MODE)
@@ -446,6 +479,7 @@ if (NOT ROSETTA_MAINTAINER_MODE)
     rosetta/CMakeLists.txt
     rosetta/cmake/*.cmake)
 endif ()
+
 
 # Run #########################################################################
 
@@ -582,6 +616,7 @@ if (_default_build_type)
   # add_custom_target(verify COMMAND Python::Interpreter "run.py" "--problemsizefile=${_problemsizefile}" "--verify"
   # COMMENT "Verify all benchmarks ..." USES_TERMINAL VERBATIM ) add_dependencies(verify build ${_references})
 endif ()
+
 
 # Summary #########################################################################
 
