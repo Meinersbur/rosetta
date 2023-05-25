@@ -487,7 +487,7 @@ def driver_main(
             prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
                              limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
 
-        if args. verify:
+        if args.verify:
             if mode == DriverMode.MANAGEDBUILDDIR:
                 refdir = (refconfig.builddir if refconfig else None) / 'refout'
             else:

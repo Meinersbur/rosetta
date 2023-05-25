@@ -4,7 +4,6 @@
 """
 Evaluate, compare, and report for a set of resultfile
 """
-
 import dateutil
 import io
 from collections import defaultdict
@@ -49,7 +48,9 @@ class BenchResult:
         'cupti',
         'cupti_compute',
         'cupti_todev',
-        'cupti_fromdev']
+        'cupti_fromdev',
+        'maxrss'
+        ]
 
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
@@ -74,12 +75,13 @@ class BenchResult:
 class BenchResultSummary:
     """A summery of multiple BenchResults with the same API as BenchResult"""
 
-    def __init__(self, results):  # TODO: Detect if any lsit element is itself a BenchResultSummary and expand it
+    def __init__(self, results):  # TODO: Detect if any list element is itself a BenchResultSummary and expand it
         self.name = name_or_list(unique(r.name for r in results))
         self.ppm = name_or_list(unique(r.ppm for r in results))
         self.buildtype = name_or_list(unique(r.buildtype for r in results))
         self.configname = name_or_list(unique(r.configname for r in results))
         self.timestamp = name_or_list(unique(r.timestamp for r in results))
+        self.maxrss = name_or_list(unique(r.maxrss for r in results))
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
         self.count = sum(r.count for r in results)
@@ -105,12 +107,16 @@ def get_column_data(result: BenchResult, colname: str):
         return result.timestamp
     if colname == "count":
         return result.count
+    if colname == "maxrss":
+        return result.maxrss
     if colname in BenchResult.numerical_cols:
         return result.durations.get(colname)
     assert False, "TODO: Add to switch of use getattr"
 
 
 def get_summary_data(result: BenchResultSummary, colname: str):
+    if colname == "maxrss":
+        return result.maxrss
     if colname == "count":
         return result.count
     return get_column_data(result, colname)
@@ -119,10 +125,12 @@ def get_summary_data(result: BenchResultSummary, colname: str):
 def getColumnFormatter(colname: str):
     if colname == 'program':
         return program_formatter
+    elif colname == 'maxrss':
+        return maxrss_formatter
     elif colname == 'count':
         return None
     elif colname in BenchResult.numerical_cols:
-        return duration_formatter()  # TOOD: Get best/worst
+        return duration_formatter()  # TODO: Get best/worst
     return None
 
 
@@ -143,6 +151,11 @@ def program_formatter(v: pathlib.Path):
     if v is None:
         return None
     return StrColor(v, colorama.Fore.GREEN)
+
+def maxrss_formatter(v: pathlib.Path):
+    if v is None:
+        return None
+    return StrColor(f"{v / 1024.0:.0f}", colorama.Style.NORMAL)+StrColor("MB",colorama.Style.DIM)
 
 
 def duration_formatter(best=None, worst=None):
@@ -187,6 +200,10 @@ def getHTMLFromatter(col: str):
     def str_html_formatter(v):
         return html.escape(str(v))
 
+    def memory_formatter(v):
+        return f'{v / 1024.0:.0f}<span class="text-dark-emphasis">MB</span>'
+
+
     def duration_formatter(stat):
         # print(col)
         assert isinstance(stat, Statistic)
@@ -202,6 +219,8 @@ def getHTMLFromatter(col: str):
 
     if col == 'count':
         return str_html_formatter
+    if col == 'maxrss':
+        return memory_formatter
     if col in BenchResult.numerical_cols:
         return duration_formatter
     return str_html_formatter  # TODO: Return None, the equivalent of str_html_formatter should by applied by default
@@ -560,7 +579,8 @@ def getMeasureDisplayStr(s: str):
             'cupti': "nvprof",
             'cupti_compute': "nvprof Kernel",
             'cupti_todev': "nvprof H->D",
-            'cupti_fromdev': "nvprof D->H"}.get(s, s)
+            'cupti_fromdev': "nvprof D->H",
+            'maxrss': "Max RSS"}.get(s, s)
 
 
 def getPPMDisplayStr(s: str):
@@ -743,12 +763,14 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
     # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
     # x.grid(linestyle='--',axis='y')
     x_label = 'Benchmark'
+    y_label = 'Walltime [s]'
     if baseline_cmpval:
         x_label = f"{x_label} for {baseline_cmpval[0]}"
+        y_label = 'Speedup [times]'
     ax.set(
         axisbelow=True,  # Hide the grid behind plot objects
         xlabel=x_label,
-        ylabel='Speedup [times]',
+        ylabel=y_label,
     )
     ax.set_yscale('log', base=2)
     ax.spines['top'].set_visible(False)
@@ -756,7 +778,6 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
 
     ax.set_xticks([groupwidth * i for i in range(len(labels))])
     ax.set_xticklabels(labels, rotation=20, ha="right", rotation_mode="anchor")
-
     ax.legend()
     return fig
 
@@ -999,9 +1020,8 @@ def make_report(results):
     for index, s in enumerate(sections):
         if index != 0:
             png_btn = f'<button class="ms-4 btn btn-dark" onclick="exportPngImage(this)"><i class="bi bi-filetype-png me-1"></i> Export to PNG</button>'
-            jpg_btn = f'<button class="ms-2 btn btn-dark" onclick="exportJpgImage(this)"><i class="bi bi-filetype-jpg me-1"></i> Export to JPG</button>'
             pdf_btn = f'<button class="ms-2 btn btn-dark" onclick="exportPdf(this)"><i class="bi bi-filetype-pdf me-1"></i> Export to PDF</button>'
-            yield f'<h2 class="mt-4" id="{s.name}_{index}">{s.title} {png_btn} {jpg_btn} {pdf_btn}</h2>'
+            yield f'<h2 class="mt-4" id="{s.name}_{index}">{s.title} {png_btn} {pdf_btn}</h2>'
         else:
             yield f'<h2 class="mt-4" id="{s.name}_{index}">{s.title}</h2>'
         yield from s.content
@@ -1025,20 +1045,6 @@ function exportPngImage(clickedButton) {
     .then(function (dataUrl) {
       var link = document.createElement('a');
       link.download = 'plot.png';
-      link.href = dataUrl;
-      link.click();
-    })
-    .catch(function (error) {
-      console.error('Error exporting image: ', error);
-    });
-}
-function exportJpgImage(clickedButton) {
-  const h2Element = clickedButton.parentNode; // Get the parent h2 element
-  const svgElement = findNextSvgElement(h2Element);
-  domtoimage.toJpeg(svgElement,{ quality: 0.95 })
-    .then(function (dataUrl) {
-      var link = document.createElement('a');
-      link.download = 'plot.jpeg';
       link.href = dataUrl;
       link.click();
     })

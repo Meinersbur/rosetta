@@ -43,13 +43,13 @@ class EvaluateTests(unittest.TestCase):
         # Search for the table header
         s=f.getvalue().splitlines()
         while s:
-            if re.search(tablecellre('Benchmark', 'timestamp', 'Wall'), s[0]):
+            if re.search(tablecellre('Benchmark', 'timestamp', 'Wall', 'Max RSS'), s[0]):
                 break
             s.pop(0)
 
         self.assertRegex(s[1], tablecellre('---',  '---') )
-        self.assertRegex(s[2], tablecellre('idioms.assign',  '42.00') )
-        self.assertRegex(s[3], tablecellre('idioms.assign',  '42.00') ) # Should it combine multiple different runs?
+        self.assertRegex(s[2], tablecellre('idioms.assign',  '42.00', '162968') )
+        self.assertRegex(s[3], tablecellre('idioms.assign',  '42.00', '147343') ) # Should it combine multiple different runs?
 
 
     def test_ppm(self):
@@ -85,6 +85,39 @@ class EvaluateTests(unittest.TestCase):
         self.assertRegex(s[2], tablecellre('---', '---', '---') )
         self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '4.20' ))
 
+
+    def test_maxrss(self):
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
+
+        # Search for the table header
+        s=f.getvalue().splitlines()
+        while s:
+            if re.search(tablecellre('Benchmark', 'PPM', 'Max RSS'), s[0]):
+                break
+            s.pop(0)
+
+        self.assertRegex(s[1], tablecellre('---', '---', '---'))
+        self.assertRegex(s[2], tablecellre('idioms.assign', 'serial', '162968' ))
+        self.assertRegex(s[3], tablecellre('idioms.assign', 'cuda', '72788' ))
+
+
+    def test_maxrss_compare(self):
+        f = io.StringIO()
+        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
+            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' , '--compare-by=ppm'], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
+
+        # Search for the table header
+        s=f.getvalue().splitlines()
+        while s:
+            if re.search(tablecellre('Benchmark', 'Max RSS'), s[0]):
+                break
+            s.pop(0)
+
+        self.assertRegex(s[1], tablecellre('serial', 'cuda'))
+        self.assertRegex(s[2], tablecellre('---', '---', '---') )
+        self.assertRegex(s[3], tablecellre('idioms.assign', '162968', '72788' ))
   
 
 
