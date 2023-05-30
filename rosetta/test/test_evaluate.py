@@ -48,11 +48,11 @@ class EvaluateTests(unittest.TestCase):
             s.pop(0)
 
         self.assertRegex(s[1], tablecellre('---',  '---') )
-        self.assertRegex(s[2], tablecellre('idioms.assign',  '42.00', '162968') )
-        self.assertRegex(s[3], tablecellre('idioms.assign',  '42.00', '147343') ) # Should it combine multiple different runs?
+        self.assertRegex(s[2], tablecellre('idioms.assign',  '42.00', '159.15') )
+        self.assertRegex(s[3], tablecellre('idioms.assign',  '42.00', '143.89') ) # Should it combine multiple different runs?
 
 
-    def test_ppm(self):
+    def test_ppm_maxrss(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
             rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
@@ -60,16 +60,16 @@ class EvaluateTests(unittest.TestCase):
         # Search for the table header
         s=f.getvalue().splitlines()
         while s:
-            if re.search(tablecellre('Benchmark', 'PPM', 'Wall'), s[0]):
+            if re.search(tablecellre('Benchmark', 'PPM', 'Wall','Max RSS'), s[0]):
                 break
             s.pop(0)
 
-        self.assertRegex(s[1], tablecellre('---', '---', '---'))
-        self.assertRegex(s[2], tablecellre('idioms.assign', 'serial', '42.00' ))
-        self.assertRegex(s[3], tablecellre('idioms.assign', 'cuda', '4.20' ))
+        self.assertRegex(s[1], tablecellre('---', '---', '---', '---'))
+        self.assertRegex(s[2], tablecellre('idioms.assign', 'serial', '42.00', '159.15'))
+        self.assertRegex(s[3], tablecellre('idioms.assign', 'cuda', '4.20', '71.08'))
 
 
-    def test_ppm_compare(self):
+    def test_ppm_maxrss_compare(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
             rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' , '--compare-by=ppm'], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
@@ -77,49 +77,13 @@ class EvaluateTests(unittest.TestCase):
         # Search for the table header
         s=f.getvalue().splitlines()
         while s:
-            if re.search(tablecellre('Benchmark', 'Wall'), s[0]):
+            if re.search(tablecellre('Benchmark', 'Wall', 'Max RSS'), s[0]):
                 break
             s.pop(0)
 
         self.assertRegex(s[1], tablecellre('serial', 'cuda'))
-        self.assertRegex(s[2], tablecellre('---', '---', '---') )
-        self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '4.20' ))
-
-
-    def test_maxrss(self):
-        f = io.StringIO()
-        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
-
-        # Search for the table header
-        s=f.getvalue().splitlines()
-        while s:
-            if re.search(tablecellre('Benchmark', 'PPM', 'Max RSS'), s[0]):
-                break
-            s.pop(0)
-
-        self.assertRegex(s[1], tablecellre('---', '---', '---'))
-        self.assertRegex(s[2], tablecellre('idioms.assign', 'serial', '162968' ))
-        self.assertRegex(s[3], tablecellre('idioms.assign', 'cuda', '72788' ))
-
-
-    def test_maxrss_compare(self):
-        f = io.StringIO()
-        with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' , '--compare-by=ppm'], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
-
-        # Search for the table header
-        s=f.getvalue().splitlines()
-        while s:
-            if re.search(tablecellre('Benchmark', 'Max RSS'), s[0]):
-                break
-            s.pop(0)
-
-        self.assertRegex(s[1], tablecellre('serial', 'cuda'))
-        self.assertRegex(s[2], tablecellre('---', '---', '---') )
-        self.assertRegex(s[3], tablecellre('idioms.assign', '162968', '72788' ))
-  
-
+        self.assertRegex(s[2], tablecellre('---', '---', '---', '---') )
+        self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '4.20', '159.15', '71.08'))
 
 
 if __name__ == '__main__':
