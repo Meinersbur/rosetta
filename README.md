@@ -91,8 +91,9 @@ Comparable Projects
  * NAS Parallel Benchmarks
  * [Rodinia](https://rodinia.cs.virginia.edu/doku.php)
 
-
-### Run using Python
+Build
+--------------------
+### Build and Run using Python
 - Create a virtual environment and install necessary packages 
 ```shell
 python3 -m venv venv
@@ -118,4 +119,39 @@ For example:
 python rosetta.py -h 
 python rosetta.py --build
 python rosetta.py --bench
+```
+Alternate Build
+--------------------
+### Required
+* cmake
+* [ninja] (https://github.com/ninja-build/ninja)
+* python 3.9 or later  
+* pip
+all other requirements are included in requirements.txt  
+```shell
+pip install -r requirements.txt
+```
+### Build
+Make a directory outside rosetta folder  
+```shell
+mkdir release
+cd release
+```
+Build using cmake and ninja
+```shell
+cmake -S ../rosetta/ -B . -GNinja -DCMAKE_BUILD_TYPE=Release
+ninja
+```
+Build enabling SYCL(Intel)  
+```shell
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icpx -S ../rosetta/ -B . -GNinja
+ninja
+```
+### Verify 
+```shell
+./verify.py
+```
+### Run all benchmarks  
+```shell
+./bench.py
 ```
