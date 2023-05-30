@@ -68,6 +68,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
             log.info(f"Benchmark {basename} does not match --filter-include={filter}")
             continue
         log.info(f"Adding benchmark {path}")
+        #print("####  Path: ", path)  #Added by AK
         buildfiles.append(path)
 
     benchs = []
@@ -97,7 +98,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
                 def add_benchmark(*args, sources=None, basename=None, ppm=None, params=None):
                     for a in args:
-                        if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target'}:
+                        if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target', 'sycl'}: #added by AK: used for 'xyz.sycl.cxx'
                             ppm = a
                         elif isinstance(a, registry.GenParam) or isinstance(a, registry.SizeParam) or isinstance(a, registry.TuneParam):
                             params = (params or []) + [a]
@@ -122,6 +123,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                         basename = removesuffix(basename, '.omp_parallel')
                         basename = removesuffix(basename, '.omp_task')
                         basename = removesuffix(basename, '.omp_target')
+                        basename = removesuffix(basename, '.sycl') #added by AK
                         basename = '.'.join(list(rel.parts) + [basename])
 
                     target = basename + '.' + ppm
@@ -146,6 +148,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 globals['omp_parallel'] = 'omp_parallel'
                 globals['omp_task'] = 'omp_task'
                 globals['omp_target'] = 'omp_target'
+                globals['sycl'] = 'sycl' #Added by AK
                 globals['mpi'] = 'mpi'
 
                 exec(script, module.__dict__)
@@ -178,6 +181,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
             print(f"add_benchmark_openmp_target({bench.basename}", file=out)
         elif bench.ppm == 'cuda':
             print(f"add_benchmark_cuda({bench.basename}", file=out)
+        elif bench.ppm == 'sycl': #added by AK
+            print(f"add_benchmark_sycl({bench.basename}", file=out)
         else:
             die("Unhandled ppm")
         print("    PBSIZE", bench. pbsize, file=out)
@@ -201,7 +206,7 @@ def main():
     parser.add_argument('--filter-include', '--filter', action='append',
                         help="Only look into filenames that contain this substring")
     args = parser.parse_args()
-
+    #print("****outfile:", args.output, "benchdir:", args.benchdir)
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir,
                      builddir=args.builddir, configname=args.configname, filter=args.filter_include)
 

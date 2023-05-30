@@ -83,7 +83,9 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
 */
-
+#ifdef __cplusplus
+extern "C" {
+#endif 
 #include "mconf.h"
 
 extern double PI, MACHEP, MAXNUM;
@@ -97,9 +99,7 @@ extern double fabs ( double );
 double sqrt(), atan(), incbet(), incbi(), fabs();
 #endif
 
-double stdtr( k, t )
-int k;
-double t;
+double stdtr(int k, double t )
 {
 double x, rk, z, f, tz, p, xsqk;
 int j;
@@ -184,9 +184,7 @@ if( t < 0 )
 return(p);
 }
 
-double stdtri( k, p )
-int k;
-double p;
+double stdtri(int k, double p )
 {
 double t, rk, z;
 int rflg;
@@ -223,3 +221,6 @@ if( MAXNUM * z < rk )
 t = sqrt( rk/z - rk );
 return( rflg * t );
 }
+#ifdef __cplusplus
+}
+#endif 

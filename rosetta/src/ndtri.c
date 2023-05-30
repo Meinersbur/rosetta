@@ -51,6 +51,10 @@ Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 2000 by Stephen L. Moshier
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif 
+
 #include "mconf.h"
 extern double MAXNUM;
 
@@ -369,8 +373,10 @@ extern double sqrt ( double );
 double polevl(), p1evl(), log(), sqrt();
 #endif
 
-double ndtri(y0)
-double y0;
+
+
+
+double ndtri(double y0)
 {
 double x, y, z, y2, x0, x1;
 int code;
@@ -415,3 +421,8 @@ if( code != 0 )
 	x = -x;
 return( x );
 }
+
+
+#ifdef __cplusplus
+}
+#endif 

@@ -565,7 +565,7 @@ def getMeasureDisplayStr(s: str):
 
 def getPPMDisplayStr(s: str):
     return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel",
-            'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s, s)
+            'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading", 'sycl':"SYCL"}.get(s, s) #added by AK
 
 
 def print_comparison(benchgroups: GroupedBenches, columns, compare_columns):

@@ -8,6 +8,16 @@ include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
 
+#Required for IntelSYCL :added by AK
+if (CMAKE_HOST_WIN32)
+    # need at least CMake 3.23 for IntelLLVM support of IntelDPCPP package on Windows
+    cmake_minimum_required(VERSION 3.23)
+else()
+    # CMake 3.20.5 is the minimum recommended for IntelLLVM on Linux
+    cmake_minimum_required(VERSION 3.20.5)
+endif()
+
+
 set(CMAKE_CTEST_ARGUMENTS "-j")
 set(CTEST_TEST_TARGET_ALIAS check)
 include(CTest)
@@ -190,6 +200,14 @@ elseif (ROSETTA_PPM_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
 
+#SYCL   :added by AK
+if (NOT DEFINED ROSETTA_PPM_SYCL)
+  find_package(IntelSYCL)
+elseif (ROSETTA_PPM_SYCL)
+  find_package(IntelSYCL REQUIRED)
+endif ()
+
+
 # MPI
 if (NOT DEFINED ROSETTA_PPM_MPI)
   find_package(MPI)
@@ -324,6 +342,14 @@ if (OpenACC_CXX_FOUND)
 endif ()
 option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
 
+
+#IntelSYCL  :added by AK
+set(_sycl_enabled_default OFF)
+if (IntelSYCL_FOUND)
+  set(_sycl_enabled_default ON)
+endif ()
+option(ROSETTA_PPM_SYCL "Enable SYCL PPM" ${_sycl_enabled_default})
+
 set(_mpi_enabled_default OFF)
 if (MPI_CXX_FOUND)
   set(_mpi _enabled_default ON)
@@ -424,7 +450,12 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   add_dependencies(build-openmp build-openmp-target)
   add_dependencies(build build-openmp-target)
 endif ()
-
+#Added by AK
+if (ROSETTA_PPM_SYCL)
+  add_custom_target(build-sycl)
+  set_target_properties(build-sycl PROPERTIES FOLDER "Benchmarks")
+  add_dependencies(build build-sycl)
+endif ()
 add_subdirectory(benchmarks)
 
 # Maintanance #################################################################
@@ -663,6 +694,13 @@ if (ROSETTA_PPM_OPENACC)
   )
 else ()
   list(APPEND _disabled_ppm "OpenACC")
+endif ()
+if (ROSETTA_PPM_SYCL) #added by AK
+  message(
+    "  SYCL: ${SYCL_COMPILER} ${SYCL_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, IntelSYCL ${SYCL_LANGUAGE_VERSION})"
+  )
+else ()
+  list(APPEND _disabled_ppm "OpenMP-Parallel")
 endif ()
 if (ROSETTA_PPM_MPI)
   message(

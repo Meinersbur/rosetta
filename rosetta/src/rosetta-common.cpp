@@ -31,8 +31,10 @@
 #if ROSETTA_PPM_OPENMP || ROSETTA_PLATFORM_OPENMP
 #include <omp.h>
 #endif
-
-
+//Added by AK
+#if ROSETTA_PPM_SYCL
+#include <sycl/sycl.hpp>
+#endif
 
 #include <cerrno>
 #include <cstdint>
@@ -1418,6 +1420,10 @@ struct Rosetta {
 #endif
 #if ROSETTA_PPM_OPENMP_TARGET
       const char *ppm_variant = "openmp-target";
+#endif
+//Added by AK
+#if ROSETTA_PPM_SYCL
+      const char *ppm_variant = "sycl";
 #endif
 
 
