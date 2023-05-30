@@ -344,7 +344,7 @@ def colsortkey(item, col):
         # Return programs alphabetically
         return item
     if col == 'ppm':
-        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4}.get(item, 5)
+        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4, 'sycl':5}.get(item, 6) #Added by AK
     return 0  # Keep the original order of everything else
 
 
