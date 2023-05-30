@@ -206,7 +206,6 @@ def getHTMLFromatter(col: str):
         return html.escape(str(v))
 
     def memory_formatter(v):
-        print(f"memory formatter v: {v}")
         if v >= 1024 * 1024:
             return f'{(v / (1024 * 1024)):.2f}<span class="text-dark-emphasis">GiB</span>'
         if v >= 1024:
