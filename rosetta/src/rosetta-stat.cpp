@@ -2,7 +2,7 @@
 #include "rosetta-stat.h"
 
 #include "cdflib.hpp"
-
+#include <cstdint> //added as MAX_INT was not supported by Intel compiler
 #include <cassert>
 #include <cmath>
 
