@@ -50,7 +50,7 @@ class BenchResult:
         'cupti_todev',
         'cupti_fromdev',
         'maxrss'
-        ]
+    ]
 
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
                  count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
@@ -152,10 +152,15 @@ def program_formatter(v: pathlib.Path):
         return None
     return StrColor(v, colorama.Fore.GREEN)
 
-def maxrss_formatter(v: pathlib.Path):
+
+def maxrss_formatter(v):
     if v is None:
         return None
-    return StrColor(f"{v / 1024.0:.0f}", colorama.Style.NORMAL)+StrColor("MB",colorama.Style.DIM)
+    if v >= 1024 * 1024:
+        return StrColor(f"{v / (1024 * 1024):.2f}", colorama.Style.NORMAL) + StrColor("GiB", colorama.Style.DIM)
+    if v >= 1024:
+        return StrColor(f"{v / 1024:.2f}", colorama.Style.NORMAL) + StrColor("MiB", colorama.Style.DIM)
+    return StrColor(f"{v:.2f}", colorama.Style.NORMAL) + StrColor("KiB", colorama.Style.DIM)
 
 
 def duration_formatter(best=None, worst=None):
@@ -201,8 +206,11 @@ def getHTMLFromatter(col: str):
         return html.escape(str(v))
 
     def memory_formatter(v):
-        return f'{v / 1024.0:.0f}<span class="text-dark-emphasis">MB</span>'
-
+        if v >= 1024 * 1024:
+            return f'{(v / (1024 * 1024)):.2f}<span class="text-dark-emphasis">GiB</span>'
+        if v >= 1024:
+            return f'{(v / 1024):.2f}<span class="text-dark-emphasis">MiB</span>'
+        return f'{v:.2f}<span class="text-dark-emphasis">KiB</span>'
 
     def duration_formatter(stat):
         # print(col)
