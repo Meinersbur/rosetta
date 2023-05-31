@@ -381,7 +381,7 @@ def colsortkey(item, col):
         # Return programs alphabetically
         return item
     if col == 'ppm':
-        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4}.get(item, 5)
+        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4, 'sycl':5}.get(item, 6)
     return 0  # Keep the original order of everything else
 
 
@@ -604,7 +604,7 @@ def getMeasureDisplayStr(s: str):
 
 def getPPMDisplayStr(s: str):
     return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel",
-            'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading"}.get(s, s)
+            'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading", 'sycl':"SYCL"}.get(s, s)
 
 
 def print_comparison(benchgroups: GroupedBenches, columns, compare_columns):

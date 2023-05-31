@@ -82,6 +82,13 @@ function (add_benchmark_openmp_target basename)
   add_benchmark_ppm("${basename}" "openmp-target" "omp_target" "rosetta-openmp-target" ${ARGN})
 endfunction ()
 
+function (add_benchmark_sycl basename)
+  if (NOT ROSETTA_PPM_SYCL)
+    return()
+  endif ()
+  add_benchmark_ppm("${basename}" "sycl" "sycl" "rosetta-sycl" ${ARGN})
+endfunction ()
+
 # https://stackoverflow.com/a/52714922
 set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/stage1.cmake")
 set(_stage1generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage1.py")

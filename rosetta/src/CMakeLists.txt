@@ -98,3 +98,15 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   #set_property(TARGET rosetta-openmp-target PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
   enable_platform_nvidia(rosetta-openmp-target)
 endif ()
+
+if (ROSETTA_PPM_SYCL)
+  add_library(rosetta-sycl rosetta-sycl.cpp ${_common_sources})
+  set_target_properties(rosetta-sycl PROPERTIES FOLDER "Runtime")
+  target_compile_features(rosetta-sycl PUBLIC cxx_std_17)
+  target_compile_definitions(rosetta-sycl PUBLIC ROSETTA_PPM_SYCL=1)
+  target_include_directories(rosetta-sycl PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
+  #https://intel.github.io/llvm-docs/GetStartedGuide.html
+  target_link_options(rosetta-sycl PUBLIC -fsycl)
+  #target_compile_options(rosetta-sycl PUBLIC -fsycl)
+  target_link_libraries(rosetta-sycl PUBLIC IntelSYCL::SYCL_CXX)
+endif ()

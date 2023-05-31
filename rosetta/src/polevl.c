@@ -48,12 +48,11 @@ Cephes Math Library Release 2.1:  December, 1988
 Copyright 1984, 1987, 1988 by Stephen L. Moshier
 Direct inquiries to 30 Frost Street, Cambridge, MA 02140
 */
+#ifdef __cplusplus
+extern "C" {
+#endif 
 
-
-double polevl( x, coef, N )
-double x;
-double coef[];
-int N;
+double polevl(double x, double coef[], int N )
 {
 double ans;
 int i;
@@ -76,10 +75,7 @@ return( ans );
  * Otherwise same as polevl.
  */
 
-double p1evl( x, coef, N )
-double x;
-double coef[];
-int N;
+double p1evl(double x, double coef[], int N )
 {
 double ans;
 double *p;
@@ -95,3 +91,6 @@ while( --i );
 
 return( ans );
 }
+#ifdef __cplusplus
+}
+#endif 

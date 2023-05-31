@@ -53,7 +53,9 @@ Cephes Math Library Release 2.0:  April, 1987
 Copyright 1984, 1987 by Stephen L. Moshier
 Direct inquiries to 30 Frost Street, Cambridge, MA 02140
 */
-
+#ifdef __cplusplus
+extern "C" {
+#endif 
 #include <stdio.h>
 #include "mconf.h"
 
@@ -74,9 +76,7 @@ static char *ermsg[7] = {
 };
 
 
-int mtherr( name, code )
-char *name;
-int code;
+int mtherr(char *name,int code )
 {
 
 /* Display string passed by calling program,
@@ -100,3 +100,6 @@ printf( "%s error\n", ermsg[code] );
  */
 return( 0 );
 }
+#ifdef __cplusplus
+}
+#endif 

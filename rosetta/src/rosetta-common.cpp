@@ -32,7 +32,9 @@
 #include <omp.h>
 #endif
 
-
+#if ROSETTA_PPM_SYCL
+#include <sycl/sycl.hpp>
+#endif
 
 #include <cerrno>
 #include <cstdint>
@@ -1420,6 +1422,9 @@ struct Rosetta {
       const char *ppm_variant = "openmp-target";
 #endif
 
+#if ROSETTA_PPM_SYCL
+      const char *ppm_variant = "sycl";
+#endif
 
       std::cout << "Benchmarking done, " << numMeasures << " measurements recorded.\n";
 

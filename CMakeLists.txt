@@ -328,6 +328,13 @@ if (OpenMPOffload_FOUND)
 endif ()
 
 
+#SYCL
+if (NOT DEFINED ROSETTA_PPM_SYCL)
+  find_package(IntelSYCL)
+elseif (ROSETTA_PPM_SYCL)
+  find_package(IntelSYCL REQUIRED)
+endif ()
+
 # OpenACC
 if (NOT DEFINED ROSETTA_PPM_OPENACC)
   find_package(OpenACC)
@@ -465,6 +472,18 @@ endforeach()
 
 
 
+#IntelSYCL
+set(_sycl_enabled_default OFF)
+if (IntelSYCL_FOUND)
+  set(_sycl_enabled_default ON)
+endif ()
+option(ROSETTA_PPM_SYCL "Enable SYCL PPM" ${_sycl_enabled_default})
+
+set(_mpi_enabled_default OFF)
+if (MPI_CXX_FOUND)
+  set(_mpi _enabled_default ON)
+endif ()
+option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
 
 
 
@@ -550,6 +569,11 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   set_target_properties(build-openmp-target PROPERTIES FOLDER "Benchmarks")
   add_dependencies(build-openmp build-openmp-target)
   add_dependencies(build build-openmp-target)
+endif ()
+if (ROSETTA_PPM_SYCL)
+  add_custom_target(build-sycl)
+  set_target_properties(build-sycl PROPERTIES FOLDER "Benchmarks")
+  add_dependencies(build build-sycl)
 endif ()
 
 add_subdirectory(benchmarks)
