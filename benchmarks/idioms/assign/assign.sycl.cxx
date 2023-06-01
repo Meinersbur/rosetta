@@ -1,3 +1,4 @@
+// BUILD: add_benchmark(sycl)
 #include <rosetta.h>
 #include <CL/sycl.hpp> 
 
