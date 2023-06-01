@@ -2,54 +2,31 @@
 #include <rosetta.h>
 // #include <array>
 // #include <iostream>
-#include <sycl/sycl.hpp> //Not required as included in rosetta-common.cpp
+#include <CL/sycl.hpp> 
 
-using namespace sycl;
+//using namespace sycl;
 
-// static void kernel(pbsize_t n, real *data, queue Q) {
-//     Q.submit([&](handler& h) {
-//         accessor A{data, h};
-//         h.parallel_for(n, [=](auto& idx) { A[idx] = idx; });
-//     });
-//     host_accessor A{data};
-// }
+static void kernel_test(pbsize_t n, real data[]) {
+  cl::sycl::queue q;
+  cl::sycl::buffer<real, 1> buf(data, cl::sycl::range<1>(n));
 
-// void run(State &state, pbsize_t n) {
-//   auto data = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "data");
-//   queue Q;
-//   buffer B{data};
-//   for (auto &&_ : state){   
-//     kernel(n, B, Q);
-//   }
-// }
+    q.submit([&](cl::sycl::handler& cgh) {
+        auto acc = buf.get_access<cl::sycl::access::mode::read_write>(cgh);
 
-
-//void run(State &state, pbsize_t n) {
-//   auto data = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "data");
-//   queue Q;
-//   buffer B{data};
-
-//   Q.submit([&](handler& h) {
-//     accessor A{B, h};
-//     h.parallel_for(n, [=](auto& idx) { A[idx] = idx; });
-//   });
-//   host_accessor A{B};
-//   for (int i = 0; i < n; i++)
-//     std::cout << "data[" << i << "] = " << A[i] << "\n";
-
-  //return 0;
-// }
-
-static void kernel_test(pbsize_t n, real *data) {
-  for (idx_t i = 0; i < n; i += 1) {
-    // NOT a constant to not allow compiler optimizing to memset.
-    data[i] = i;
-  }
+        cgh.parallel_for<class AssignNumbers>(
+            cl::sycl::range<1>(n),
+            [=](cl::sycl::id<1> id) {
+                acc[id] = id;
+            });
+    });
+    q.wait_and_throw();
+    //std::cout <<"inside kernel: "<< data[5] << std::endl;
 }
 
 void run(State &state, pbsize_t n) {
   auto data = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "data");
 
-  for (auto &&_ : state)
+  for (auto &&_ : state){
     kernel_test(n, data);
+  }
 }
