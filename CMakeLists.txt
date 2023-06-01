@@ -560,9 +560,10 @@ add_subdirectory(benchmarks)
 if (NOT ROSETTA_MAINTAINER_MODE)
   add_format_target(
     CLANG_RGLOB
-    benchmarks/*.cxx
-    benchmarks/*.cu
-    benchmarks/*.h
+# Disable formatting because clang-format does not handle #pragma well.
+#    benchmarks/*.cxx
+#    benchmarks/*.cu
+#    benchmarks/*.h
     rosetta/*.h
     rosetta/*.cpp
     PY_RGLOB
