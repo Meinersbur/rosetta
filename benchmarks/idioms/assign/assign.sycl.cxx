@@ -1,10 +1,6 @@
-// BUILD: add_benchmark(ppm=sycl)
 #include <rosetta.h>
-// #include <array>
-// #include <iostream>
 #include <CL/sycl.hpp> 
 
-//using namespace sycl;
 
 static void kernel_test(pbsize_t n, real data[]) {
   cl::sycl::queue q;
@@ -20,7 +16,6 @@ static void kernel_test(pbsize_t n, real data[]) {
             });
     });
     q.wait_and_throw();
-    //std::cout <<"inside kernel: "<< data[5] << std::endl;
 }
 
 void run(State &state, pbsize_t n) {
