@@ -123,13 +123,26 @@ python rosetta.py --bench
 ```
 Rosetta benchmarks can be executed using two types of filters:
 - Program filter:
-  - `--includeprogram`: Include a specific program to the benchmark. 
-  - `--excludeprogram`: Exclude a specific program from the benchmark. Skipped if `--includeprogram` filter is used.
+  - `--include-program`: Include a specific program to the benchmark that contains this substring. 
+  - `--include-program-exact`: Include a specific program to the benchmark that exactly matches this string. 
+  - `--include-program-regex`: Include a specific program to the benchmark that matches this regex. 
+  - `--exclude-program`: Exclude a specific program from the benchmark that contains this substring. Skipped if `--includeprogram` or filter is used.
+  - `--exclude-program-exact`: Exclude a specific program from the benchmark that exactly matches this string.
+  - `--exclude-program-regex`: Exclude a specific program from the benchmark that matches this regex. 
 - Programming models filter: 
-  - `--includeppm`: Include a specific programming model to the benchmark.
-  - `--excludeppm`: Exclude a specific programming model from the benchmark. Skipped if `--includeppm` filter is used.
+  - `--include-ppm`: Include a specific programming model to the benchmark that contains this substring. 
+  - `--include-ppm-exact`: Include a specific programming model to the benchmark that exactly matches this string. 
+  - `--include-ppm-regex`: Include a specific programming model to the benchmark that matches this regex. 
+  - `--exclude-ppm`: Exclude a specific programming model from the benchmark that contains this substring. Skipped if `--includeprogram` or filter is used.
+  - `--exclude-ppm-exact`: Exclude a specific programming model from the benchmark that exactly matches this string.
+  - `--exclude-ppm-regex`: Exclude a specific programming model from the benchmark that matches this regex. 
 
 Example of using filters:
-  - `python rosetta.py --bench --includeprogram assign`
-  - `python rosetta.py --bench --excludeppm cuda --excludeppm openmp-parallel --excludeprogram polybench`
-  - `python rosetta.py --bench --includeppm openmp-parallel --includeppm serial --excludeprogram polybench`
+  - `python rosetta.py --bench --include-program assign`
+  - `python rosetta.py --bench --include-program-exact idioms.assign`
+  - `python rosetta.py --bench --include-program-regex ".*mm$" --include-ppm serial`
+  - `python rosetta.py --bench --exclude-program-regex ".*polybench.*" --include-ppm serial`
+  - `python rosetta.py --bench --exclude-ppm cuda --exclude-ppm openmp-parallel --exclude-program polybench`
+  - `python rosetta.py --bench --include-ppm openmp-parallel --include-ppm serial --exclude-program polybench`
+  - `python rosetta.py --bench --exclude-program-regex ".*polybench.*" --include-ppm-regex "cu.*"`
+  - `python rosetta.py --bench --exclude-program-regex ".*polybench.*" --exclude-ppm-regex "openmp.*"`
