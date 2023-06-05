@@ -23,6 +23,7 @@ from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
+from .rosetta_filter import *
 
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
@@ -315,7 +316,8 @@ def driver_main(
     add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
     parser.add_argument('--problemsizefile', type=pathlib.Path,
                         help="Problem sizes to use (.ini file)")  # Also used by --verify
-
+    add_filter_args(parser)
+    args = parser.parse_args()
     # Evaluate step
     add_boolean_argument(parser, 'evaluate', default=None,
                          help="Evaluate result")
@@ -504,7 +506,7 @@ def driver_main(
 
         if args.bench:
             resultfiles, resultssubdir = runner.run_bench(
-                srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir())
+                srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir(), args=args)
 
         if args.evaluate or args.report:
             from . import evaluator

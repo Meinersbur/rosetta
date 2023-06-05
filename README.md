@@ -110,7 +110,7 @@ export Thrust_DIR=/usr/local/cuda-12/lib64/cmake/thrust
 sudo apt install cmake
 sudo apt-get install ninja-build
 ```
-- Using rosetta's own script: 
+- Using Rosetta's own script: 
 ```
 python /path/to/rosetta/rosetta.py <subcommand>
 ```
@@ -121,3 +121,15 @@ python rosetta.py -h
 python rosetta.py --build
 python rosetta.py --bench
 ```
+Rosetta benchmarks can be executed using two types of filters:
+- Program filter:
+  - `--includeprogram`: Include a specific program to the benchmark. 
+  - `--excludeprogram`: Exclude a specific program from the benchmark. Skipped if `--includeprogram` filter is used.
+- Programming models filter: 
+  - `--includeppm`: Include a specific programming model to the benchmark.
+  - `--excludeppm`: Exclude a specific programming model from the benchmark. Skipped if `--includeppm` filter is used.
+
+Example of using filters:
+  - `python rosetta.py --bench --includeprogram assign`
+  - `python rosetta.py --bench --excludeppm cuda --excludeppm openmp-parallel --excludeprogram polybench`
+  - `python rosetta.py --bench --includeppm openmp-parallel --includeppm serial --excludeprogram polybench`

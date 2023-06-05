@@ -18,6 +18,7 @@ from .util import invoke
 from .common import *
 from .registry import Benchmark
 from . import registry
+from .rosetta_filter import *
 
 
 # Not included batteries
@@ -50,8 +51,8 @@ def do_run(bench, args, resultfile, timestamp=None):
     start = datetime.datetime.now()
     args.append(f'--xmlout={resultfile}')
     if timestamp:
-        args.append(f'--timestamp={timestamp.isoformat(sep = " ")}')
-    #print("Executing", shjoin([exe] + args))
+        args.append(f'--timestamp={timestamp.isoformat(sep=" ")}')
+    # print("Executing", shjoin([exe] + args))
 
     invoke.diag(exe, *args,
                 setenv={'OMP_TARGET_OFFLOAD': 'mandatory'}  # TODO: Make configurable per-PPM
@@ -59,16 +60,14 @@ def do_run(bench, args, resultfile, timestamp=None):
     assert resultfile.is_file(), "Expecting result file to be written by benchmark"
     return resultfile
 
-    #p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
+    # p = subprocess.Popen([exe] + args ,stdout=subprocess.PIPE,universal_newlines=True)
     p = subprocess.Popen([exe] + args)
-    #stdout = p.stdout.read()
+    # stdout = p.stdout.read()
     # TODO: Integrate into invoke TODO: Fallback on windows TODO: should measure this in-process
     unused_pid, exitcode, ru = os.wait4(p.pid, 0)
 
     stop = datetime.datetime.now()
     p.wait()  # To let python now as well that it has finished
-
-    
 
     wtime = max(stop - start, datetime.timedelta(0))
     utime = ru.ru_utime
@@ -107,8 +106,8 @@ def get_problemsize(bench: Benchmark, problemsizefile: pathlib.Path):
 
 
 def make_resultssubdir(within):
-    #global resultsdir
-    #within = within or resultsdir
+    # global resultsdir
+    # within = within or resultsdir
     assert within
     now = datetime.datetime.now()
     i = 0
@@ -122,13 +121,14 @@ def make_resultssubdir(within):
         suffix = f'_{i}'
 
 
-def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
+def run_bench(problemsizefile=None, srcdir=None, resultdir=None, args=None):
     problemsizefile = get_problemsizefile(srcdir, problemsizefile)
-
     results = []
     resultssubdir = make_resultssubdir(within=resultdir)
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     for e in registry.benchmarks:
+        if not match_filter(e, args):
+            continue
         thisresultdir = resultssubdir
         configname = e.configname
         if configname:
