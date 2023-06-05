@@ -18,7 +18,7 @@ import importlib.util
 from rosetta.util.support import *
 import rosetta.runner as runner
 import rosetta.registry as registry
-
+from rosetta.rosetta_filter import *
 
 buildre = re.compile(r'^\s*//\s*BUILD\:(?P<script>.*)$')
 preparere = re.compile(r'^\s*//\s*PREPARE\:(?P<script>.*)$')
@@ -64,10 +64,6 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
         basename = path.stem
         basename = '.'.join(list(rel.parts) + [basename])
 
-        if filter and not any(f in basename for f in filter):
-            #print(f"Benchmark {basename} does not match --filter-include={filter}")
-            log.info(f"Benchmark {basename} does not match --filter-include={filter}")
-            continue
         log.info(f"Adding benchmark {path}")
         buildfiles.append(path)
 
@@ -171,8 +167,9 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
         print("endif ()", file=out)
         print(file=out)
-
     for bench in benchs:
+        if not match_filter(bench, filter):
+            continue
         if bench.ppm == 'serial':
             print(f"add_benchmark_serial({bench.basename}", file=out)
         elif bench.ppm == 'omp_parallel':
@@ -203,13 +200,12 @@ def main():
     parser.add_argument('--benchdir', type=pathlib.Path)
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--configname')
-    # TODO: More extensive filter mechanisms
-    parser.add_argument('--filter-include', '--filter', action='append',
-                        help="Only look into filenames that contain this substring")
+    add_filter_args(parser)
     args = parser.parse_args()
 
+
     gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir,
-                     builddir=args.builddir, configname=args.configname, filter=args.filter_include)
+                     builddir=args.builddir, configname=args.configname, filter=args)
 
 
 if __name__ == '__main__':

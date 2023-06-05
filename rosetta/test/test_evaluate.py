@@ -38,7 +38,7 @@ class EvaluateTests(unittest.TestCase):
     def test_single(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'single' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
+            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'single' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)
 
         # Search for the table header
         s=f.getvalue().splitlines()
@@ -55,7 +55,7 @@ class EvaluateTests(unittest.TestCase):
     def test_ppm_maxrss_peak_alloc(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)     
+            rosetta.driver.driver_main(argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__ ).parent / 'resultfiles'/ 'multi_ppm' ], mode= rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)
 
         # Search for the table header
         s=f.getvalue().splitlines()
