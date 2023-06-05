@@ -53,9 +53,6 @@ Cephes Math Library Release 2.0:  April, 1987
 Copyright 1984, 1987 by Stephen L. Moshier
 Direct inquiries to 30 Frost Street, Cambridge, MA 02140
 */
-#ifdef __cplusplus
-extern "C" {
-#endif 
 #include <stdio.h>
 #include "mconf.h"
 
@@ -100,6 +97,3 @@ printf( "%s error\n", ermsg[code] );
  */
 return( 0 );
 }
-#ifdef __cplusplus
-}
-#endif 

@@ -43,9 +43,6 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1996, 2000 by Stephen L. Moshier
 */
-#ifdef __cplusplus
-extern "C" {
-#endif 
 #include "mconf.h"
 
 extern double MACHEP, MAXNUM, MAXLOG, MINLOG;
@@ -312,7 +309,3 @@ if( rflg )
 	}
 return( x );
 }
-
-#ifdef __cplusplus
-}
-#endif 

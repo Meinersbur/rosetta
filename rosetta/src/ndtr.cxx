@@ -143,9 +143,6 @@ Cephes Math Library Release 2.9:  November, 2000
 Copyright 1984, 1987, 1988, 1992, 2000 by Stephen L. Moshier
 */
 
-#ifdef __cplusplus
-extern "C" {
-#endif 
 #include "mconf.h"
 
 extern double SQRTH;
@@ -520,7 +517,3 @@ y = x * polevl( z, T, 4 ) / p1evl( z, U, 5 );
 return( y );
 
 }
-
-#ifdef __cplusplus
-}
-#endif 

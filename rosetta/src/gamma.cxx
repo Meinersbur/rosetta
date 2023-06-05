@@ -103,9 +103,6 @@ Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier
 */
 
-#ifdef __cplusplus
-extern "C" {
-#endif 
 #include "mconf.h"
 
 #ifdef UNK
@@ -276,8 +273,10 @@ extern double pow ( double, double );
 extern double log ( double );
 extern double exp ( double );
 extern double sin ( double );
-extern double polevl ( double, void *, int );
-extern double p1evl ( double, void *, int );
+// extern double polevl ( double, void *, int );
+// extern double p1evl ( double, void *, int );
+extern double polevl(double x, double coef[], int N );
+extern double p1evl(double x, double coef[], int N );
 extern double floor ( double );
 extern double fabs ( double );
 //extern int isnan ( double );
@@ -682,6 +681,3 @@ else
 	q += polevl( p, A, 4 ) / x;
 return( q );
 }
-#ifdef __cplusplus
-}
-#endif 

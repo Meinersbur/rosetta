@@ -57,10 +57,7 @@
 /*
 Cephes Math Library Release 2.3:  March, 1995
 Copyright 1984, 1995 by Stephen L. Moshier
-*/
-#ifdef __cplusplus
-extern "C" {
-#endif 
+*/ 
 #include "mconf.h"
 
 #ifdef UNK
@@ -252,6 +249,3 @@ extern unsigned short INFINITY[];
 extern unsigned short NAN[];
 extern unsigned short NEGZERO[];
 #endif
-#ifdef __cplusplus
-}
-#endif 

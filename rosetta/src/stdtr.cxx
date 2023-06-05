@@ -83,9 +83,6 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1995, 2000 by Stephen L. Moshier
 */
-#ifdef __cplusplus
-extern "C" {
-#endif 
 #include "mconf.h"
 
 extern double PI, MACHEP, MAXNUM;
@@ -221,6 +218,3 @@ if( MAXNUM * z < rk )
 t = sqrt( rk/z - rk );
 return( rflg * t );
 }
-#ifdef __cplusplus
-}
-#endif 

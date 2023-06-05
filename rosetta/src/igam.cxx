@@ -81,9 +81,7 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1985, 1987, 2000 by Stephen L. Moshier
 */
-#ifdef __cplusplus
-extern "C" {
-#endif 
+
 #include "mconf.h"
 #ifdef ANSIPROT
 extern double lgam ( double );
@@ -208,6 +206,3 @@ while( c/ans > MACHEP );
 
 return( ans * ax/a );
 }
-#ifdef __cplusplus
-}
-#endif 

@@ -1,4 +1,4 @@
-// BUILD: add_benchmark(sycl)
+// BUILD: add_benchmark(ppm=sycl)
 #include <rosetta.h>
 #include <CL/sycl.hpp> 
 
@@ -22,7 +22,7 @@ static void kernel_test(pbsize_t n, real data[]) {
 void run(State &state, pbsize_t n) {
   auto data = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "data");
 
-  for (auto &&_ : state){
+  for (auto &&_ : state)
     kernel_test(n, data);
-  }
+  
 }

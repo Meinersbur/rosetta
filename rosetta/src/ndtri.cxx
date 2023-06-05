@@ -50,9 +50,7 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 2000 by Stephen L. Moshier
 */
-#ifdef __cplusplus
-extern "C" {
-#endif 
+
 #include "mconf.h"
 extern double MAXNUM;
 
@@ -363,8 +361,10 @@ static unsigned short Q2[32] = {
 #endif
 
 #ifdef ANSIPROT
-extern double polevl ( double, void *, int );
-extern double p1evl ( double, void *, int );
+// extern double polevl ( double, void *, int );
+// extern double p1evl ( double, void *, int );
+extern double polevl(double x, double coef[], int N );
+extern double p1evl(double x, double coef[], int N );
 extern double log ( double );
 extern double sqrt ( double );
 #else
@@ -416,6 +416,3 @@ if( code != 0 )
 	x = -x;
 return( x );
 }
-#ifdef __cplusplus
-}
-#endif 
