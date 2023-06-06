@@ -52,15 +52,135 @@ else ()
   set(_default_build_type)
 endif ()
 
-# TODO: should call something in bin/
-set(RUNNER_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/lib/runner.py")
-set(GENCONFIG_EXECUTABLE "${CMAKE_SOURCE_DIR}/rosetta/bin/genconfig.py")
-
 # TODO: Better name; "maintainer mode" comes from GNU autotools
 option(
   ROSETTA_MAINTAINER_MODE
   "Skip always looking for changed benchmark build instructions (maintainer mode meaning now its the benchmark maintainer's responsibility to invoke CMake when benchmark build instructions change)"
   OFF)
+
+
+
+
+
+set(ROSETTA_PPM_DEFAULT
+  "AUTODETECT"
+  CACHE STRING "Default enabled state of PPMs (ON, OFF, or AUTODETECT)")
+set_property(CACHE ROSETTA_PPM_DEFAULT PROPERTY STRINGS "ON" "OFF" "AUTODETECT")
+
+set(ROSETTA_PLATFORM_DEFAULT
+  "AUTODETECT"
+  CACHE STRING "Default enabled state of PLATFORMs (ON, OFF, or AUTODETECT)")
+set_property(CACHE ROSETTA_PLATFORM_DEFAULT PROPERTY STRINGS "ON" "OFF" "AUTODETECT")
+
+
+
+set(all_PPMS)
+set(all_Ppms)
+# The following variables are defined per-PPM (where * is the name of the PPM):
+#
+# - ROSETTA_PPM_*: Is the PPM Enabled? (cached, user-controlled except on first run)
+#   - ON:        Compile benchmarks of this PPM and fail if dependencies are not met
+#   - OFF:       Do not compile benchmarks of this PPM and do not search for its dependencies (unless required by another PPM/PLATFORM)
+#   - undefined: Introspect the environment whether the PPM dependencies are met. 
+#            If all dependencies found: Set the option default to ON, this will be the option's value during the next run of cmake unless overriden by the user
+#            Otherwise:                 Set the option default to OFF, this will be the option's value during the next run of cmake unless overriden by the user
+# - displayname_ppm_*: Name to be displayed to be the user (may contain hypens etc.)
+# - helptext_ppm_*: Enabled option help string
+# - autodetect_ppm_*: Autodetection result
+macro (add_ppm _Ppm)
+  cmake_parse_arguments(_arg "NOPREREQ" "DISPLAYNAME;ENABLEDHELP" "" ${ARGN})
+  
+  string(TOUPPER "${_Ppm}" _PPM)
+  string(TOLOWER "${_Ppm}" _ppm)
+  list(APPEND all_PPMS "${_PPM}")
+  list(APPEND all_Ppms "${_Ppm}")
+
+  set (_displayname "${_Ppm}")
+  if (_arg_DISPLAYNAME)
+    set(_displayname "${_arg_DISPLAYNAME}" )
+  endif ()
+  set (displayname_ppm_${_ppm} "${_displayname}") 
+
+  if (_arg_NOPREREQ)
+    set(autodetect_ppm_${_ppm} "ON")
+  endif ()
+
+  if (_arg_HELP_ENABLED)
+    set (helptext_ppm_${_ppm} "${_arg_ENABLEDHELP}") 
+  else ()
+    set (helptext_ppm_${_ppm} "Enable ${_displayname} PPM") 
+  endif () 
+
+  # Set default option to skip autodetection
+  # If first configuring with autodetect, the PPM variable will undefined and later trigger weak detection of dependencies
+  if (NOT ROSETTA_PPM_DEFAULT STREQUAL "AUTODETECT" AND NOT DEFINED ROSETTA_PPM_${_PPM})
+    set(ROSETTA_PPM_${_PPM} ${ROSETTA_PPM_DEFAULT})
+  endif ()
+endmacro ()
+
+
+
+add_ppm(Serial NOPREREQ)
+add_ppm(CUDA)
+add_ppm(OpenCL)
+add_ppm(OpenMP_Parallel DISPLAYNAME "OpenMP-Parallel"
+  ENABLEDHELP "Enable OpenMP '#pragma omp parallel' PPM")
+add_ppm(OpenMP_Task DISPLAYNAME "OpenMP-Task"
+  ENABLEDHELP "Enable OpenMP '#pragma omp task' PPM")
+add_ppm(OpenMP_Target DISPLAYNAME "OpenMP-Target"
+  ENABLEDHELP "Enable OpenMP '#pragma omp target' PPM")
+add_ppm(OpenACC)
+add_ppm(MPI)
+
+
+
+
+set(all_Platforms)
+# The following variables are defined per-platform (where * is the name of the platform):
+#
+# - ROSETTA_PLATFORM_*: Is the platform Enabled? (cached, user-controlled except on first run)
+# - displayname_ppm_*: Name to be displayed to be the user (may contain hypens etc.)
+# - helptext_platform_*: Enabled option help string
+# - autodetect_ppm_*: Autodetection result
+macro (add_platform _Platform)
+  cmake_parse_arguments(_arg "NOPREREQ" "DISPLAYNAME;ENABLEDHELP" "" ${ARGN})
+  
+  string(TOUPPER "${_Platform}" _PLATFORM)
+  string(TOLOWER "${_Platform}" _platform)
+  list(APPEND all_Platforms "${_Platform}")
+
+  set (_displayname "${_Platform}")
+  if (_arg_DISPLAYNAME)
+    set(_displayname "${_arg_DISPLAYNAME}" )
+  endif ()
+  set ("displayname_platform_${_platform}" "${_displayname}") 
+
+  if (_arg_NOPREREQ)
+    set(autodetect_platform_${_platform} "ON")
+  endif ()
+
+  if (_arg_HELP_ENABLED)
+    set (helptext_platform_${_platform} "${_arg_ENABLEDHELP") 
+  else ()
+    set (helptext_platform_${_platform} "Enable ${_displayname} Platform") 
+  endif ()
+
+  # Set default option to skip autodetection
+  if (NOT ROSETTA_PLATFORM_DEFAULT STREQUAL "AUTODETECT" AND NOT DEFINED ROSETTA_PLATFORM_${_PLATFORM})
+    set(ROSETTA_PLATOFRM_${_PPM} ${ROSETTA_PLATFORM_DEFAULT})
+  endif ()
+endmacro ()
+
+add_platform(NVIDIA 
+  ENABLEDHELP "Enable NVIDIA CUPTI Performance Measurements")
+add_platform(OpenMP
+  ENABLEDHELP "Enable omp_get_wtime measurements")
+add_platform(PAPI 
+  ENABLEDHELP "Enable PAPI measurements (not implemented)")
+add_platform(OMPT
+  ENABLEDHELP "Enable OMPT measurements (not implemented)")
+
+
 
 # Dependencies ################################################################
 
@@ -91,22 +211,47 @@ if (TARGET Catch2WithMain)
 endif ()
 
 # CUDA
-if (NOT DEFINED ROSETTA_PPM_CUDA)
-  set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
-  check_language(CUDA)
+set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
+
+if (ROSETTA_PPM_CUDA OR ROSETTA_PLATFORM_NVIDIA)
+  find_package(CUDAToolkit REQUIRED)
+elseif (NOT DEFINED ROSETTA_PPM_CUDA OR NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit)
+endif ()
+
+if (ROSETTA_PPM_CUDA)
+  enable_language(CUDA)
+  find_package(Thrust REQUIRED CONFIG)
+  if (NOT CMAKE_CUDA_COMPILER)
+    message(FATAL_ERROR "CUDA enabled but no CUDA found")
+  endif ()
+  if (NOT CUDAToolkit_FOUND)
+    message(FATAL_ERROR "CUDA enabled but no CUDA Toolkit found")
+  endif ()
+elseif (NOT DEFINED ROSETTA_PPM_CUDA)
+  check_language(CUDA)
   if (CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
-  endif ()
-elseif (ROSETTA_PPM_CUDA)
-  set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
-  check_language(CUDA)
-  enable_language(CUDA)
-  find_package(CUDAToolkit)
-  if (NOT CMAKE_CUDA_COMPILER)
-    message(FATAL_ERROR "CUDA enabled but no CUDA not found")
+    find_package(Thrust CONFIG)
   endif ()
 endif ()
+
+if (Thrust_FOUND)
+  thrust_create_target(Thrust) # https://github.com/NVIDIA/thrust/blob/main/thrust/cmake/README.md
+endif ()
+
+
+# For Nvidia platform
+if (CUDAToolkit_FOUND)
+  set(autodetect_platform_nvidia "ON")
+endif ()
+
+# For CUDA PPM
+if (CUDAToolkit_FOUND AND CMAKE_CUDA_COMPILER AND Thrust_Found)
+  set(autodetect_ppm_cuda "ON")
+endif ()
+
+
 
 # Add -G option to debug flags by default because CMake's default doesn't
 if (CMAKE_CUDA_COMPILER)
@@ -130,26 +275,12 @@ if (CMAKE_CUDA_COMPILER)
           CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds." FORCE)
     endif ()
   endif ()
-  set(ROSETTA_CUDA_IS_FIRST_CONFIG
-      1
-      CACHE INTERNAL "Used to set override CMake's default flags" FORCE)
+  set(ROSETTA_CUDA_IS_FIRST_CONFIG 1 CACHE INTERNAL "Used to override CMake's default flags" FORCE)
 endif ()
 
-if (CMAKE_CUDA_COMPILER)
-  # only for CUDA_VERSION
-  #find_package(CUDA REQUIRED)
-  find_package(Thrust REQUIRED CONFIG)
-  thrust_create_target(Thrust) # https://github.com/NVIDIA/thrust/blob/main/thrust/cmake/README.md
-endif ()
 
-#message(FATAL_ERROR "Stop here")
 
-# For Nvidia platform
-if (NOT DEFINED ROSETTA_PLATFORM_NVIDIA)
-  find_package(CUDAToolkit)
-elseif (ROSETTA_PLATFORM_NVIDIA)
-  find_package(CUDAToolkit REQUIRED)
-endif ()
+
 
 # OpenCL
 if (NOT DEFINED ROSETTA_PPM_OPENCL)
@@ -157,8 +288,13 @@ if (NOT DEFINED ROSETTA_PPM_OPENCL)
 elseif (ROSETTA_PPM_OPENCL)
   find_package(OpenCL REQUIRED)
 endif ()
+if (OpenCL_FOUND)
+  set(autodetect_ppm_opencl "ON")
+endif ()
 
-# pthreads find_package(Threads REQUIRED)
+
+# pthreads 
+# find_package(Threads REQUIRED)
 
 # OpenMP
 if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL
@@ -182,6 +318,15 @@ if (NOT DEFINED ROSETTA_PPM_OPENMP_PARALLEL
     endif ()
   endif ()
 endif ()
+if (OpenMP_CXX_FOUND)
+  set(autodetect_ppm_openmp_parallel "ON")
+  set(autodetect_ppm_openmp_task "ON")
+  set(autodetect_platform_openmp "ON")
+endif ()
+if (OpenMPOffload_FOUND)
+  set(autodetect_ppm_openmp_target "ON")
+endif ()
+
 
 # OpenACC
 if (NOT DEFINED ROSETTA_PPM_OPENACC)
@@ -189,6 +334,10 @@ if (NOT DEFINED ROSETTA_PPM_OPENACC)
 elseif (ROSETTA_PPM_OPENACC)
   find_package(OpenACC REQUIRED)
 endif ()
+if (OpenACC_CXX_FOUND)
+  set(autodetect_ppm_openacc "ON")
+endif ()
+
 
 # MPI
 if (NOT DEFINED ROSETTA_PPM_MPI)
@@ -196,26 +345,28 @@ if (NOT DEFINED ROSETTA_PPM_MPI)
 elseif (ROSETTA_PPM_MPI)
   find_package(MPI REQUIRED)
 endif ()
+if (MPI_CXX_FOUND)
+  set(autodetect_ppm_mpi "ON")
+endif ()
+
 
 # Introspection ################################################################
 
 # pointer restrict
-check_cxx_source_compiles(
-  "
+check_cxx_source_compiles("
         int f(void *restrict x);
         int main(void) {return 0;}
     "
   HAVE_CXX_RESTRICT)
 
-check_cxx_source_compiles(
-  "
+check_cxx_source_compiles("
         int f(void *__restrict x);
         int main(void) {return 0;}
     "
   HAVE_CXX___RESTRICT)
 if (HAVE_CXX_RESTRICT)
   set(KEYWORD_RESTRICT "restrict")
-  elif(HAVE_CXX___RESTRICT)
+elseif (HAVE_CXX___RESTRICT)
   set(KEYWORD_RESTRICT "__restrict")
 else ()
   set(KEYWORD_RESTRICT "")
@@ -227,8 +378,7 @@ check_include_file_cxx(filesystem HAS_INCLUDE_FILESYSTEM)
 check_include_file_cxx(charconv HAS_INCLUDE_CHARCONV)
 
 # g++ >= 11: charconv with float types (https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html)
-check_cxx_source_compiles(
-  "
+check_cxx_source_compiles("
 #include <charconv>
 
 template <typename T>
@@ -254,6 +404,8 @@ void foo() {
 "
   HAS_INCLUDE_CHARCONV_FLOAT)
 
+
+
 # Configuration ###############################################################
 
 set(ROSETTA_RESULTS_DIR
@@ -271,65 +423,6 @@ set(ROSETTA_RANDSEED
     "${_randseed_default}"
     CACHE STRING "Seed for compile-time randomness")
 
-option(ROSETTA_PPM_REFERENCE "Enable reference code; use serial if there is no explicit reference version" ON)
-
-option(ROSETTA_PPM_SERIAL "Enable serial" ON)
-
-set(_cuda_enabled_default OFF)
-if (CMAKE_CUDA_COMPILER)
-  set(_cuda_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_CUDA "Enable CUDA PPM" ${_cuda_enabled_default})
-
-set(_nvidia_enabled_default OFF)
-if (TARGET CUDA::cudart)
-  set(_nvidia_enabled_default ON)
-endif ()
-option(ROSETTA_PLATFORM_NVIDIA "Enable NVIDIA CUPTI Performance Measurements" ${_nvidia_enabled_default})
-
-set(_papi_enabled_default OFF)
-if (False)
-  set(_papi_enabled_default ON)
-endif ()
-option(ROSETTA_PLATFORM_PAPI "Enable Performance-API Measurements (Not implemented)" ${_papi_enabled_default})
-
-set(_ompwtime_enabled_default OFF)
-if (OPENMP_FOUND)
-  set(_ompwtime_enabled_default ON)
-endif ()
-option(ROSETTA_PLATFORM_OPENMP "Enable omp_get_wtime Measurements (Not implemented)" ${_ompwtime_enabled_default})
-
-set(_opencl_enabled_default OFF)
-if (OpenCL_FOUND)
-  set(_opencl_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENCL "Enable OpenCL PPM" ${_opencl_enabled_default})
-
-set(_openmp_thread_enabled_default OFF)
-if (OpenMP_CXX_FOUND)
-  set(_openmp_thread_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENMP_PARALLEL "Enable OpenMP '#pragma omp parallel' PPM" ${_openmp_thread_enabled_default})
-option(ROSETTA_PPM_OPENMP_TASK "Enable OpenMP '#pragma omp task' PPM" ${_openmp_thread_enabled_default})
-
-set(_openmp_target_enabled_default OFF)
-if (OpenMP_CXX_FOUND AND OpenMPOffload_FOUND)
-  set(_openmp_target_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENMP_TARGET "Enable OpenMP '#pragma omp target' PPM" ${_openmp_target_enabled_default})
-
-set(_openacc_enabled_default OFF)
-if (OpenACC_CXX_FOUND)
-  set(_openacc_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_OPENACC "Enable OpenACC PPM" ${_openacc_enabled_default})
-
-set(_mpi_enabled_default OFF)
-if (MPI_CXX_FOUND)
-  set(_mpi _enabled_default ON)
-endif ()
-option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
-
 set(ROSETTA_REALTYPE
     "double"
     CACHE STRING "Which type to prefer for floating-point values ('float', 'double', or 'long double')")
@@ -338,6 +431,42 @@ set_property(CACHE ROSETTA_REALTYPE PROPERTY STRINGS "float" "double" "long doub
 set(ROSETTA_PROBLEMSIZE
     "medium"
     CACHE STRING "Problemsize to use (predefined or path to ini-file)")
+
+# Add option for enabling each PPM
+foreach(_PPM IN LISTS all_PPMS)
+  string(TOLOWER "${_PPM}" _ppm)
+  if (ROSETTA_PPM_DEFAULT STREQUAL "AUTODETECT")
+    if (autodetect_ppm_${_ppm})
+      set(_enabled_default ON)
+    else ()
+      set(_enabled_default OFF)
+    endif () 
+  else ()
+    set(_enabled_default ${ROSETTA_PPM_DEFAULT})
+  endif ()
+  option(ROSETTA_PPM_${_PPM} "${helptext_ppm_${_ppm}}" ${_enabled_default})
+endforeach()
+
+foreach(_PLATFORM IN LISTS all_PLATFORMS)
+  string(TOLOWER "${_PLATFORM}" _platform)
+  if (ROSETTA_PLATFORM_DEFAULT STREQUAL "AUTODETECT")
+    if (autodetect_platform_${_platform})
+      set(_enabled_default ON)
+    else ()
+      set(_enabled_default OFF)
+    endif () 
+  else ()
+    set(_enabled_default ${ROSETTA_PLATFORM_DEFAULT})
+  endif ()
+  option(ROSETTA_PLATFORM_${_PLATFORM} "${helptext_ppm_${_ppm}}" ${_enabled_default})
+endforeach()
+
+
+
+
+
+
+
 
 set(_problemsizefile)
 get_filename_component(_rosetta_predefined "${ROSETTA_PROBLEMSIZE}.problemsize.ini" ABSOLUTE BASE_DIR
@@ -356,6 +485,7 @@ endif ()
 if (NOT _problemsizefile)
   message(SEND_ERROR "Problem sizes required")
 endif ()
+
 
 # Build #######################################################################
 
@@ -377,9 +507,11 @@ function (rosetta_add_reference basename pbsize)
   add_dependencies(references "reference-${basename}")
 endfunction ()
 
+
 # Library ----------------------------------------------------------------------
 
 add_subdirectory(rosetta)
+
 
 # Benchmarks -------------------------------------------------------------------
 
@@ -393,11 +525,6 @@ if (ROSETTA_PPM_CUDA)
   add_custom_target(build-cuda)
   set_target_properties(build-cuda PROPERTIES FOLDER "Benchmarks")
   add_dependencies(build build-cuda)
-
-  # For convenience, we add -G to add debug symbols to device code by default, which CMake unfortunately forgets
-  #set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -G" CACHE STRING "Flags used by the CUDA compiler during DEBUG builds.")
-  #set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -G" CACHE STRING "Flags used by the CUDA compiler during RELWITHDEBINFO builds.")
-  #message("CMAKE_CUDA_FLAGS_DEBUG: ${CMAKE_CUDA_FLAGS_DEBUG}")
 endif ()
 
 if (ROSETTA_PPM_OPENMP_PARALLEL
@@ -427,14 +554,16 @@ endif ()
 
 add_subdirectory(benchmarks)
 
+
 # Maintanance #################################################################
 
 if (NOT ROSETTA_MAINTAINER_MODE)
   add_format_target(
     CLANG_RGLOB
-    benchmarks/*.cxx
-    benchmarks/*.cu
-    benchmarks/*.h
+# Disable formatting because clang-format does not handle #pragma well.
+#    benchmarks/*.cxx
+#    benchmarks/*.cu
+#    benchmarks/*.h
     rosetta/*.h
     rosetta/*.cpp
     PY_RGLOB
@@ -447,6 +576,7 @@ if (NOT ROSETTA_MAINTAINER_MODE)
     rosetta/cmake/*.cmake)
 endif ()
 
+
 # Run #########################################################################
 
 get_property(_benchmarks GLOBAL PROPERTY benchmarks)
@@ -455,7 +585,7 @@ file(
   GENERATE
   OUTPUT "${CMAKE_BINARY_DIR}/bench-$<CONFIG>.py"
   CONTENT
-    "#! /usr/bin/env python3
+    "#! ${Python_EXECUTABLE}
 # -*- coding: utf-8 -*-
 
 import sys
@@ -495,7 +625,7 @@ file(
   GENERATE
   OUTPUT "${CMAKE_BINARY_DIR}/verify-$<CONFIG>.py"
   CONTENT
-    "#! /usr/bin/env python3
+    "#! ${Python_EXECUTABLE}
 # -*- coding: utf-8 -*-
 
 import sys
@@ -535,7 +665,7 @@ file(
   GENERATE
   OUTPUT "${CMAKE_BINARY_DIR}/probe-$<CONFIG>.py"
   CONTENT
-    "#! /usr/bin/env python3
+    "#! ${Python_EXECUTABLE}
 # -*- coding: utf-8 -*-
 
 import sys
@@ -583,17 +713,63 @@ if (_default_build_type)
   # COMMENT "Verify all benchmarks ..." USES_TERMINAL VERBATIM ) add_dependencies(verify build ${_references})
 endif ()
 
+
 # Summary #########################################################################
 
 set(_disabled_ppm)
 set(_disabled_platform)
+
+
+get_filename_component(_problemsizefilename "${_problemsizefile}" NAME)
+
 
 set(_extra_flags)
 if (ROSETTA_NO_EXCEPTIONS)
   set(_extra_flags "-fno-exceptions")
 endif ()
 
-get_filename_component(_problemsizefilename "${_problemsizefile}" NAME)
+
+set(clargs_ppm_serial "${CMAKE_CXX_COMPILER}" ${_extra_flags}) 
+set(verinfo_ppm_serial "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+
+set(clargs_ppm_cuda ${CMAKE_CUDA_COMPILER} ${_extra_flags}) 
+set(verinfo_ppm_cuda "${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}" "CUDA ${CUDAToolkit_VERSION}")
+
+set(clargs_ppm_opencl "${CMAKE_CXX_COMPILER}" ${OpenCL_LIBRARIES} ${_extra_flags}) 
+set(verinfo_ppm_opencl "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenCL ${OpenCL_VERSION_STRING}")
+
+set(clargs_ppm_openmp_parallel ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags}) 
+set(verinfo_ppm_openmp_parallel "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenMP ${OpenMP_CXX_VERSION}")
+
+set(clargs_ppm_openmp_task ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags}) 
+set(verinfo_ppm_openmp_task "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenMP ${OpenMP_CXX_VERSION}")
+
+set(clargs_ppm_openmp_target ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_LDFLAGS} ${_extra_flags}) 
+set(verinfo_ppm_openmp_target "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenMP ${OpenMP_CXX_VERSION}")
+
+set(clargs_ppm_openacc ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags}) 
+set(verinfo_ppm_openacc "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenACC ${OpenACC_CXX_VERSION}")
+
+set(clargs_ppm_mpi ${MPI_CXX_COMPILER} ${MPI_CXX_COMPILE_OPTIONS} ${MPI_CXX_COMPILE_DEFINITIONS} ${MPI_CXX_INCLUDE_DIRS} ${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBRARIES} ${_extra_flags}) 
+set(verinfo_ppm_mpi "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "MPI ${MPI_CXX_VERSION}")
+
+set(verinfo_platform_nvidia "CUDA ${CUDAToolkit_VERSION}")
+
+
+
+
+
+
+
+function (add_padding _varname _targetlen)
+  string(LENGTH "${${_varname}}" _strlen)
+  math(EXPR _padlen "(${_targetlen}) - (${_strlen})")
+  if (_padlen GREATER 0)
+    string(REPEAT " " "${_padlen}" _pad)
+    set("${_varname}" "${${_varname}}${_pad}" PARENT_SCOPE)
+  endif ()
+endfunction()
+
 
 message("")
 message("Configuration Summary")
@@ -605,80 +781,70 @@ else ()
   message("Default Build Configuration: ${_default_build_type}")
 endif ()
 message("Default problem size: ${_problemsizefilename}")
+
 message("Enabled PPMs:")
-if (ROSETTA_PPM_SERIAL)
-  get_property(
-    _cxx_standard
-    TARGET rosetta-serial
-    PROPERTY CXX_STANDARD)
-  if (_cxx_standard STREQUAL "")
-    set(_cxx_standard "${CMAKE_CXX_STANDARD}")
+set(_disabled_ppm)
+foreach (_Ppm IN LISTS all_Ppms)
+  string(TOUPPER "${_Ppm}" _PPM)
+  string(TOLOWER "${_Ppm}" _ppm)
+  if (ROSETTA_PPM_${_PPM})
+    set(_infostr "${displayname_ppm_${_ppm}}:")
+    if (verinfo_platform_${_platform})
+      string(JOIN ", " _joinedverinfo ${verinfo_platform_${_platform}})
+      set(_infostr "${_infostr} (${_joinedverinfo})")
+    endif ()
+
+
+    if (TARGET rosetta-${_ppm})
+        # TODO: For CUDA, this is "CUDA_STANDARD"
+        get_property(
+          _cxx_standard
+          TARGET rosetta-${_ppm}
+          PROPERTY CXX_STANDARD)
+        if (_cxx_standard STREQUAL "")
+          set(_cxx_standard "${CMAKE_CXX_STANDARD}")
+        endif ()
+        if (_cxx_standard STREQUAL "")
+          set(_cxx_standard "${CMAKE_CXX_STANDARD_DEFAULT}")
+        endif ()
+        if (_cxx_standard)
+          list (APPEND verinfo_ppm_${_ppm} "C++${_cxx_standard}")
+        endif ()
+    endif ()
+    add_padding(_infostr 16)
+    string(JOIN " " _joinedargs ${clargs_ppm_${_ppm}})
+    set(_infostr "${_infostr} ${_joinedargs}")
+
+    if (verinfo_ppm_${_ppm})
+      string(JOIN ", " _joinedverinfo ${verinfo_ppm_${_ppm}})
+      set(_infostr "${_infostr} (${_joinedverinfo})")
+    endif ()
+
+    message("  ${_infostr}")
+  else ()
+    list(APPEND _disabled_ppm "${displayname_ppm_${_ppm}}")
   endif ()
-  if (_cxx_standard STREQUAL "")
-    set(_cxx_standard "${CMAKE_CXX_STANDARD_DEFAULT}")
-  endif ()
-  message(
-    "  Serial:          ${CMAKE_CXX_COMPILER} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, C++${_cxx_standard})"
-  )
-else ()
-  list(APPEND _disabled_ppm "Serial")
-endif ()
-if (ROSETTA_PPM_CUDA)
-  message(
-    "  CUDA:            ${CMAKE_CUDA_COMPILER} ${_extra_flags} (${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}, CUDA ${CUDA_VERSION})"
-  )
-else ()
-  list(APPEND _disabled_ppm "CUDA")
-endif ()
-if (ROSETTA_PPM_OPENCL)
-  message(
-    "  OpenCL:          ${CMAKE_CXX_COMPILER} ${OpenCL_LIBRARIES} ${_extra_flags} (OpenCL ${OpenCL_VERSION_STRING})")
-else ()
-  list(APPEND _disabled_ppm "OpenCL")
-endif ()
-if (ROSETTA_PPM_OPENMP_PARALLEL)
-  message(
-    "  OpenMP-Parallel: ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, OpenMP ${OpenMP_CXX_VERSION} ${OpenMP_CXX_SPEC_DATE})"
-  )
-else ()
-  list(APPEND _disabled_ppm "OpenMP-Parallel")
-endif ()
-if (ROSETTA_PPM_OPENMP_TASK)
-  message(
-    "  OpenMP-Task:     ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, OpenMP ${OpenMP_CXX_VERSION} ${OpenMP_CXX_SPEC_DATE})"
-  )
-else ()
-  list(APPEND _disabled_ppm "OpenMP-Task")
-endif ()
-if (ROSETTA_PPM_OPENMP_TARGET)
-  message(
-    "  OpenMP-Target:   ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_CFLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, OpenMP ${OpenMP_CXX_VERSION} ${OpenMP_CXX_SPEC_DATE})"
-  )
-else ()
-  list(APPEND _disabled_ppm "OpenMP-Target")
-endif ()
-if (ROSETTA_PPM_OPENACC)
-  message(
-    "  OpenACC:         ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, OpenACC ${OpenACC_CXX_VERSION} ${OpenACC_CXX_SPEC_DATE})"
-  )
-else ()
-  list(APPEND _disabled_ppm "OpenACC")
-endif ()
-if (ROSETTA_PPM_MPI)
-  message(
-    "  MPI:         ${MPI_CXX_COMPILER} ${MPI_CXX_COMPILE_OPTIONS} ${MPI_CXX_COMPILE_DEFINITIONS} ${MPI_CXX_INLCUDE_DIRS} ${MPI_CXX_LINK_FLAGS} ${MPI_CXX_LIBRARIES} (${MPI_CXX_VERSION})"
-  )
-else ()
-  list(APPEND _disabled_ppm "MPI")
-endif ()
+endforeach ()
+
 list(JOIN _disabled_ppm " " _disabled_ppm_str)
-message("Disabled PPMs: ${_disabled_ppm_str}")
+message("Disabled PPMs: ${_disabled_ppm_str}")  
+
 message("Enabled Platforms:")
-if (ROSETTA_PLATFORM_NVIDIA)
-  message("  NVIDIA (CUDAToolkit ${CUDAToolkit_VERSION})")
-else ()
-  list(APPEND _disabled_platform "NVIDIA")
-endif ()
+set(_disabled_platform)
+foreach (_Platform IN LISTS all_Platforms)
+  string(TOUPPER "${_Platform}" _PLATFORM)
+  string(TOLOWER "${_Platform}" _platform)
+  if (ROSETTA_PLATFORM_${_PLATFORM})
+    set(_infostr "${displayname_platform_${_platform}}")
+    if (verinfo_platform_${_platform})
+      string(JOIN ", " _joinedverinfo ${verinfo_platform_${_platform}})
+      set(_infostr "${_infostr} (${_joinedverinfo})")
+    endif ()
+    message("  ${_infostr}")
+  else ()
+    list(APPEND _disabled_platform "${displayname_platform_${_platform}}")
+  endif ()
+endforeach ()
 list(JOIN _disabled_platform " " _disabled_platform_str)
 message("Disabled Platforms: ${_disabled_platform_str}")
 
