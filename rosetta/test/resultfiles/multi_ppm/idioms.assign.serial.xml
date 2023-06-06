@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <benchmarks>
-  <benchmark name="idioms.assign" n="100" ppm="serial" maxrss="166879232">
+  <benchmark name="idioms.assign" n="100" ppm="serial" maxrss="178909184" peak_alloc="80000">
     <iteration walltime="41000000 ns" />
     <iteration walltime="43 ms" />
   </benchmark>

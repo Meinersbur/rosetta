@@ -49,7 +49,8 @@ class BenchResult:
         'cupti_compute',
         'cupti_todev',
         'cupti_fromdev',
-        'maxrss'
+        'maxrss',
+        'peak_alloc'
     ]
 
     def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
@@ -82,6 +83,7 @@ class BenchResultSummary:
         self.configname = name_or_list(unique(r.configname for r in results))
         self.timestamp = name_or_list(unique(r.timestamp for r in results))
         self.maxrss = name_or_list(unique(r.maxrss for r in results))
+        self.peak_alloc = name_or_list(unique(r.peak_alloc for r in results))
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
         self.count = sum(r.count for r in results)
@@ -109,6 +111,8 @@ def get_column_data(result: BenchResult, colname: str):
         return result.count
     if colname == "maxrss":
         return result.maxrss
+    if colname == "peak_alloc":
+        return result.peak_alloc
     if colname in BenchResult.numerical_cols:
         return result.durations.get(colname)
     assert False, "TODO: Add to switch of use getattr"
@@ -117,6 +121,8 @@ def get_column_data(result: BenchResult, colname: str):
 def get_summary_data(result: BenchResultSummary, colname: str):
     if colname == "maxrss":
         return result.maxrss
+    if colname == "peak_alloc":
+        return result.peak_alloc
     if colname == "count":
         return result.count
     return get_column_data(result, colname)
@@ -125,8 +131,8 @@ def get_summary_data(result: BenchResultSummary, colname: str):
 def getColumnFormatter(colname: str):
     if colname == 'program':
         return program_formatter
-    elif colname == 'maxrss':
-        return maxrss_formatter
+    elif colname == 'maxrss' or colname == 'peak_alloc':
+        return memory_formatter
     elif colname == 'count':
         return None
     elif colname in BenchResult.numerical_cols:
@@ -153,14 +159,16 @@ def program_formatter(v: pathlib.Path):
     return StrColor(v, colorama.Fore.GREEN)
 
 
-def maxrss_formatter(v):
+def memory_formatter(v):
     if v is None:
         return None
+    if v >= 1024 * 1024 * 1024:
+        return StrColor(f"{v / (1024 * 1024 * 1024):.2f}", colorama.Style.NORMAL) + StrColor("GiB", colorama.Style.DIM)
     if v >= 1024 * 1024:
-        return StrColor(f"{v / (1024 * 1024):.2f}", colorama.Style.NORMAL) + StrColor("GiB", colorama.Style.DIM)
+        return StrColor(f"{v / (1024 * 1024):.2f}", colorama.Style.NORMAL) + StrColor("MiB", colorama.Style.DIM)
     if v >= 1024:
-        return StrColor(f"{v / 1024:.2f}", colorama.Style.NORMAL) + StrColor("MiB", colorama.Style.DIM)
-    return StrColor(f"{v:.2f}", colorama.Style.NORMAL) + StrColor("KiB", colorama.Style.DIM)
+        return StrColor(f"{v / 1024:.2f}", colorama.Style.NORMAL) + StrColor("KiB", colorama.Style.DIM)
+    return StrColor(f"{v:.2f}", colorama.Style.NORMAL) + StrColor("B", colorama.Style.DIM)
 
 
 def duration_formatter(best=None, worst=None):
@@ -206,11 +214,13 @@ def getHTMLFromatter(col: str):
         return html.escape(str(v))
 
     def memory_formatter(v):
+        if v >= 1024 * 1024 * 1024:
+            return f'{(v / (1024 * 1024 * 1024)):.2f}<span class="text-dark-emphasis">GiB</span>'
         if v >= 1024 * 1024:
-            return f'{(v / (1024 * 1024)):.2f}<span class="text-dark-emphasis">GiB</span>'
+            return f'{(v / (1024 * 1024)):.2f}<span class="text-dark-emphasis">MiB</span>'
         if v >= 1024:
-            return f'{(v / 1024):.2f}<span class="text-dark-emphasis">MiB</span>'
-        return f'{v:.2f}<span class="text-dark-emphasis">KiB</span>'
+            return f'{(v / 1024):.2f}<span class="text-dark-emphasis">KiB</span>'
+        return f'{v:.2f}<span class="text-dark-emphasis">B</span>'
 
     def duration_formatter(stat):
         # print(col)
@@ -227,7 +237,7 @@ def getHTMLFromatter(col: str):
 
     if col == 'count':
         return str_html_formatter
-    if col == 'maxrss':
+    if col == 'maxrss' or col == 'peak_alloc':
         return memory_formatter
     if col in BenchResult.numerical_cols:
         return duration_formatter
@@ -588,7 +598,8 @@ def getMeasureDisplayStr(s: str):
             'cupti_compute': "nvprof Kernel",
             'cupti_todev': "nvprof H->D",
             'cupti_fromdev': "nvprof D->H",
-            'maxrss': "Max RSS"}.get(s, s)
+            'maxrss': "Max RSS",
+            'peak_alloc': "Peak Allocation"}.get(s, s)
 
 
 def getPPMDisplayStr(s: str):
