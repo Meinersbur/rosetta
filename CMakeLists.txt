@@ -129,6 +129,7 @@ add_ppm(OpenMP_Task DISPLAYNAME "OpenMP-Task"
   ENABLEDHELP "Enable OpenMP '#pragma omp task' PPM")
 add_ppm(OpenMP_Target DISPLAYNAME "OpenMP-Target"
   ENABLEDHELP "Enable OpenMP '#pragma omp target' PPM")
+add_ppm(SYCL)
 add_ppm(OpenACC)
 add_ppm(MPI)
 
@@ -333,6 +334,9 @@ if (NOT DEFINED ROSETTA_PPM_SYCL)
   find_package(IntelSYCL)
 elseif (ROSETTA_PPM_SYCL)
   find_package(IntelSYCL REQUIRED)
+endif ()
+if (IntelSYCL_FOUND)
+  set(autodetect_ppm_sycl "ON")
 endif ()
 
 # OpenACC
@@ -770,6 +774,9 @@ set(verinfo_ppm_openmp_task "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSI
 
 set(clargs_ppm_openmp_target ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_LDFLAGS} ${_extra_flags}) 
 set(verinfo_ppm_openmp_target "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenMP ${OpenMP_CXX_VERSION}")
+
+set(clargs_ppm_sycl ${SYCL_COMPILER} ${SYCL_CXX_FLAGS} ${_extra_flags}) 
+set(verinfo_ppm_sycl "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "IntelSYCL ${SYCL_LANGUAGE_VERSION}")
 
 set(clargs_ppm_openacc ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags}) 
 set(verinfo_ppm_openacc "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenACC ${OpenACC_CXX_VERSION}")
