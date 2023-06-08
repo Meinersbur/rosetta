@@ -1,3 +1,4 @@
+// BUILD: add_benchmark(ppm=omp_task)
 #include "rosetta.h"
 
 

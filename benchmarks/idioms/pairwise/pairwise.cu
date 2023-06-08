@@ -1,3 +1,8 @@
+// BUILD: add_benchmark(cuda,
+// BUILD:               GenParam('real',compiletime,choices=['float','double','long double']),
+// BUILD:               SizeParam('n',runtime,verify=129,train=1024,ref=1024*1024,min=0),
+// BUILD:               TuneParam('threadsPerBlock',runtime)
+// BUILD:              )
 #include "pairwise.h"
 #include "rosetta.h"
 
@@ -24,7 +29,7 @@ static void pointwise_cuda(benchmark::State &state, int n) {
   BENCH_CUDA_TRY(cudaMalloc((void **)&dev_B, n * sizeof(double)));
   BENCH_CUDA_TRY(cudaMalloc((void **)&dev_C, n * n * sizeof(double)));
 
-  cudaMemcpy(dev_A, A, N * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_A, A, n * sizeof(double), cudaMemcpyHostToDevice);
 
   int threadsPerBlock = 256;
   int blocksPerGrid = ((n * n) + threadsPerBlock - 1) / threadsPerBlock;
