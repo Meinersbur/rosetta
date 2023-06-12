@@ -331,9 +331,9 @@ endif ()
 
 #SYCL
 if (NOT DEFINED ROSETTA_PPM_SYCL)
-  find_package(IntelSYCL)
+  find_package(IntelSYCL CONFIG QUIET)
 elseif (ROSETTA_PPM_SYCL)
-  find_package(IntelSYCL REQUIRED)
+  find_package(IntelSYCL CONFIG REQUIRED)
 endif ()
 if (IntelSYCL_FOUND)
   set(autodetect_ppm_sycl "ON")
