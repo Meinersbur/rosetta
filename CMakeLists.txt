@@ -248,7 +248,7 @@ if (CUDAToolkit_FOUND)
 endif ()
 
 # For CUDA PPM
-if (CUDAToolkit_FOUND AND CMAKE_CUDA_COMPILER AND Thrust_Found)
+if (CUDAToolkit_FOUND AND CMAKE_CUDA_COMPILER AND Thrust_FOUND)
   set(autodetect_ppm_cuda "ON")
 endif ()
 
@@ -332,10 +332,21 @@ endif ()
 #SYCL
 if (NOT DEFINED ROSETTA_PPM_SYCL)
   find_package(IntelSYCL CONFIG QUIET)
+  if (NOT IntelSYCL_FOUND)
+    message(STATUS "IntelSYCL NOT found. Finding IntelDPCPP")
+    find_package(IntelDPCPP CONFIG QUIET)
+  endif ()
 elseif (ROSETTA_PPM_SYCL)
-  find_package(IntelSYCL CONFIG REQUIRED)
+  find_package(IntelSYCL CONFIG)
+  if(IntelSYCL_FOUND)
+    message(STATUS "Found package IntelSYCL")
+  else ()
+    message(STATUS "Package IntelSYCL not found")
+    find_package(IntelDPCPP CONFIG REQUIRED)
+    message(STATUS "Found package IntelDPCPP")
+  endif ()
 endif ()
-if (IntelSYCL_FOUND)
+if (IntelSYCL_FOUND OR IntelDPCPP_FOUND)
   set(autodetect_ppm_sycl "ON")
 endif ()
 
@@ -471,23 +482,6 @@ foreach(_PLATFORM IN LISTS all_PLATFORMS)
   endif ()
   option(ROSETTA_PLATFORM_${_PLATFORM} "${helptext_ppm_${_ppm}}" ${_enabled_default})
 endforeach()
-
-
-
-
-
-#IntelSYCL
-set(_sycl_enabled_default OFF)
-if (IntelSYCL_FOUND)
-  set(_sycl_enabled_default ON)
-endif ()
-option(ROSETTA_PPM_SYCL "Enable SYCL PPM" ${_sycl_enabled_default})
-
-set(_mpi_enabled_default OFF)
-if (MPI_CXX_FOUND)
-  set(_mpi _enabled_default ON)
-endif ()
-option(ROSETTA_PPM_MPI "Enable MPI PPM" ${_mpi_enabled_default})
 
 
 
