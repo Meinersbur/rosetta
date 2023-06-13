@@ -18,7 +18,7 @@ import importlib.util
 from rosetta.util.support import *
 import rosetta.runner as runner
 import rosetta.registry as registry
-from rosetta.rosetta_filter import *
+from rosetta.filtering import *
 
 buildre = re.compile(r'^\s*//\s*BUILD\:(?P<script>.*)$')
 preparere = re.compile(r'^\s*//\s*PREPARE\:(?P<script>.*)$')
@@ -167,9 +167,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
         print("endif ()", file=out)
         print(file=out)
+    benchs = get_filtered_benchmarks(benchs, filter)
     for bench in benchs:
-        if not match_filter(bench, filter):
-            continue
         if bench.ppm == 'serial':
             print(f"add_benchmark_serial({bench.basename}", file=out)
         elif bench.ppm == 'omp_parallel':
