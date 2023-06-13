@@ -187,7 +187,7 @@ add_platform(OMPT
 # Dependencies ################################################################
 
 # Python
-find_package(Python 3.6 REQUIRED)
+find_package(Python 3.9 REQUIRED)
 
 # Google Benchmark set(BENCHMARK_ENABLE_TESTING OFF) include(FetchContent) FetchContent_Declare(googlebenchmark
 # GIT_REPOSITORY https://github.com/google/benchmark.git ) FetchContent_MakeAvailable(googlebenchmark)
