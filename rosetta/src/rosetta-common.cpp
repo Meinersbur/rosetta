@@ -156,7 +156,7 @@ std::pair<usage_duration_t, usage_duration_t> ProcessCPUUsage() {
     return MakeTime(spec);
   DiagnoseAndExit("clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) failed");
 #else
-  struct rusage ru;
+  struct rusage ru = {0};
   if (getrusage(RUSAGE_SELF, &ru) == 0)
     return MakeTime(ru);
   DiagnoseAndExit("getrusage(RUSAGE_SELF, ...) failed");
