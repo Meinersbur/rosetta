@@ -23,7 +23,7 @@ from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
-from .rosetta_filter import *
+from .filtering import *
 
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
@@ -334,7 +334,6 @@ def driver_main(
         '--cols-always',
         help="Comma-separated list of columns to display even if it does not contains data")
     parser.add_argument('--cols-never', help="Comma-separated list of columns to not display")
-
     # Report step
     add_boolean_argument(parser, 'report', default=None, help="Create HTML report")
     parser.add_argument('--reportfile', type=pathlib.Path, help="Path to write the report.html to")
@@ -515,7 +514,7 @@ def driver_main(
                 resultfiles = resultfiles or []
                 resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
 
-            # If there is no other source of results, source all prebious ones
+            # If there is no other source of results, source all previous ones
             if resultfiles is None:
                 resultfiles = resultfiles or []
                 if resultsdir:
@@ -528,6 +527,8 @@ def driver_main(
                 die("No results")
 
             results = evaluator.load_resultfiles(resultfiles)
+            # if not match_filter(e, args):
+            #     continue
 
             if args.evaluate:
                 group_by = None

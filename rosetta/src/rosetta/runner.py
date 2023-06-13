@@ -18,7 +18,7 @@ from .util import invoke
 from .common import *
 from .registry import Benchmark
 from . import registry
-from .rosetta_filter import *
+from .filtering import *
 
 
 # Not included batteries
@@ -126,9 +126,8 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None, args=None):
     results = []
     resultssubdir = make_resultssubdir(within=resultdir)
     timestamp = datetime.datetime.now(datetime.timezone.utc)
-    for e in registry.benchmarks:
-        if not match_filter(e, args):
-            continue
+    filtered_benchmarks = get_filtered_benchmarks(registry.benchmarks, args)
+    for e in filtered_benchmarks:
         thisresultdir = resultssubdir
         configname = e.configname
         if configname:

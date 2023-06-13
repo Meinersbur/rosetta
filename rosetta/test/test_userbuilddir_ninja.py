@@ -27,7 +27,6 @@ class UserBuilddirNinja(unittest.TestCase):
         print("builddir: ", cls.builddir)
         invoke.diag('cmake', '-S', cls.srcdir, '-B', cls. builddir,  '-GNinja', '-DCMAKE_BUILD_TYPE=Release', '-DROSETTA_PPM_DEFAULT=OFF', '-DROSETTA_PPM_SERIAL=ON',
                     '-DROSETTA_BENCH_FILTER=--filter=cholesky', cwd=cls.builddir, onerror=invoke.Invoke.EXCEPTION)
-
         cls.resultsdir = cls.builddir / 'results'
         cls.benchlistfile = cls.builddir / 'benchmarks' / 'benchlist.py'
 
@@ -55,7 +54,7 @@ class UserBuilddirNinja(unittest.TestCase):
         with problemsizefile.open('r') as f:
             s = f.read()
 
-        self.assertRegex(s, r'\[suites\.polybench\.cholesky\]\nn\=')
+        self.assertRegex(s, r'\[idioms\.assign\]\nn\=')
 
 
 
@@ -77,13 +76,13 @@ class UserBuilddirNinja(unittest.TestCase):
     def test_bench(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee( f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,
+            rosetta.driver.driver_main(argv=[None, '--bench', '--filter-include-program-substr', 'assign'], mode=DriverMode.USERBUILDDIR,
                                    benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
 
         # Check terminal output
         s=f.getvalue()
         self.assertTrue(re.search(r'Benchmark.+Wall', s, re.MULTILINE), "Evaluation table Header")
-        self.assertTrue(re.search(r'suites\.polybench\.cholesky', s, re.MULTILINE), "Benchmark entry")
+        self.assertTrue(re.search(r'idioms\.assign', s, re.MULTILINE), "Benchmark entry")
 
         # Check existance of the reportfile, only a single one is expected
         [reportfile] = list((self.builddir /'results').glob('*/report.html'))
@@ -93,7 +92,7 @@ class UserBuilddirNinja(unittest.TestCase):
         results = list(resultsubdir.glob('*.xml'))
         self.assertTrue(len(results)>=1)
         for r in results:
-            self.assertTrue(r.name.startswith('suites.polybench.cholesky.'), "Must only run filtered tests" )
+            self.assertTrue(r.name.startswith('idioms.assign.'), "Must only run filtered tests" )
 
 
 
