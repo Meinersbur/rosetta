@@ -74,8 +74,8 @@ set_property(CACHE ROSETTA_PLATFORM_DEFAULT PROPERTY STRINGS "ON" "OFF" "AUTODET
 
 
 
-set(all_PPMS)
 set(all_Ppms)
+set(all_PPMS)
 # The following variables are defined per-PPM (where * is the name of the PPM):
 #
 # - ROSETTA_PPM_*: Is the PPM Enabled? (cached, user-controlled except on first run)
@@ -92,8 +92,8 @@ macro (add_ppm _Ppm)
   
   string(TOUPPER "${_Ppm}" _PPM)
   string(TOLOWER "${_Ppm}" _ppm)
-  list(APPEND all_PPMS "${_PPM}")
   list(APPEND all_Ppms "${_Ppm}")
+  list(APPEND all_PPMS "${_PPM}")
 
   set (_displayname "${_Ppm}")
   if (_arg_DISPLAYNAME)
@@ -136,6 +136,7 @@ add_ppm(MPI)
 
 
 set(all_Platforms)
+set(all_PLATFORMS)
 # The following variables are defined per-platform (where * is the name of the platform):
 #
 # - ROSETTA_PLATFORM_*: Is the platform Enabled? (cached, user-controlled except on first run)
@@ -148,6 +149,7 @@ macro (add_platform _Platform)
   string(TOUPPER "${_Platform}" _PLATFORM)
   string(TOLOWER "${_Platform}" _platform)
   list(APPEND all_Platforms "${_Platform}")
+  list(APPEND all_PLATFORMS "${_PLATFORM}")
 
   set (_displayname "${_Platform}")
   if (_arg_DISPLAYNAME)
