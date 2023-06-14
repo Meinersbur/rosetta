@@ -187,12 +187,13 @@ class Statistic:
         n = self.count
         if n == 0:
             return 0
-        result =  self._sumsqr / n - sqr(self.mean)
-        if result < 0:
-            # Due to floating point rounding errors, the previous subtraction might be negative
-            # Since a variance is never negative, treat this a zero
+        
+        result = self._sumsqr / n - sqr(self.mean)
+        if result <= 0:
+            # Due to floating-point inaccuracy (https://en.wikipedia.org/wiki/Catastrophic_cancellation), result can be negative when close to zero. In this case just assume zero.
+            # TODO: Possible numerically more stable when not using sumsqr.
             return 0
-        return result 
+        return result
 
     @property
     def corrected_variance(self):

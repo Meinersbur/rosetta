@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import sys
+if not sys.version_info >= (3, 9):
+    print("Requires python 3.9 or later", file=sys.stderr)
+    print(f"Python interpreter {sys.executable} reports version {sys.version}", file=sys.stderr)
+    sys.exit(1)
+
+
 import typing
 from collections import defaultdict
 import datetime

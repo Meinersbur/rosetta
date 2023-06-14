@@ -8,13 +8,17 @@ include(CheckLanguage)
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
 
-set(CMAKE_CTEST_ARGUMENTS "-j")
+# Custom modules
+list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
+include(Formatting)
+
+
+# Testing
+set(CMAKE_CTEST_ARGUMENTS -j --output-on-failure)
 set(CTEST_TEST_TARGET_ALIAS check)
 include(CTest)
 set_target_properties(check PROPERTIES FOLDER "Self-Testing")
 
-list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
-include(Formatting)
 
 # Use Folders in Visual Studio IDE
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -74,8 +78,8 @@ set_property(CACHE ROSETTA_PLATFORM_DEFAULT PROPERTY STRINGS "ON" "OFF" "AUTODET
 
 
 
-set(all_PPMS)
 set(all_Ppms)
+set(all_PPMS)
 # The following variables are defined per-PPM (where * is the name of the PPM):
 #
 # - ROSETTA_PPM_*: Is the PPM Enabled? (cached, user-controlled except on first run)
@@ -92,8 +96,8 @@ macro (add_ppm _Ppm)
   
   string(TOUPPER "${_Ppm}" _PPM)
   string(TOLOWER "${_Ppm}" _ppm)
-  list(APPEND all_PPMS "${_PPM}")
   list(APPEND all_Ppms "${_Ppm}")
+  list(APPEND all_PPMS "${_PPM}")
 
   set (_displayname "${_Ppm}")
   if (_arg_DISPLAYNAME)
@@ -137,6 +141,7 @@ add_ppm(MPI)
 
 
 set(all_Platforms)
+set(all_PLATFORMS)
 # The following variables are defined per-platform (where * is the name of the platform):
 #
 # - ROSETTA_PLATFORM_*: Is the platform Enabled? (cached, user-controlled except on first run)
@@ -149,6 +154,7 @@ macro (add_platform _Platform)
   string(TOUPPER "${_Platform}" _PLATFORM)
   string(TOLOWER "${_Platform}" _platform)
   list(APPEND all_Platforms "${_Platform}")
+  list(APPEND all_PLATFORMS "${_PLATFORM}")
 
   set (_displayname "${_Platform}")
   if (_arg_DISPLAYNAME)
@@ -186,7 +192,7 @@ add_platform(OMPT
 # Dependencies ################################################################
 
 # Python
-find_package(Python 3.6 REQUIRED)
+find_package(Python 3.9 REQUIRED)
 
 # Google Benchmark set(BENCHMARK_ENABLE_TESTING OFF) include(FetchContent) FetchContent_Declare(googlebenchmark
 # GIT_REPOSITORY https://github.com/google/benchmark.git ) FetchContent_MakeAvailable(googlebenchmark)
@@ -386,6 +392,7 @@ check_cxx_source_compiles("
         int main(void) {return 0;}
     "
   HAVE_CXX___RESTRICT)
+
 if (HAVE_CXX_RESTRICT)
   set(KEYWORD_RESTRICT "restrict")
 elseif (HAVE_CXX___RESTRICT)
@@ -482,6 +489,8 @@ foreach(_PLATFORM IN LISTS all_PLATFORMS)
   endif ()
   option(ROSETTA_PLATFORM_${_PLATFORM} "${helptext_ppm_${_ppm}}" ${_enabled_default})
 endforeach()
+
+
 
 
 
@@ -641,7 +650,9 @@ add_custom_target(
   COMMAND Python::Interpreter "bench-$<CONFIG>.py"
   COMMENT "Run benchmarks ..."
   USES_TERMINAL VERBATIM)
-add_dependencies(bench ${_benchmarks})
+if (_benchmarks)
+  add_dependencies(bench ${_benchmarks})
+endif ()
 
 file(
   GENERATE
@@ -681,7 +692,9 @@ add_custom_target(
   COMMAND Python::Interpreter "verify-$<CONFIG>.py" --no-buildondemand
   COMMENT "Verify benchmarks ..."
   USES_TERMINAL VERBATIM)
-add_dependencies(verify ${_benchmarks})
+if (_benchmarks)
+  add_dependencies(verify ${_benchmarks})
+endif ()
 
 file(
   GENERATE
@@ -721,7 +734,9 @@ add_custom_target(
   COMMAND Python::Interpreter "probe-$<CONFIG>.py" --no-buildondemand
   COMMENT "Probe problemsize ..."
   USES_TERMINAL VERBATIM)
-add_dependencies(probe ${_benchmarks})
+if (_benchmarks)
+  add_dependencies(probe ${_benchmarks})
+endif ()
 
 if (_default_build_type)
   execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "bench-${_default_build_type}.py" "bench.py"

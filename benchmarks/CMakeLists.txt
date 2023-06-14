@@ -1,9 +1,3 @@
-# Make the Rosetta Python module available for gen-stage1/gen-stage2/synth generators
-cmake_path(CONVERT "$ENV{PYTHONPATH}" TO_CMAKE_PATH_LIST _pythonpath)
-list(APPEND _pythonpath "${CMAKE_SOURCE_DIR}/rosetta/src")
-cmake_path(CONVERT "${_pythonpath}" TO_NATIVE_PATH_LIST _pythonpath)
-set(ENV{PYTHONPATH} "${_pythonpath}")
-
 # Stage 1 #######################################################################################################
 
 if (NOT ROSETTA_MAINTAINER_MODE)
@@ -91,7 +85,7 @@ endfunction ()
 
 # https://stackoverflow.com/a/52714922
 set(_refsizeinclude "${CMAKE_CURRENT_BINARY_DIR}/stage1.cmake")
-set(_stage1generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage1.py")
+set(_stage1generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage1.py")
 
 # Python::Interpreter does not work?
 set(_stage1args "--builddir=${CMAKE_CURRENT_BINARY_DIR}" "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}"
@@ -101,9 +95,10 @@ if (ROSETTA_CONFIGNAME)
 endif ()
 separate_arguments(_filter_args NATIVE_COMMAND "${ROSETTA_BENCH_FILTER}")
 list(APPEND _stage1args ${_filter_args})
-message("Executing: ${Python_EXECUTABLE} -m rosetta.scripts.gen-stage1 ${_stage1args}")
-execute_process(COMMAND "${Python_EXECUTABLE}" -m rosetta.scripts.gen-stage1 ${_stage1args} COMMAND_ERROR_IS_FATAL ANY)
-list(APPEND CMAKE_CONFIGURE_DEPENDS ${_stage1generator})
+list(APPEND CMAKE_CONFIGURE_DEPENDS "${_stage1generator}" "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage1.py")
+message("Executing: ${Python_EXECUTABLE} ${_stage1generator} ${_stage1args}")
+execute_process(COMMAND "${Python_EXECUTABLE}" "${_stage1generator}" ${_stage1args} COMMAND_ERROR_IS_FATAL ANY)
+
 
 # execute_process( COMMAND "${Python_EXECUTABLE}" "${_stage1generator}" "--builddir=${CMAKE_CURRENT_BINARY_DIR}"
 # "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}" "--problemsizefile=${_problemsizefile}" "--output=${_refsizeinclude}"
@@ -202,16 +197,17 @@ foreach (_benchmark IN LISTS _benchmarks)
 endforeach ()
 
 
-set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage2.py")
+set(_stage2generator "${CMAKE_SOURCE_DIR}/rosetta/bin/gen-stage2.py")
 set(_stage2args
     "--builddir=${CMAKE_CURRENT_BINARY_DIR}" "--benchdir=${CMAKE_CURRENT_SOURCE_DIR}"
     "--resultsdir=${ROSETTA_RESULTS_DIR}" "--benchfile=${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py"
     "--config=$<CONFIG>")
-add_custom_command(
-  OUTPUT ${_benchpropfiles}
-  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py" "${_stage2generator}"
-  COMMAND "${CMAKE_COMMAND}" -E env "PYTHONPATH=${_pythonpath}" "$<TARGET_FILE:Python::Interpreter>" -m
-          rosetta.scripts.gen-stage2 ${_stage2args}
-  COMMENT "Generate properties files")
 
+if (_benchpropfiles)
+  add_custom_command(
+    OUTPUT ${_benchpropfiles}
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/benchlist-$<CONFIG>.py" "${_stage2generator}" "${CMAKE_SOURCE_DIR}/rosetta/src/rosetta/scripts/gen-stage2.py"
+    COMMAND "${Python_EXECUTABLE}" "${_stage2generator}" ${_stage2args}
+    COMMENT "Generate properties files")
+endif ()
 add_custom_target(genfiles DEPENDS ${_benchpropfiles})

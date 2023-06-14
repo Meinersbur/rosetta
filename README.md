@@ -1,6 +1,8 @@
 Parallel Programming Languages Rosetta Stone
 ============================================
 
+[![Self-check](https://github.com/Meinersbur/rosetta/actions/workflows/check.yml/badge.svg)](https://github.com/Meinersbur/rosetta/actions/workflows/check.yml)
+
 Rosetta is a combinations of a benchmarking framework (think of Google Benchmark) and a benchmark collection of codes in implemented multiple programming languages, styles, idioms and libraries.
 
 Benchmarking Framework
