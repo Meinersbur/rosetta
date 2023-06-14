@@ -143,6 +143,7 @@ Rosetta benchmarks can be executed using two types of filters:
 Example of using filters:
   - `python rosetta.py --bench --filter-include-program-substr assign --filter-include-program-regex ".*polybench.*" --filter-exclude-program-substr heat-3d --filter-include-ppm-substr serial`
   - `python rosetta.py --bench --filter-include-program-substr assign`
+  - `python rosetta.py --bench --filter-include-program-substr assign --filter-include-ppm-substr serial --filter-include-ppm-substr cuda`
   - `python rosetta.py --bench --filter-exclude-program-substr polybench --filter-exclude-ppm-regex "openmp.*"`
   - `python rosetta.py --bench --filter-include-program-exact idioms.assign`
   - `python rosetta.py --bench --filter-include-program-regex ".*mm$" --filter-include-ppm-substr serial`
@@ -153,4 +154,9 @@ To use filtering please make sure `ROSETTA_BENCH_FILTER:STRING` is not set in `C
 ```shell
 //Benchmark filter switches
 ROSETTA_BENCH_FILTER:STRING=
+```
+
+To run any of the unittests, execute the relevant test file. For run unittest for filtering:
+```shell
+python rosetta/test/test_filtering.py
 ```
