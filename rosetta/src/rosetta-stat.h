@@ -3,32 +3,9 @@
 
 #include <cstddef>
 #include <initializer_list>
-// #include "const.cxx"
-// #include "gamma.cxx"
-// #include "igam.cxx"
-// #include "incbet.cxx"
-// #include "incbi.cxx"
-// #include "mtherr.cxx"
-// #include "ndtr.cxx"
-// #include "ndtri.cxx"
-// #include "polevl.cxx"
-// #include "stdtr.cxx"
-
-extern "C++" {
-// From cephes library
-double stdtr(int k, double t);
-double stdtri(int k, double p);
-double ndtri(double y0);
-double ndtr(double a);
-}
-
-// extern "C" {
-// // From cephes library
-// double stdtr(int k, double t);
-// double stdtri(int k, double p);
-// double ndtri(double y0);
-// double ndtr(double a);
-// }
+#include "ndtr.hpp"
+#include "ndtri.hpp"
+#include "stdtr.hpp"
 
 
 namespace rosetta {

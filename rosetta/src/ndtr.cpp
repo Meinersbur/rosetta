@@ -143,7 +143,7 @@ Cephes Math Library Release 2.9:  November, 2000
 Copyright 1984, 1987, 1988, 1992, 2000 by Stephen L. Moshier
 */
 
-#include "mconf.h"
+#include "ndtr.hpp"
 
 extern double SQRTH;
 extern double MAXLOG;

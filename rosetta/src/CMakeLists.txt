@@ -2,16 +2,16 @@ set(_common_sources
     "rosetta-common.cpp"
     "rosetta-stat.cpp"
     "cdflib.cpp"
-    "stdtr.cxx"
-    "ndtr.cxx"
-    "ndtri.cxx"
-    "incbet.cxx"
-    "incbi.cxx"
-    "mtherr.cxx"
-    "const.cxx"
-    "gamma.cxx"
-    "polevl.cxx"
-    "igam.cxx")
+    "stdtr.cpp"
+    "ndtr.cpp"
+    "ndtri.cpp"
+    "incbet.cpp"
+    "incbi.cpp"
+    "mtherr.cpp"
+    "const.cpp"
+    "gamma.cpp"
+    "polevl.cpp"
+    "igam.cpp")
 
 function (enable_platform_nvidia target)
   if (NOT ROSETTA_PLATFORM_NVIDIA)

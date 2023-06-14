@@ -103,7 +103,7 @@ Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier
 */
 
-#include "mconf.h"
+#include "gamma.hpp"
 
 #ifdef UNK
 static double P[] = {

@@ -50,8 +50,8 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 2000 by Stephen L. Moshier
 */
+#include "ndtri.hpp"
 
-#include "mconf.h"
 extern double MAXNUM;
 
 #ifdef UNK
