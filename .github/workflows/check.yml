@@ -1,0 +1,95 @@
+name: Self-check
+
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  ACTIONS_STEP_DEBUG: true
+  ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  user:
+    name: User Builddir
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Print env
+        run: |
+          env
+
+      - name: Install system requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cmake git ninja-build python3-colorama python3-dateutil python3-scipy python3-matplotlib python3-cwcwidth 
+
+      - name: Configure
+        run: |
+          cmake -GNinja -S "${GITHUB_WORKSPACE}" -B ${{runner.workspace}}/_build -DCMAKE_BUILD_TYPE=Release -DROSETTA_PPM_DEFAULT=OFF -DROSETTA_PLATFORM_DEFAULT=OFF -DROSETTA_PPM_SERIAL=ON
+
+      - name: Print CMakeCache.txt
+        run: |
+          cat "${{runner.workspace}}/_build/CMakeCache.txt"
+
+      - name: Check
+        run: |
+          ninja -C "${{runner.workspace}}/_build" check
+
+      - name: Print Check Logfile
+        run: |
+          cat "${{runner.workspace}}/_build/Testing/Temporary/LastTest.log"
+
+      - name: Bench
+        run: |
+            "${{runner.workspace}}/_build/bench.py"
+
+      - name: Report Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+            if-no-files-found: error
+            name: User-Builddir Report
+            path: |
+              ${{runner.workspace}}/_build/results/**/*.html
+
+
+  managed:
+    name: Managed Builddirs
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Print env
+        run: |
+          env
+
+      - name: Install system requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cmake git ninja-build python3-colorama python3-dateutil python3-scipy python3-matplotlib python3-cwcwidth 
+
+      - name: Rosetta
+        run: |
+          python3 "${GITHUB_WORKSPACE}/rosetta.py" --verify --bench
+
+      - name: Log Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+            if-no-files-found: error
+            name: Managed-Builddir Logs
+            path: |
+              build/*/CMakeCache.txt
+
+      - name: Report Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+            if-no-files-found: error
+            name: Managed-Builddir Report
+            path: |
+              results/**/*.html
