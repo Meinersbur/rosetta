@@ -58,7 +58,7 @@
 Cephes Math Library Release 2.3:  March, 1995
 Copyright 1984, 1995 by Stephen L. Moshier
 */ 
-#include "mconf.h"
+#include "mconf.hpp"
 
 #ifdef UNK
 #if 1

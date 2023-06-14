@@ -1,6 +1,6 @@
 #ifndef NDTR_HPP
 #define NDTR_HPP
-#include "mconf.h"
+#include "mconf.hpp"
 
 double ndtr(double a);
 double erfc(double a);

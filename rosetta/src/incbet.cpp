@@ -58,7 +58,7 @@
 Cephes Math Library, Release 2.8:  June, 2000
 Copyright 1984, 1995, 2000 by Stephen L. Moshier
 */
-#include "mconf.h"
+#include "mconf.hpp"
 
 #ifdef DEC
 #define MAXGAM 34.84425627277176174

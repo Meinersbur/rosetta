@@ -1,7 +1,7 @@
 #include "rosetta.h"
 
-#include "rosetta-common.h"
-#include "rosetta-stat.h"
+#include "rosetta-common.hpp"
+#include "rosetta-stat.hpp"
 
 #include <algorithm>
 #include <cassert>
