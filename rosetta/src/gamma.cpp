@@ -103,8 +103,7 @@ Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier
 */
 
-
-#include "mconf.h"
+#include "gamma.hpp"
 
 #ifdef UNK
 static double P[] = {
@@ -274,8 +273,10 @@ extern double pow ( double, double );
 extern double log ( double );
 extern double exp ( double );
 extern double sin ( double );
-extern double polevl ( double, void *, int );
-extern double p1evl ( double, void *, int );
+// extern double polevl ( double, void *, int );
+// extern double p1evl ( double, void *, int );
+extern double polevl(double x, double coef[], int N );
+extern double p1evl(double x, double coef[], int N );
 extern double floor ( double );
 extern double fabs ( double );
 //extern int isnan ( double );
@@ -298,8 +299,7 @@ double lgam();
 /* Gamma function computed by Stirling's formula.
  * The polynomial STIR is valid for 33 <= x <= 172.
  */
-static double stirf(x)
-double x;
+static double stirf(double x)
 {
 double y, w, v;
 
@@ -321,8 +321,7 @@ return( y );
 
 
 
-double gamma(x)
-double x;
+double gamma(double x)
 {
 double p, q, z;
 int i;
@@ -574,8 +573,7 @@ static unsigned short LS2P[] = {
 /* Logarithm of gamma function */
 
 
-double lgam(x)
-double x;
+double lgam(double x)
 {
 double p, q, u, w, z;
 int i;

@@ -24,7 +24,7 @@ static void pointwise_cuda(benchmark::State &state, int n) {
   BENCH_CUDA_TRY(cudaMalloc((void **)&dev_B, n * sizeof(double)));
   BENCH_CUDA_TRY(cudaMalloc((void **)&dev_C, n * n * sizeof(double)));
 
-  cudaMemcpy(dev_A, A, N * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(dev_A, A, n * sizeof(double), cudaMemcpyHostToDevice);
 
   int threadsPerBlock = 256;
   int blocksPerGrid = ((n * n) + threadsPerBlock - 1) / threadsPerBlock;

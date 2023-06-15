@@ -50,8 +50,8 @@
 Cephes Math Library Release 2.8:  June, 2000
 Copyright 1984, 1987, 1989, 2000 by Stephen L. Moshier
 */
+#include "ndtri.hpp"
 
-#include "mconf.h"
 extern double MAXNUM;
 
 #ifdef UNK
@@ -361,16 +361,17 @@ static unsigned short Q2[32] = {
 #endif
 
 #ifdef ANSIPROT
-extern double polevl ( double, void *, int );
-extern double p1evl ( double, void *, int );
+// extern double polevl ( double, void *, int );
+// extern double p1evl ( double, void *, int );
+extern double polevl(double x, double coef[], int N );
+extern double p1evl(double x, double coef[], int N );
 extern double log ( double );
 extern double sqrt ( double );
 #else
 double polevl(), p1evl(), log(), sqrt();
 #endif
 
-double ndtri(y0)
-double y0;
+double ndtri(double y0)
 {
 double x, y, z, y2, x0, x1;
 int code;

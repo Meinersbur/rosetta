@@ -3,16 +3,9 @@
 
 #include <cstddef>
 #include <initializer_list>
-
-
-extern "C" {
-// From cephes library
-double stdtr(int k, double t);
-double stdtri(int k, double p);
-double ndtri(double y0);
-double ndtr(double a);
-}
-
+#include "ndtr.hpp"
+#include "ndtri.hpp"
+#include "stdtr.hpp"
 
 
 namespace rosetta {

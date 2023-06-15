@@ -2,16 +2,16 @@ set(_common_sources
     "rosetta-common.cpp"
     "rosetta-stat.cpp"
     "cdflib.cpp"
-    "stdtr.c"
-    "ndtr.c"
-    "ndtri.c"
-    "incbet.c"
-    "incbi.c"
-    "mtherr.c"
-    "const.c"
-    "gamma.c"
-    "polevl.c"
-    "igam.c")
+    "stdtr.cpp"
+    "ndtr.cpp"
+    "ndtri.cpp"
+    "incbet.cpp"
+    "incbi.cpp"
+    "mtherr.cpp"
+    "const.cpp"
+    "gamma.cpp"
+    "polevl.cpp"
+    "igam.cpp")
 
 function (enable_platform_nvidia target)
   if (NOT ROSETTA_PLATFORM_NVIDIA)
@@ -74,7 +74,7 @@ if (ROSETTA_PPM_OPENMP_PARALLEL)
   target_compile_features(rosetta-openmp-parallel PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-parallel PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_PARALLEL=1)
   target_include_directories(rosetta-openmp-parallel PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  target_link_libraries(rosetta-openmp-parallel PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+  target_link_libraries(rosetta-openmp-parallel PUBLIC OpenMP::OpenMP_CXX)
   #set_property(TARGET rosetta-openmp-parallel PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
 endif ()
 
@@ -84,7 +84,7 @@ if (ROSETTA_PPM_OPENMP_TASK)
   target_compile_features(rosetta-openmp-task PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-task PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TASK=1)
   target_include_directories(rosetta-openmp-task PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  target_link_libraries(rosetta-openmp-task PUBLIC OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+  target_link_libraries(rosetta-openmp-task PUBLIC OpenMP::OpenMP_CXX)
   #set_property(TARGET rosetta-openmp-task PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
 endif ()
 
@@ -94,7 +94,21 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   target_compile_features(rosetta-openmp-target PUBLIC cxx_std_17)
   target_compile_definitions(rosetta-openmp-target PUBLIC ROSETTA_PPM_OPENMP=1 ROSETTA_PPM_OPENMP_TARGET=1)
   target_include_directories(rosetta-openmp-target PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
-  target_link_libraries(rosetta-openmp-target PUBLIC OpenMP::OpenMP_Offload_C OpenMP::OpenMP_Offload_CXX)
+  target_link_libraries(rosetta-openmp-target PUBLIC OpenMP::OpenMP_Offload_CXX)
   #set_property(TARGET rosetta-openmp-target PROPERTY POSITION_INDEPENDENT_CODE ON) # Because of -fPIE
   enable_platform_nvidia(rosetta-openmp-target)
+endif ()
+
+if (ROSETTA_PPM_SYCL)
+  add_library(rosetta-sycl rosetta-sycl.cpp ${_common_sources})
+  set_target_properties(rosetta-sycl PROPERTIES FOLDER "Runtime")
+  target_compile_features(rosetta-sycl PUBLIC cxx_std_17)
+  target_compile_definitions(rosetta-sycl PUBLIC ROSETTA_PPM_SYCL=1)
+  target_include_directories(rosetta-sycl PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include" ${SYCL_INCLUDE_DIR})
+  #https://intel.github.io/llvm-docs/GetStartedGuide.html
+  #target_link_options(rosetta-sycl PUBLIC ${SYCL_FLAGS})
+  #target_link_options(rosetta-sycl PUBLIC  -fsycl-targets=nvptx64-nvidia-cuda)
+  if (IntelSYCL_FOUND)
+    target_link_libraries(rosetta-sycl PUBLIC IntelSYCL::SYCL_CXX)
+  endif ()
 endif ()

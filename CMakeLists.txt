@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19) # COMMAND_ERROR_IS_FATAL
 project(
   rosetta
   VERSION 0.0.2
-  LANGUAGES C CXX)
+  LANGUAGES CXX)
 
 include(CheckLanguage)
 include(CheckCXXSourceCompiles)
@@ -133,6 +133,7 @@ add_ppm(OpenMP_Task DISPLAYNAME "OpenMP-Task"
   ENABLEDHELP "Enable OpenMP '#pragma omp task' PPM")
 add_ppm(OpenMP_Target DISPLAYNAME "OpenMP-Target"
   ENABLEDHELP "Enable OpenMP '#pragma omp target' PPM")
+add_ppm(SYCL)
 add_ppm(OpenACC)
 add_ppm(MPI)
 
@@ -253,7 +254,7 @@ if (CUDAToolkit_FOUND)
 endif ()
 
 # For CUDA PPM
-if (CUDAToolkit_FOUND AND CMAKE_CUDA_COMPILER AND Thrust_Found)
+if (CUDAToolkit_FOUND AND CMAKE_CUDA_COMPILER AND Thrust_FOUND)
   set(autodetect_ppm_cuda "ON")
 endif ()
 
@@ -333,6 +334,27 @@ if (OpenMPOffload_FOUND)
   set(autodetect_ppm_openmp_target "ON")
 endif ()
 
+
+#SYCL
+if (NOT DEFINED ROSETTA_PPM_SYCL)
+  find_package(IntelSYCL CONFIG QUIET)
+  if (NOT IntelSYCL_FOUND)
+    message(STATUS "IntelSYCL NOT found. Finding IntelDPCPP")
+    find_package(IntelDPCPP CONFIG QUIET)
+  endif ()
+elseif (ROSETTA_PPM_SYCL)
+  find_package(IntelSYCL CONFIG)
+  if(IntelSYCL_FOUND)
+    message(STATUS "Found package IntelSYCL")
+  else ()
+    message(STATUS "Package IntelSYCL not found")
+    find_package(IntelDPCPP CONFIG REQUIRED)
+    message(STATUS "Found package IntelDPCPP")
+  endif ()
+endif ()
+if (IntelSYCL_FOUND OR IntelDPCPP_FOUND)
+  set(autodetect_ppm_sycl "ON")
+endif ()
 
 # OpenACC
 if (NOT DEFINED ROSETTA_PPM_OPENACC)
@@ -555,6 +577,11 @@ if (ROSETTA_PPM_OPENMP_TARGET)
   add_dependencies(build-openmp build-openmp-target)
   add_dependencies(build build-openmp-target)
 endif ()
+if (ROSETTA_PPM_SYCL)
+  add_custom_target(build-sycl)
+  set_target_properties(build-sycl PROPERTIES FOLDER "Benchmarks")
+  add_dependencies(build build-sycl)
+endif ()
 
 add_subdirectory(benchmarks)
 
@@ -756,6 +783,9 @@ set(verinfo_ppm_openmp_task "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSI
 
 set(clargs_ppm_openmp_target ${CMAKE_CXX_COMPILER} ${OpenMP_CXX_FLAGS} ${OPENMP_OFFLOADING_LDFLAGS} ${_extra_flags}) 
 set(verinfo_ppm_openmp_target "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenMP ${OpenMP_CXX_VERSION}")
+
+set(clargs_ppm_sycl ${SYCL_COMPILER} ${SYCL_CXX_FLAGS} ${_extra_flags}) 
+set(verinfo_ppm_sycl "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "IntelSYCL ${SYCL_LANGUAGE_VERSION}")
 
 set(clargs_ppm_openacc ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags}) 
 set(verinfo_ppm_openacc "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenACC ${OpenACC_CXX_VERSION}")

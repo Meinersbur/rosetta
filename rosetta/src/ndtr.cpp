@@ -143,8 +143,7 @@ Cephes Math Library Release 2.9:  November, 2000
 Copyright 1984, 1987, 1988, 1992, 2000 by Stephen L. Moshier
 */
 
-
-#include "mconf.h"
+#include "ndtr.hpp"
 
 extern double SQRTH;
 extern double MAXLOG;
@@ -401,8 +400,7 @@ double erf(), erfc(), expx2(), sqrt();
 static double erfce();
 #endif
 
-double ndtr(a)
-double a;
+double ndtr(double a)
 {
 double x, y, z;
 
@@ -432,8 +430,7 @@ return(y);
 }
 
 
-double erfc(a)
-double a;
+double erfc(double a)
 {
 double p,q,x,y,z;
 
@@ -490,8 +487,7 @@ return(y);
    exp(x^2) erfc(x)
    valid for x > 1.
    Use with ndtr and expx2.  */
-static double erfce(x)
-double x;
+static double erfce(double x)
 {
 double p,q;
 
@@ -510,8 +506,7 @@ return (p/q);
 
 
 
-double erf(x)
-double x;
+double erf(double x)
 {
 double y, z;
 

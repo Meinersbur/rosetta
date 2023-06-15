@@ -61,6 +61,8 @@ Cephes Math Library Release 2.3:  June, 1995
 Copyright 1984, 1987, 1989, 1995 by Stephen L. Moshier
 */
 
+#ifndef MCONF_H
+#define MCONF_H
 
 #include <math.h>
 
@@ -199,3 +201,5 @@ int mtherr();
 
 /* Variable for error reporting.  See mtherr.c.  */
 extern int merror;
+
+#endif

@@ -1,4 +1,4 @@
-#include "rosetta-stat.h"
+#include "rosetta-stat.hpp"
 
 #include "cdflib.hpp"
 

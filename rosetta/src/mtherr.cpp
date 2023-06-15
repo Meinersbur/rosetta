@@ -53,9 +53,8 @@ Cephes Math Library Release 2.0:  April, 1987
 Copyright 1984, 1987 by Stephen L. Moshier
 Direct inquiries to 30 Frost Street, Cambridge, MA 02140
 */
-
 #include <stdio.h>
-#include "mconf.h"
+#include "mconf.hpp"
 
 int merror = 0;
 
@@ -74,9 +73,7 @@ static char *ermsg[7] = {
 };
 
 
-int mtherr( name, code )
-char *name;
-int code;
+int mtherr(char *name,int code )
 {
 
 /* Display string passed by calling program,
