@@ -76,14 +76,14 @@ class ManagedBuilddirDefaultconfig(unittest.TestCase):
 
     def test_configure(self):
         builds = list((self.rootdir / 'build' ).iterdir())
-        self.assertSetEqual({ b.name for b in builds }, {'defaultbuild'}  )
+        self.assertSetEqual({ b.name for b in builds }, {'defaultbuild', 'refbuild'})
         self.assertTrue((self.rootdir / 'build' / 'defaultbuild' / 'CMakeCache.txt').exists())
 
 
     def test_build(self):
         rosetta.driver.driver_main(  argv=[None, '--build'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )   
         buildlist = list( (self.rootdir / 'build' ).iterdir())
-        self.assertEquals(len(buildlist),1)  
+        self.assertEquals(len(buildlist),2)  
         self.assertTrue((self.rootdir / 'build' / 'defaultbuild' / 'benchmarks' / 'Release' / 'idioms.assign.serial').exists())
 
 
@@ -162,7 +162,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
 
     def test_configure(self):
         builds = list((self.rootdir / 'build' ).iterdir())
-        self.assertSetEqual({ b.name for b in builds }, {'build-O2', 'build-O3'}  )
+        self.assertSetEqual({ b.name for b in builds }, {'build-O2', 'build-O3', 'refbuild'}  )
         for build in builds:
             self.assertTrue((build / 'CMakeCache.txt').exists())
 
@@ -171,7 +171,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
     def test_build(self):
         rosetta.driver.driver_main(  argv=[None, '--build', '--config=O2', '--config=O3'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir  )     
         buildlist = list((self.rootdir / 'build' ).iterdir())
-        self.assertEquals(len(buildlist),2)
+        self.assertEquals(len(buildlist), 3)
         for build in buildlist:
             self.assertTrue((build / 'benchmarks' / 'Release' / 'idioms.assign.serial').exists())
 
@@ -183,7 +183,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
     
         # Evaluate output
         s=f.getvalue()
-        self. assertTrue(re.search(r'Benchmark.+PPM.*Wall', s, re.MULTILINE), "Evaluation table Header")
+        self. assertTrue(re.search(r'Benchmark.+Samples.+Wall', s, re.MULTILINE), "Evaluation table Header")
         self. assertTrue(re.search(r'O2.+O3', s, re.MULTILINE), "Comparison table Header")
         self. assertTrue(re.search(r'idioms\.assign.+serial', s, re.MULTILINE), "Benchmark entry")
         self. assertTrue(re.search(r'suites\.polybench\.cholesky.+serial', s, re.MULTILINE), "Benchmark entry")

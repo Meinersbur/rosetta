@@ -83,7 +83,7 @@ def parse_build_configs(args, implicit_reference):
     if implicit_reference:
         # TODO: Reference configuration (only reference PPM)
         selected_keys.add("REF")
-        specified_keys.add('REF')
+        # specified_keys.add('REF')
 
     configs = []
     for k in selected_keys:
@@ -379,7 +379,7 @@ def driver_main(
         if mode == DriverMode.MANAGEDBUILDDIR:
             # Always also create a REF dir in case we need it when running --verify
             configs = parse_build_configs(args, implicit_reference=True)
-            if len(configs) >= 2:
+            if len(configs) >= 3: # Not counting REF
                 default_compare_by = ['configname']
 
             rootdir = mkpath(first_defined(args.rootdir, pathlib.Path.cwd()))
@@ -458,8 +458,9 @@ def driver_main(
             # Load all available benchmarks
             if args.verify or args.bench or args.probe:
                 for config in configs:
-                    registry.load_register_file(
-                        config.builddir / 'benchmarks' / 'benchlist.py')
+                    if config.name == 'REF':
+                        continue
+                    registry.load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
 
             def only_REF(bench):
                 return bench.configname == 'REF'
