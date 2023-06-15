@@ -4,10 +4,6 @@ on:
   push: {}
   pull_request: {}
 
-env:
-  ACTIONS_STEP_DEBUG: true
-  ACTIONS_RUNNER_DEBUG: true
-
 jobs:
   user:
     name: User Builddir
