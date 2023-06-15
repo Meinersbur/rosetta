@@ -57,8 +57,7 @@ class ManagedBuilddirDefaultconfig(unittest.TestCase):
         print("srcdir: " , cls.srcdir)
         print("rootdir: " , cls.rootdir)
 
-        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign', '--cmake-def=ROSETTA_PPM_DEFAULT=OFF', '--cmake-def=ROSETTA_PPM_SERIAL=ON'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
-
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter=idioms.assign', '--cmake-def=ROSETTA_PPM_DEFAULT=OFF', '--cmake-def=ROSETTA_PPM_SERIAL=ON'], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )
         cls.resultsdir= cls.rootdir / 'results'
 
 
@@ -142,8 +141,7 @@ class ManagedBuilddirMulticonfig(unittest.TestCase):
         print("srcdir: " , cls.srcdir)
         print("rootdir: " , cls.rootdir)
 
-        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter-include=idioms.assign --filter-include=suites.polybench.cholesky', '--cmake-def=ROSETTA_PPM_DEFAULT=OFF', '--cmake-def=ROSETTA_PPM_SERIAL=ON', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )     
-
+        rosetta.driver.driver_main(argv=[None, '--configure', '--cmake-def=ROSETTA_BENCH_FILTER=--filter-include=idioms.assign --filter-include=suites.polybench.cholesky', '--cmake-def=ROSETTA_PPM_DEFAULT=OFF', '--cmake-def=ROSETTA_PPM_SERIAL=ON', "--compiler-arg=O2:-O2",  "--compiler-arg=O3:-O3"], mode=DriverMode.MANAGEDBUILDDIR, rootdir=cls.rootdir, srcdir=cls.srcdir  )
         cls.resultsdir= cls.rootdir / 'results'
 
 
