@@ -25,7 +25,7 @@ class UserBuilddirMulticonfig(unittest.TestCase):
         cls.builddir = mkpath(cls.test_dir)
         print("srcdir: " , cls.srcdir)
         print("builddir: " , cls.builddir)
-        invoke.diag('cmake', '-S', cls.srcdir, '-B',cls. builddir,  '-GNinja Multi-Config',  '-DROSETTA_BENCH_FILTER=--filter=cholesky', cwd= cls.builddir,onerror=invoke.Invoke.EXCEPTION)
+        invoke.diag('cmake', '-S', cls.srcdir, '-B',cls. builddir,  '-GNinja Multi-Config',  '-DROSETTA_BENCH_FILTER=--filter=cholesky', '-DROSETTA_PPM_DEFAULT=OFF', '-DROSETTA_PPM_SERIAL=ON', cwd= cls.builddir,onerror=invoke.Invoke.EXCEPTION)
 
         cls.resultsdir= cls.builddir / 'results'
         cls.benchlistfile = cls.builddir / 'benchmarks' / 'benchlist.py'

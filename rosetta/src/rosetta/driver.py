@@ -377,8 +377,8 @@ def driver_main(
             return resultsdir
 
         if mode == DriverMode.MANAGEDBUILDDIR:
-
-            configs = parse_build_configs(args, implicit_reference=args.verify)
+            # Always also create a REF dir in case we need it when running --verify
+            configs = parse_build_configs(args, implicit_reference=True)
             if len(configs) >= 2:
                 default_compare_by = ['configname']
 

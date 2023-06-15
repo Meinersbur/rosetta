@@ -25,7 +25,7 @@ class UserBuilddirNinja(unittest.TestCase):
         cls.builddir = mkpath(cls.test_dir)
         print("srcdir: ", cls.srcdir)
         print("builddir: ", cls.builddir)
-        invoke.diag('cmake', '-S', cls.srcdir, '-B', cls. builddir,  '-GNinja', '-DCMAKE_BUILD_TYPE=Release',
+        invoke.diag('cmake', '-S', cls.srcdir, '-B', cls. builddir,  '-GNinja', '-DCMAKE_BUILD_TYPE=Release', '-DROSETTA_PPM_DEFAULT=OFF', '-DROSETTA_PPM_SERIAL=ON',
                     '-DROSETTA_BENCH_FILTER=--filter=cholesky', cwd=cls.builddir, onerror=invoke.Invoke.EXCEPTION)
 
         cls.resultsdir = cls.builddir / 'results'
