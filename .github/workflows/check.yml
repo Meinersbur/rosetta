@@ -28,6 +28,7 @@ jobs:
           cmake -GNinja -S "${GITHUB_WORKSPACE}" -B ${{runner.workspace}}/_build -DCMAKE_BUILD_TYPE=Release -DROSETTA_PPM_DEFAULT=OFF -DROSETTA_PLATFORM_DEFAULT=OFF -DROSETTA_PPM_SERIAL=ON
 
       - name: Print CMakeCache.txt
+        if: always()
         run: |
           cat "${{runner.workspace}}/_build/CMakeCache.txt"
 
@@ -36,6 +37,7 @@ jobs:
           ninja -C "${{runner.workspace}}/_build" check
 
       - name: Print Check Logfile
+        if: always()
         run: |
           cat "${{runner.workspace}}/_build/Testing/Temporary/LastTest.log"
 
