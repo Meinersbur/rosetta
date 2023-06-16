@@ -321,7 +321,7 @@ return( y );
 
 
 
-double gamma(double x)
+double cdf_gamma(double x)
 {
 double p, q, z;
 int i;

@@ -34,7 +34,7 @@ jobs:
         run: |
           ninja -C "${{runner.workspace}}/_build" check
 
-      - name: Print Check Logfile
+      - name: Print Check Log
         if: always()
         run: |
           cat "${{runner.workspace}}/_build/Testing/Temporary/LastTest.log"
@@ -66,14 +66,15 @@ jobs:
       - name: Install system requirements
         run: |
           sudo apt-get update
-          sudo apt-get -y install cmake git ninja-build python3-colorama python3-dateutil python3-scipy python3-matplotlib python3-cwcwidth 
+          sudo apt-get -y install cmake git ninja-build python3-colorama python3-dateutil python3-scipy python3-matplotlib python3-cwcwidth clang g++
 
       - name: Rosetta
         run: |
-          python3 "${GITHUB_WORKSPACE}/rosetta.py" --verify --bench
+          python3 "${GITHUB_WORKSPACE}/rosetta.py" --verify --bench --cmake-def=clang:CMAKE_CXX_COMPILER=clang++ --cmake-def=clang:CMAKE_CUDA_COMPILER=clang++ --cmake-def=gcc:CMAKE_CXX_COMPILER=g++  --cmake-def=ROSETTA_PPM_DEFAULT=OFF --cmake-def=ROSETTA_PPM_SERIAL=ON
 
       - name: Log Artifacts
         uses: actions/upload-artifact@v3
+        if: always()
         with:
             if-no-files-found: error
             name: Managed-Builddir Logs

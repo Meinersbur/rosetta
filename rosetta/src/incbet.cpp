@@ -68,7 +68,7 @@ Copyright 1984, 1995, 2000 by Stephen L. Moshier
 
 extern double MACHEP, MINLOG, MAXLOG;
 #ifdef ANSIPROT
-extern double gamma ( double );
+extern double cdf_gamma ( double );
 extern double lgam ( double );
 extern double exp ( double );
 extern double log ( double );
@@ -156,7 +156,7 @@ if( (a+b) < MAXGAM && fabs(y) < MAXLOG && fabs(t) < MAXLOG )
 	t *= pow(x,a);
 	t /= a;
 	t *= w;
-	t *= gamma(a+b) / (gamma(a) * gamma(b));
+	t *= cdf_gamma(a+b) / (cdf_gamma(a) * cdf_gamma(b));
 	goto done;
 	}
 /* Resort to logarithms.  */
@@ -389,7 +389,7 @@ s += ai;
 u = a * log(x);
 if( (a+b) < MAXGAM && fabs(u) < MAXLOG )
 	{
-	t = gamma(a+b)/(gamma(a)*gamma(b));
+	t = cdf_gamma(a+b)/(cdf_gamma(a)*cdf_gamma(b));
 	s = s * t * pow(x,a);
 	}
 else

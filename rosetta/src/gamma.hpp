@@ -3,6 +3,6 @@
 
 #include "mconf.hpp"
 double lgam(double x);
-double gamma(double x);
+double cdf_gamma(double x);
 static double stirf(double x);
 #endif
