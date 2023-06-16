@@ -317,7 +317,6 @@ def driver_main(
     parser.add_argument('--problemsizefile', type=pathlib.Path,
                         help="Problem sizes to use (.ini file)")  # Also used by --verify
     add_filter_args(parser)
-    args = parser.parse_args()
     # Evaluate step
     add_boolean_argument(parser, 'evaluate', default=None,
                          help="Evaluate result")
