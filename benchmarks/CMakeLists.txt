@@ -5,6 +5,13 @@ if (NOT ROSETTA_MAINTAINER_MODE)
   file(GLOB_RECURSE _potential_build_files FOLLOW_SYMLINKS LIST_DIRECTORIES false CONFIGURE_DEPENDS "*.cxx" "*.cu" "*.build")
 endif ()
 
+# Added to suppress  __SYCL2020_DEPRECATED warnings
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES ".*Intel.*")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")
+endif()
+
 # internal TODO: basename is not required
 function (add_benchmark_ppm basename ppm ppm_shortname _library)
   cmake_parse_arguments(_arg "" "PBSIZE" "SOURCES" ${ARGN})
