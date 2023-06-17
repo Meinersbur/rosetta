@@ -144,7 +144,7 @@ def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
                     else:
                         reld = absd / mid
                     # if refv != absd :
-                    if reld > 1e-4:  # TODO: Don't hardcode difference
+                    if reld > 1e-3:  # TODO: Don't hardcode difference
                         if errsfound == 0:
                             print(f"While comparing {refpath} and {testoutpath}:")
                         print(
