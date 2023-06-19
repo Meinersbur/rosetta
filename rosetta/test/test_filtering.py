@@ -13,10 +13,10 @@ class TestFiltering(unittest.TestCase):
     def setUp(self):
         # Initialize test data
         self.benchmarks = [
-            Benchmark("apple", "target1", "exepath1", "buildtype1", "green", "configname1"),
-            Benchmark("apple", "target2", "exepath2", "buildtype2", "red", "configname2"),
-            Benchmark("cherry", "target3", "exepath3", "buildtype3", "red", "configname3"),
-            Benchmark("orange", "target3", "exepath3", "buildtype3", "orange", "configname3")
+            Benchmark("idioms.assign", "target1", "exepath1", "buildtype1", "serial", "configname1"),
+            Benchmark("idioms.assign", "target2", "exepath2", "buildtype2", "cuda", "configname2"),
+            Benchmark("polybench.cholesky", "target3", "exepath3", "buildtype3", "cuda", "configname3"),
+            Benchmark("polybench.gemm", "target3", "exepath3", "buildtype3", "openmp-parallel", "configname3")
         ]
         self.reset_args()
 
@@ -46,50 +46,58 @@ class TestFiltering(unittest.TestCase):
         self.assertTrue(self.benchmarks[2] in filtered_benchmarks, "Should match third benchmark")
         self.assertTrue(self.benchmarks[3] in filtered_benchmarks, "Should match fourth benchmark")
 
-        # test: --filter-include-ppm-exact red
+        # test: --filter-include-ppm-exact cuda
         self.reset_args()
-        self.args.filter_include_ppm_exact = ['red']
+        self.args.filter_include_ppm_exact = ['cuda']
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 2, "Length should be 2")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
         self.assertTrue(self.benchmarks[2] in filtered_benchmarks, "Should match third benchmark")
 
-        # test: --filter-exclude-ppm-exact red
+        # test: --filter-exclude-ppm-exact cuda
         self.reset_args()
-        self.args.filter_exclude_ppm_exact = ['red']
+        self.args.filter_exclude_ppm_exact = ['cuda']
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 2, "Length should be 2")
         self.assertTrue(self.benchmarks[0] in filtered_benchmarks, "Should match first benchmark")
         self.assertTrue(self.benchmarks[3] in filtered_benchmarks, "Should match fourth benchmark")
 
-        # test: --filter-include-ppm-exact red --filter-exclude-program-exact cherry
+        # test: --filter-include-program-substr assign
         self.reset_args()
-        self.args.filter_include_ppm_exact = ['red']
-        self.args.filter_exclude_program_exact = ['cherry']
+        self.args.filter_include_program_substr = ['assign']
+        filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
+        self.assertEqual(len(filtered_benchmarks), 2, "Length should be 2")
+        self.assertTrue(self.benchmarks[0] in filtered_benchmarks, "Should match first benchmark")
+        self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
+
+        # test: --filter-include-ppm-exact cuda --filter-exclude-program-exact polybench.cholesky
+        self.reset_args()
+        self.args.filter_include_ppm_exact = ['cuda']
+        self.args.filter_exclude_program_exact = ['polybench.cholesky']
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 1, "Length should be 1")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
 
-        # test: --filter-exclude-program-exact cherry --filter-include-ppm-exact red
+        # test: --filter-exclude-program-exact polybench.cholesky --filter-include-ppm-exact cuda
         self.reset_args()
-        self.args.filter_exclude_program_exact = ['cherry']
-        self.args.filter_include_ppm_exact = ['red']
+        self.args.filter_exclude_program_exact = ['polybench.cholesky']
+        self.args.filter_include_ppm_exact = ['cuda']
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 1, "Length should be 1")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
 
-        # test: --filter-include-ppm-regex ".*n.*"
+        # test: --filter-include-ppm-regex ".*l.*"
         self.reset_args()
-        self.args.filter_include_ppm_regex = [".*n.*"]
+        self.args.filter_include_ppm_regex = [".*l.*"]
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 2, "Length should be 2")
         self.assertTrue(self.benchmarks[0] in filtered_benchmarks, "Should match first benchmark")
         self.assertTrue(self.benchmarks[3] in filtered_benchmarks, "Should match fourth benchmark")
 
-        # test: --filter-include-ppm-regex ".*n.*" --filter-include-ppm-exact red
+        # test: --filter-include-ppm-regex ".*l.*" --filter-include-ppm-exact cuda
         self.reset_args()
-        self.args.filter_include_ppm_regex = [".*n.*"]
-        self.args.filter_include_ppm_exact = ["red"]
+        self.args.filter_include_ppm_regex = [".*l.*"]
+        self.args.filter_include_ppm_exact = ["cuda"]
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 4, "Length should be 4")
         self.assertTrue(self.benchmarks[0] in filtered_benchmarks, "Should match first benchmark")
@@ -97,20 +105,20 @@ class TestFiltering(unittest.TestCase):
         self.assertTrue(self.benchmarks[2] in filtered_benchmarks, "Should match third benchmark")
         self.assertTrue(self.benchmarks[3] in filtered_benchmarks, "Should match fourth benchmark")
 
-        # test: --filter-include-ppm-regex ".*n.*" --filter-include-ppm-exact red --filter-exclude-ppm-exact green
+        # test: --filter-include-ppm-regex ".*l.*" --filter-include-ppm-exact cuda --filter-exclude-ppm-exact serial
         self.reset_args()
-        self.args.filter_include_ppm_regex = [".*n.*"]
-        self.args.filter_include_ppm_exact = ["red"]
-        self.args.filter_exclude_ppm_exact = ["green"]
+        self.args.filter_include_ppm_regex = [".*l.*"]
+        self.args.filter_include_ppm_exact = ["cuda"]
+        self.args.filter_exclude_ppm_exact = ["serial"]
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 3, "Length should be 3")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
         self.assertTrue(self.benchmarks[2] in filtered_benchmarks, "Should match third benchmark")
         self.assertTrue(self.benchmarks[3] in filtered_benchmarks, "Should match fourth benchmark")
 
-        # test: --filter-include-ppm-regex ".*e.*"
+        # test: --filter-include-ppm-regex ".*a.*"
         self.reset_args()
-        self.args.filter_include_ppm_regex = [".*e.*"]
+        self.args.filter_include_ppm_regex = [".*a.*"]
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 4, "Length should be 4")
         self.assertTrue(self.benchmarks[0] in filtered_benchmarks, "Should match first benchmark")
@@ -118,19 +126,19 @@ class TestFiltering(unittest.TestCase):
         self.assertTrue(self.benchmarks[2] in filtered_benchmarks, "Should match third benchmark")
         self.assertTrue(self.benchmarks[3] in filtered_benchmarks, "Should match fourth benchmark")
 
-        # test: --filter-include-ppm-exact red --filter-include-program-exact apple
+        # test: --filter-include-ppm-exact cuda --filter-include-program-exact idioms.assign
         self.reset_args()
-        self.args.filter_include_ppm_exact = ["red"]
-        self.args.filter_include_program_exact = ["apple"]
+        self.args.filter_include_ppm_exact = ["cuda"]
+        self.args.filter_include_program_exact = ["idioms.assign"]
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 1, "Length should be 1")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
 
-        # test: --filter-include-ppm-exact red --filter-include-program-exact apple --filter-exclude-ppm-exact green
+        # test: --filter-include-ppm-exact cuda --filter-include-program-exact idioms.assign --filter-exclude-ppm-exact serial
         self.reset_args()
-        self.args.filter_include_ppm_exact = ['red']
-        self.args.filter_include_program_exact = ['apple']
-        self.args.filter_exclude_ppm_exact = ['green']
+        self.args.filter_include_ppm_exact = ['cuda']
+        self.args.filter_include_program_exact = ['idioms.assign']
+        self.args.filter_exclude_ppm_exact = ['serial']
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 1, "Length should be 1")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
