@@ -75,7 +75,6 @@ void run(State &state, pbsize_t n) {
     cl::sycl::buffer<pbsize_t, 1> resultBuffer(result.data(), cl::sycl::range<1>(n));
     for (auto &&_ : state) {
       sum[0] = kernel(q, resultBuffer, global_size, local_size, n);
-      std::cout<<"n: " << n << " sum: " << sum[0];
     }
   }
 }
