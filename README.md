@@ -103,7 +103,9 @@ pip install -r requirements.txt
 ```
 - Add Thrust in environment variable in `.zshrc`:
 ```shell
-export Thrust_DIR=/usr/local/cuda-12/lib64/cmake/thrust
+export PATH=/usr/local/cuda-12.0/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64:$LD_LIBRARY_PATH
+export Thrust_DIR=/usr/local/cuda-12.0/lib64/cmake/thrust
 ```
 - Install `cmake` and `ninja-build`:
 ```shell
@@ -159,4 +161,22 @@ ROSETTA_BENCH_FILTER:STRING=
 To run any of the unittests, execute the relevant test file. For run unittest for filtering:
 ```shell
 python rosetta/test/test_filtering.py
+```
+
+### (Optional) Run with predefined problem sizes
+- Optionally, you can utilize the `--problemsizefile` argument to specify a predefined problem sizes for the benchmarks. If the `--problemsize` argument is not provided, the default `medium.problemsize.ini` will be used.
+```shell
+python rosetta.py --bench --problemsizefile="benchmarks/mini.problemsize.ini"
+python rosetta.py --bench --problemsizefile="benchmarks/small.problemsize.ini"
+python rosetta.py --bench --problemsizefile="benchmarks/medium.problemsize.ini"
+python rosetta.py --bench --problemsizefile="benchmarks/large.problemsize.ini"
+python rosetta.py --bench --problemsizefile="benchmarks/extralarge.problemsize.ini"
+```
+- Verify the different problem size files excluding CUDA PPM:
+```shell
+python rosetta.py --verify --problemsizefile="benchmarks/mini.problemsize.ini" --filter-exclude-ppm-exact cuda
+python rosetta.py --verify --problemsizefile="benchmarks/small.problemsize.ini" --filter-exclude-ppm-exact cuda
+python rosetta.py --verify --problemsizefile="benchmarks/medium.problemsize.ini" --filter-exclude-ppm-exact cuda
+python rosetta.py --verify --problemsizefile="benchmarks/large.problemsize.ini" --filter-exclude-ppm-exact cuda
+python rosetta.py --verify --problemsizefile="benchmarks/extralarge.problemsize.ini" --filter-exclude-ppm-exact cuda
 ```

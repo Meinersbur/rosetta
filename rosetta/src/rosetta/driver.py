@@ -546,7 +546,7 @@ def driver_main(
                 refdir = (refconfig.builddir if refconfig else None) / 'refout'
             else:
                 refdir = builddir / 'refout'
-            verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
+            verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir, args=args)
 
         if args.bench:
             from . import runner
