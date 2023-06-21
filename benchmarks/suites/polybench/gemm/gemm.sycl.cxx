@@ -4,14 +4,14 @@
 
 using namespace cl::sycl;
 
-static void mykernel(queue &q, size_t ni, size_t nj, size_t nk, real alpha, real beta,
+static void mykernel(queue &q, pbsize_t ni, pbsize_t nj, pbsize_t nk, real alpha, real beta,
                      buffer<real, 1> &C_buf, buffer<real, 1> &A_buf, buffer<real, 1> &B_buf) {
 
   q.submit([&](handler &cgh) {
     auto C = C_buf.get_access<access::mode::read_write>(cgh);
     cgh.parallel_for<class scale_C>(range<2>(ni, nj), [=](id<2> idx) {
-      size_t i = idx[0];
-      size_t j = idx[1];
+      idx_t i = idx[0];
+      idx_t j = idx[1];
       C[i * nj + j] *= beta;
     });
   });
@@ -20,9 +20,9 @@ static void mykernel(queue &q, size_t ni, size_t nj, size_t nk, real alpha, real
     auto B = B_buf.get_access<access::mode::read>(cgh);
     auto C = C_buf.get_access<access::mode::read_write>(cgh);
     cgh.parallel_for<class matmul_update>(range<2>(ni, nj), [=](id<2> idx) {
-      size_t i = idx[0];
-      size_t j = idx[1];
-      for (size_t k = 0; k < nk; k++) {
+      idx_t i = idx[0];
+      idx_t j = idx[1];
+      for (idx_t k = 0; k < nk; k++) {
         C[i * nj + j] += alpha * A[i * nk + k] * B[k * nj + j];
       }
     });

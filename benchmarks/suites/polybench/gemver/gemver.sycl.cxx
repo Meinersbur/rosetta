@@ -4,7 +4,7 @@
 
 using namespace cl::sycl;
 
-static void mykernel(queue &q, size_t n, real alpha, real beta,
+static void mykernel(queue &q, pbsize_t n, real alpha, real beta,
                      buffer<real, 1> &A_buf, buffer<real, 1> &u1_buf, buffer<real, 1> &v1_buf,
                      buffer<real, 1> &u2_buf, buffer<real, 1> &v2_buf, buffer<real, 1> &w_buf,
                      buffer<real, 1> &x_buf, buffer<real, 1> &y_buf, buffer<real, 1> &z_buf) {
@@ -16,8 +16,8 @@ static void mykernel(queue &q, size_t n, real alpha, real beta,
     auto u2 = u2_buf.get_access<access::mode::read>(cgh);
     auto v2 = v2_buf.get_access<access::mode::read>(cgh);
     cgh.parallel_for<class update_A>(range<2>(n, n), [=](id<2> idx) {
-      size_t i = idx[0];
-      size_t j = idx[1];
+      idx_t i = idx[0];
+      idx_t j = idx[1];
       A[i * n + j] += u1[i] * v1[j] + u2[i] * v2[j];
     });
   });
