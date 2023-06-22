@@ -164,19 +164,11 @@ python rosetta/test/test_filtering.py
 ```
 
 ### (Optional) Run with predefined problem sizes
-- Optionally, you can utilize the `--problemsizefile` argument to specify a predefined problem sizes for the benchmarks. If the `--problemsize` argument is not provided, the default `medium.problemsize.ini` will be used.
+- Optionally, you can utilize the `--problemsizefile` argument to specify a predefined problem sizes for the benchmarks. Available values for `--problemsizefile` argument are: `mini`, `small`, `medium`, `large`, and `extralarge`. If the `--problemsizefile` argument is not provided, the default `medium` problemsize file will be used.
 ```shell
-python rosetta.py --bench --problemsizefile="benchmarks/mini.problemsize.ini"
-python rosetta.py --bench --problemsizefile="benchmarks/small.problemsize.ini"
-python rosetta.py --bench --problemsizefile="benchmarks/medium.problemsize.ini"
-python rosetta.py --bench --problemsizefile="benchmarks/large.problemsize.ini"
-python rosetta.py --bench --problemsizefile="benchmarks/extralarge.problemsize.ini"
+python rosetta.py --bench --problemsizefile large
 ```
-- Verify the different problem size files excluding CUDA PPM:
+- You can also verify the different problem size files excluding CUDA PPM:
 ```shell
-python rosetta.py --verify --problemsizefile="benchmarks/mini.problemsize.ini" --filter-exclude-ppm-exact cuda
-python rosetta.py --verify --problemsizefile="benchmarks/small.problemsize.ini" --filter-exclude-ppm-exact cuda
-python rosetta.py --verify --problemsizefile="benchmarks/medium.problemsize.ini" --filter-exclude-ppm-exact cuda
-python rosetta.py --verify --problemsizefile="benchmarks/large.problemsize.ini" --filter-exclude-ppm-exact cuda
-python rosetta.py --verify --problemsizefile="benchmarks/extralarge.problemsize.ini" --filter-exclude-ppm-exact cuda
+python rosetta.py --verify --problemsizefile small --filter-exclude-ppm-exact cuda
 ```

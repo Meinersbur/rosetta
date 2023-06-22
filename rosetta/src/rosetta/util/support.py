@@ -474,3 +474,10 @@ class cached_generator:
         return functools.cached_property.__get__(self, instance, owner)
 
     __class_getitem__ = classmethod(functools.GenericAlias)
+
+
+def get_problemsizefile_path(problemsize):
+    if problemsize:
+        return pathlib.Path(f'benchmarks/{problemsize}.problemsize.ini')
+    else:
+        return None
