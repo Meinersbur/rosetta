@@ -21,10 +21,8 @@ function (enable_platform_nvidia target)
   target_sources("${target}" PRIVATE rosetta-nvidia.cpp)
   target_compile_definitions("${target}" PUBLIC ROSETTA_PLATFORM_NVIDIA=1)
   target_link_libraries("${target}" PUBLIC CUDA::cudart CUDA::cupti CUDA::cuda_driver)
-  # message("CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
   target_include_directories("${target}" PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
-  target_include_directories("${target}" PUBLIC "${CUDAToolkit_LIBRARY_ROOT}/extras/CUPTI/include"
-  )# For unknown reasons on JLSE
+  target_include_directories("${target}" PUBLIC "${CUDAToolkit_BIN_DIR}/../extras/CUPTI/include") # For unknown reasons required on JLSE
 
   # set_target_properties("${target}" PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 endfunction ()
