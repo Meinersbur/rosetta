@@ -476,8 +476,10 @@ class cached_generator:
     __class_getitem__ = classmethod(functools.GenericAlias)
 
 
-def get_problemsizefile_path(problemsize):
+def get_problemsizefile_path(problemsize, srcdir=None, rootdir=None):
     if problemsize:
-        return pathlib.Path(f'benchmarks/{problemsize}.problemsize.ini')
+        if rootdir:
+            return pathlib.Path(f'{rootdir}/benchmarks/{problemsize}.problemsize.ini')
+        return pathlib.Path(f'{srcdir}/benchmarks/{problemsize}.problemsize.ini')
     else:
         return None
