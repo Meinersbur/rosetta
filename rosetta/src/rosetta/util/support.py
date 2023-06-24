@@ -480,6 +480,8 @@ def get_problemsizefile_path(problemsize, srcdir=None, rootdir=None):
     if problemsize:
         if rootdir:
             return pathlib.Path(f'{rootdir}/benchmarks/{problemsize}.problemsize.ini')
-        return pathlib.Path(f'{srcdir}/benchmarks/{problemsize}.problemsize.ini')
+        if srcdir:
+            return pathlib.Path(f'{srcdir}/benchmarks/{problemsize}.problemsize.ini')
+        return pathlib.Path(f'benchmarks/{problemsize}.problemsize.ini')
     else:
         return None

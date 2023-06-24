@@ -1,7 +1,7 @@
-// BUILD: add_benchmark(ppm=serial)
+// BUILD: add_benchmark(ppm=serial,sources=[__file__, "durbin-common.cxx"])
 
 #include <rosetta.h>
-
+#include "durbin-common.h"
 
 
 static void kernel(pbsize_t n,
@@ -39,6 +39,11 @@ void run(State &state, pbsize_t pbsize) {
   auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");
   auto z = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "z");
 
-  for (auto &&_ : state)
-    kernel(n, r, y, z);
+  for (auto &&_ : state.manual()) {
+    initialize_input_vector(n, r);
+    {
+      auto &&scope = _.scope();
+      kernel(n, r, y, z);
+    }
+  }
 }
