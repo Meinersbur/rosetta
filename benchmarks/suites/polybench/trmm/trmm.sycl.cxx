@@ -18,7 +18,6 @@ void mykernel(queue q, buffer<real, 1> A_buf, buffer<real, 1> B_buf, pbsize_t n,
       }
     });
   });
-  q.wait_and_throw();
 }
 
 

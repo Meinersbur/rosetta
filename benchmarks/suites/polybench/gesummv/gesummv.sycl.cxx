@@ -29,7 +29,6 @@ static void mykernel(queue &q, pbsize_t n,
       y[i] = alpha * tmp[i] + beta * y[i];
     });
   });
-  q.wait_and_throw();
 }
 
 void run(State &state, pbsize_t n) {

@@ -27,7 +27,6 @@ static void mykernel(queue &q, pbsize_t ni, pbsize_t nj, pbsize_t nk, real alpha
       }
     });
   });
-  q.wait_and_throw();
 }
 
 void run(State &state, pbsize_t pbsize) {

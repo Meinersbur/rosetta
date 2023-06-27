@@ -41,7 +41,6 @@ static void mykernel(queue &q, pbsize_t n, real alpha, real beta,
         w[i] += alpha * A[i * n + j] * x[j];
     });
   });
-  q.wait_and_throw();
 }
 
 void run(State &state, pbsize_t n) {
