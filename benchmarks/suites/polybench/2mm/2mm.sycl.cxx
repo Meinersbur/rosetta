@@ -39,6 +39,7 @@ void mykernel(queue &q,
       }
     });
   });
+  q.wait_and_throw();
 }
 
 void run(State &state, pbsize_t pbsize) {

@@ -18,6 +18,7 @@ void mykernel(queue q, buffer<real, 1> C_buf, buffer<real, 1> A_buf, pbsize_t n,
           C1[i * n + j] += alpha * A1[i * m + k] * A1[j * m + k];
     });
   });
+  q.wait_and_throw();
 }
 
 
