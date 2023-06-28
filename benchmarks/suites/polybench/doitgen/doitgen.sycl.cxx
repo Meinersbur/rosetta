@@ -8,7 +8,7 @@ static void mykernel(queue &q, pbsize_t nr, pbsize_t nq, pbsize_t np, buffer<rea
   q.submit([&](handler &cgh) {
     auto A_acc = A_buf.get_access<access::mode::read>(cgh);
     auto C4_acc = C4_buf.get_access<access::mode::read>(cgh);
-    auto sum_acc = sum_buf.get_access<access::mode::read_write>(cgh);
+    auto sum_acc = sum_buf.get_access<access::mode::write>(cgh);
 
     cgh.parallel_for(range<3>(nr, nq, np), [=](id<3> idx) {
       idx_t r = idx[0];
@@ -22,7 +22,7 @@ static void mykernel(queue &q, pbsize_t nr, pbsize_t nq, pbsize_t np, buffer<rea
     });
   });
   q.submit([&](handler &cgh) {
-    auto A_acc = A_buf.get_access<access::mode::read_write>(cgh);
+    auto A_acc = A_buf.get_access<access::mode::write>(cgh);
     auto sum_acc = sum_buf.get_access<access::mode::read>(cgh);
 
     cgh.parallel_for(range<3>(nr, nq, np), [=](id<3> idx) {
