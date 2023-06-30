@@ -61,7 +61,7 @@ void run(State &state, pbsize_t pbsize) {
 
 
 
-  auto r = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "r");
+  auto r = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "r");
   auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");
   auto z = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "z");
 
