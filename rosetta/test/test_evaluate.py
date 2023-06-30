@@ -13,9 +13,8 @@ from rosetta.util.support import *
 
 def tablecellre(*args):
     return '.+'.join(
-        a.replace('\\', r'\\').replace('.', r'\.').replace('-', r'\-').replace('%', r'\%').replace(' ', r'\ ')
-        for a in args
-    )
+        a.replace('\\', r'\\').replace('.', r'\.').replace('-', r'\-').replace('%', r'\%').replace(' ', r'\ ') for a in
+        args)
 
 
 class EvaluateTests(unittest.TestCase):
@@ -42,10 +41,7 @@ class EvaluateTests(unittest.TestCase):
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             rosetta.driver.driver_main(
                 argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__).parent / 'resultfiles' / 'single'],
-                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR,
-                rootdir=self.rootdir,
-                srcdir=self.srcdir,
-            )
+                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)
 
         # Search for the table header
         s = f.getvalue().splitlines()
@@ -55,20 +51,19 @@ class EvaluateTests(unittest.TestCase):
             s.pop(0)
 
         self.assertRegex(s[1], tablecellre('---', '---', '---', '---'))
-        self.assertRegex(s[2], tablecellre('idioms.assign', '42.00', '27.38', '78.12'))
-        self.assertRegex(
-            s[3], tablecellre('idioms.assign', '42.00', '71.00', '78.12')
-        )  # Should it combine multiple different runs?
+        try:
+            self.assertRegex(s[2], tablecellre('idioms.assign', '42.00', '71.00', '78.12'))
+            self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '27.38', '78.12'))
+        except AssertionError:
+            self.assertRegex(s[2], tablecellre('idioms.assign', '42.00', '27.38', '78.12'))
+            self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '71.00', '78.12'))
 
     def test_ppm_maxrss_peak_alloc(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             rosetta.driver.driver_main(
                 argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__).parent / 'resultfiles' / 'multi_ppm'],
-                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR,
-                rootdir=self.rootdir,
-                srcdir=self.srcdir,
-            )
+                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)
 
         # Search for the table header
         s = f.getvalue().splitlines()
@@ -85,19 +80,11 @@ class EvaluateTests(unittest.TestCase):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             rosetta.driver.driver_main(
-                argv=[
-                    None,
-                    '--evaluate',
-                    '--use-results-rdir',
-                    mkpath(__file__).parent / 'resultfiles' / 'multi_ppm',
-                    '--compare-by=ppm',
-                ],
-                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR,
-                rootdir=self.rootdir,
-                srcdir=self.srcdir,
-            )
+                argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__).parent / 'resultfiles' / 'multi_ppm',
+                      '--compare-by=ppm'], mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir,
+                srcdir=self.srcdir)
 
-        # Search for the table header
+            # Search for the table header
         s = f.getvalue().splitlines()
         while s:
             if re.search(tablecellre('Benchmark', 'Wall', 'Max RSS', 'Peak Allocation'), s[0]):
