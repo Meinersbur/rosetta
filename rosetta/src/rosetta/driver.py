@@ -512,6 +512,7 @@ def driver_main(
             for use_results_rdir in args.use_results_rdir:
                 resultfiles = resultfiles or []
                 resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
+            resultfiles = sorted(resultfiles)
 
             # If there is no other source of results, source all previous ones
             if resultfiles is None:
