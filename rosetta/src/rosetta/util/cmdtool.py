@@ -9,8 +9,18 @@ def _str_to_bool(s):
     """Convert string to bool (in argparse context)."""
     if s.lower() not in ['true', 'false', '1', '0', 'y', 'n', 'yes', 'no', 'on', 'off']:
         raise ValueError('Need bool; got %r' % s)
-    return {'true': True, 'false': False, '1': True, '0': False, 'y': True,
-            'n': False, 'yes': True, 'no': False, 'on': True, 'of': False}[s.lower()]
+    return {
+        'true': True,
+        'false': False,
+        '1': True,
+        '0': False,
+        'y': True,
+        'n': False,
+        'yes': True,
+        'no': False,
+        'on': True,
+        'of': False,
+    }[s.lower()]
 
 
 def add_boolean_argument(parser, name, default=None, dest=None, help=None):
@@ -61,8 +71,9 @@ class ConfigParam:
     CMDARGDICT = NamedSentinel('CMDARGDICT')
     PATH = NamedSentinel('PATH')
 
-    def __init__(self, parent, propname, type, cmdargname=None,
-                 inherits_from=[], defaultval=None, help=None, userparam=False):
+    def __init__(
+        self, parent, propname, type, cmdargname=None, inherits_from=[], defaultval=None, help=None, userparam=False
+    ):
         self.parent = parent
         self.propname = propname
         self.type = type
@@ -119,8 +130,9 @@ class ConfigParam:
                 return None
             return min(l)
         elif self.type in (ConfigParam.STRLIST, ConfigParam.CMDARGLIST):
-            return [item for items in (p.val for p in walk_inheritance_chain(self)
-                                       if p.val is not None) for item in items]
+            return [
+                item for items in (p.val for p in walk_inheritance_chain(self) if p.val is not None) for item in items
+            ]
         elif self.type is (ConfigParam.CMDARGDICT):
             result = {}
             for d in walk_inheritance_chain(self):
@@ -145,8 +157,9 @@ class ConfigParam:
         name = '--' + cmdargprefix + self.cmdargname
         dest = propprefix + self.propname
         if self.type is ConfigParam.BOOL:
-            add_boolean_argument(parser, cmdargprefix + self.cmdargname,
-                                 default=self.defaultval, dest=dest, help=self.help)
+            add_boolean_argument(
+                parser, cmdargprefix + self.cmdargname, default=self.defaultval, dest=dest, help=self.help
+            )
         elif self.type in [ConfigParam.INT, ConfigParam.INTMIN]:
             parser.add_argument(name, dest=dest, type=int, help=self.help)
         elif self.type is ConfigParam.NUMBER:
@@ -332,7 +345,7 @@ class Configurable:
     def get_cmdline(self, effective=False, cmdargprefix=''):
         result = []
         for k, p in self.props.items():
-            result .extend(p.get_cmdline(effective=effective, cmdargprefix=cmdargprefix))
+            result.extend(p.get_cmdline(effective=effective, cmdargprefix=cmdargprefix))
 
         for k, s in self.subconfigs.items():
             subcmdargprefix = (cmdargprefix or '') + k + '-'

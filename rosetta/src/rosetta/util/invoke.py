@@ -57,8 +57,18 @@ class Invoke:
                     env[key] = val
         return env
 
-    def __init__(self, cmd, *args, cwd=None, setenv=None, appendenv=None,
-                 stdout=None, stderr=None, std_joined=None, std_prefixed=None):
+    def __init__(
+        self,
+        cmd,
+        *args,
+        cwd=None,
+        setenv=None,
+        appendenv=None,
+        stdout=None,
+        stderr=None,
+        std_joined=None,
+        std_prefixed=None
+    ):
         self.cmdline = [str(cmd)] + [str(a) for a in args]
         self.cwd = cwd
         self.setenv = setenv
@@ -89,8 +99,7 @@ class Invoke:
         if self.cwd is None:
             result = env + shortcmd + (' ' if args else '') + shjoin(args)
         else:
-            result = '(cd ' + shquote(self.cwd) + ' && ' + env + \
-                shortcmd + (' ' if args else '') + shjoin(args) + ')'
+            result = '(cd ' + shquote(self.cwd) + ' && ' + env + shortcmd + (' ' if args else '') + shjoin(args) + ')'
         return result
 
     class InvokeResult:
@@ -110,15 +119,30 @@ class Invoke:
         def output(self):
             return self.prefixed or self.joined or self.stdout or self.stderr
 
-    def execute(self, onerror=IGNORE,
-                print_stdout=False, print_stderr=False, print_prefixed=False, print_command=False, print_exitcode=False,
-                return_stdout=False, return_stderr=False, return_joined=False, return_prefixed=False,
-                stdout=None, stderr=None, std_joined=None, std_prefixed=None, forcepopen=False):
+    def execute(
+        self,
+        onerror=IGNORE,
+        print_stdout=False,
+        print_stderr=False,
+        print_prefixed=False,
+        print_command=False,
+        print_exitcode=False,
+        return_stdout=False,
+        return_stderr=False,
+        return_joined=False,
+        return_prefixed=False,
+        stdout=None,
+        stderr=None,
+        std_joined=None,
+        std_prefixed=None,
+        forcepopen=False,
+    ):
 
         cmdline = [str(s) for s in self.cmdline]
         cwd = None if (self.cwd is None) else str(self.cwd)
-        env = Invoke.assemble_env(
-            setenv=self.setenv, appendenv=self.appendenv) if self.setenv or self.appendenv else None
+        env = (
+            Invoke.assemble_env(setenv=self.setenv, appendenv=self.appendenv) if self.setenv or self.appendenv else None
+        )
         stdout = self.stdout + Invoke.hlist(stdout)
         stderr = self.stderr + Invoke.hlist(stderr)
         std_joined = self.std_joined + Invoke.hlist(std_joined)
@@ -137,8 +161,15 @@ class Invoke:
             stderr_mode = None if print_stderr else subprocess.PIPE
 
             start = datetime.datetime.now()
-            ret = subprocess.run(cmdline, cwd=cwd, env=env, check=(onerror == Invoke.EXCEPTION),
-                                 stdout=stdout_mode, stderr=stderr_mode, universal_newlines=True)
+            ret = subprocess.run(
+                cmdline,
+                cwd=cwd,
+                env=env,
+                check=(onerror == Invoke.EXCEPTION),
+                stdout=stdout_mode,
+                stderr=stderr_mode,
+                universal_newlines=True,
+            )
             stop = datetime.datetime.now()
             walltime = stop - start
 
@@ -146,7 +177,8 @@ class Invoke:
             if exitcode:
                 if onerror == Invoke.ABORT_EXITCODE:
                     abortmsg = "Command failed with code {rtncode}\n{command}".format(
-                        rtncode=exitcode, walltime=walltime, command=self.cmd())
+                        rtncode=exitcode, walltime=walltime, command=self.cmd()
+                    )
                     print(abortmsg, file=sys.stderr)
                     exit(exitcode)
                 if onerror == Invoke.ABORT:
@@ -161,8 +193,9 @@ class Invoke:
 
             stdout_str = ret.stdout if return_stdout else None
             stderr_str = ret.stderr if return_stderr else None
-            return Invoke.InvokeResult(exitcode=exitcode, stdout=stdout_str, stderr=stderr_str,
-                                       joined=None, prefixed=None, walltime=walltime)
+            return Invoke.InvokeResult(
+                exitcode=exitcode, stdout=stdout_str, stderr=stderr_str, joined=None, prefixed=None, walltime=walltime
+            )
 
         def execute_popen():
             stdin = None
@@ -238,13 +271,27 @@ class Invoke:
 
                 if onerror == Invoke.EXCEPTION:
                     # Just forward if any exception
-                    p = subprocess.Popen(cmdline, cwd=cwd, env=env, stdout=stdout_mode,
-                                         stderr=stderr_mode, universal_newlines=True, bufsize=1)
+                    p = subprocess.Popen(
+                        cmdline,
+                        cwd=cwd,
+                        env=env,
+                        stdout=stdout_mode,
+                        stderr=stderr_mode,
+                        universal_newlines=True,
+                        bufsize=1,
+                    )
                 else:
                     try:
                         # bufize=1 ensures line buffering
-                        p = subprocess.Popen(cmdline, cwd=cwd, env=env, stdout=stdout_mode,
-                                             stderr=stderr_mode, universal_newlines=True, bufsize=1)
+                        p = subprocess.Popen(
+                            cmdline,
+                            cwd=cwd,
+                            env=env,
+                            stdout=stdout_mode,
+                            stderr=stderr_mode,
+                            universal_newlines=True,
+                            bufsize=1,
+                        )
                     except Exception as err:
                         # Exception can happen if e.g. the executable does not exist
                         # Process it further down
@@ -253,6 +300,7 @@ class Invoke:
                         errmsg = "Invocation error: {err}".format(err=err)
 
                 if p:
+
                     def catch_std(std, outhandles, prefix, prefixedhandles):
                         while True:
                             try:
@@ -272,15 +320,29 @@ class Invoke:
 
                     tout = None
                     if stdout_mode == subprocess.PIPE:
-                        tout = threading.Thread(target=catch_std,
-                                                kwargs={'std': p.stdout, 'outhandles': stdouthandles, 'prefix': "[stdout] ", 'prefixedhandles': prefixedhandles})
+                        tout = threading.Thread(
+                            target=catch_std,
+                            kwargs={
+                                'std': p.stdout,
+                                'outhandles': stdouthandles,
+                                'prefix': "[stdout] ",
+                                'prefixedhandles': prefixedhandles,
+                            },
+                        )
                         tout.daemon = True
                         tout.start()
 
                     terr = None
                     if stderr_mode == subprocess.PIPE:
-                        terr = threading.Thread(target=catch_std,
-                                                kwargs={'std': p.stderr, 'outhandles': stderrhandles, 'prefix': "[stderr] ", 'prefixedhandles': prefixedhandles})
+                        terr = threading.Thread(
+                            target=catch_std,
+                            kwargs={
+                                'std': p.stderr,
+                                'outhandles': stderrhandles,
+                                'prefix': "[stderr] ",
+                                'prefixedhandles': prefixedhandles,
+                            },
+                        )
                         terr.daemon = True
                         terr.start()
 
@@ -313,13 +375,16 @@ class Invoke:
 
                 if errmsg:
                     exitmsg = "Invocation failed in {walltime}: {errmsg}".format(
-                        exitcode=exitcode, walltime=walltime, errmsg=errmsg)
+                        exitcode=exitcode, walltime=walltime, errmsg=errmsg
+                    )
                     abortmsg = "Command failed with code {rtncode}\n{errmsg}\n{command}".format(
-                        rtncode=exitcode, walltime=walltime, command=self.cmd(), errmsg=errmsg)
+                        rtncode=exitcode, walltime=walltime, command=self.cmd(), errmsg=errmsg
+                    )
                 else:
                     exitmsg = "Exit with code {exitcode} in {walltime}".format(exitcode=exitcode, walltime=walltime)
                     abortmsg = "Command failed with code {rtncode}\n{command}".format(
-                        rtncode=exitcode, walltime=walltime, command=self.cmd())
+                        rtncode=exitcode, walltime=walltime, command=self.cmd()
+                    )
 
                 for h in prefixedhandles:
                     print(exitmsg.format(rtncode=exitcode), file=h)
@@ -352,30 +417,62 @@ class Invoke:
                 if isinstance(result_prefixed, io.StringIO):
                     result_prefixed = result_prefixed.getvalue()
 
-            return Invoke.InvokeResult(exitcode=exitcode, stdout=result_stdout, stderr=result_stderr,
-                                       joined=result_joined, prefixed=result_prefixed, walltime=walltime)
+            return Invoke.InvokeResult(
+                exitcode=exitcode,
+                stdout=result_stdout,
+                stderr=result_stderr,
+                joined=result_joined,
+                prefixed=result_prefixed,
+                walltime=walltime,
+            )
 
-        if not forcepopen \
-                and not stdout and not stderr and not std_joined and not std_prefixed \
-                and stdout_print_xand_return and stderr_print_xand_return \
-                and not print_prefixed \
-                and not return_joined and not return_prefixed \
-                and not stdout and not stderr and not std_joined and not std_prefixed:
+        if (
+            not forcepopen
+            and not stdout
+            and not stderr
+            and not std_joined
+            and not std_prefixed
+            and stdout_print_xand_return
+            and stderr_print_xand_return
+            and not print_prefixed
+            and not return_joined
+            and not return_prefixed
+            and not stdout
+            and not stderr
+            and not std_joined
+            and not std_prefixed
+        ):
             return execute_run()
         return execute_popen()
 
     # Execute as if this is the command itself
 
     def run(self, onerror=None, print_stdout=True, print_stderr=True, **kwargs):
-        return self.execute(onerror=first_defined(onerror, Invoke.ABORT),
-                            print_stdout=print_stdout, print_stderr=print_stderr, **kwargs).exitcode
+        return self.execute(
+            onerror=first_defined(onerror, Invoke.ABORT), print_stdout=print_stdout, print_stderr=print_stderr, **kwargs
+        ).exitcode
 
     # Diagnostic mode, execute with additional info
 
-    def diag(self, onerror=None, print_stdout=False, print_stderr=False,
-             print_prefixed=True, print_command=True, print_exitcode=True, **kwargs):
-        return self.execute(onerror=first_defined(onerror, Invoke.IGNORE), print_command=print_command, print_stdout=print_stdout,
-                            print_stderr=print_stderr, print_prefixed=print_prefixed, print_exitcode=print_exitcode, **kwargs)
+    def diag(
+        self,
+        onerror=None,
+        print_stdout=False,
+        print_stderr=False,
+        print_prefixed=True,
+        print_command=True,
+        print_exitcode=True,
+        **kwargs
+    ):
+        return self.execute(
+            onerror=first_defined(onerror, Invoke.IGNORE),
+            print_command=print_command,
+            print_stdout=print_stdout,
+            print_stderr=print_stderr,
+            print_prefixed=print_prefixed,
+            print_exitcode=print_exitcode,
+            **kwargs
+        )
 
     # Execute to get the command's result
 

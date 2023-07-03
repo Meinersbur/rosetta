@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 if not sys.version_info >= (3, 9):
     print("Requires python 3.9 or later", file=sys.stderr)
     print(f"Python interpreter {sys.executable} reports version {sys.version}", file=sys.stderr)
@@ -46,8 +47,7 @@ def global_unintent(slist):
 
 
 def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, filter=None):
-    problemsizefile = runner.get_problemsizefile(
-        problemsizefile=problemsizefile)
+    problemsizefile = runner.get_problemsizefile(problemsizefile=problemsizefile)
     config = configparser.ConfigParser()
     config.read(problemsizefile)
 
@@ -85,8 +85,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 configdepfiles.append(buildfile)
                 script = global_unintent(script)
                 script = '\n'.join(script)
-                spec = importlib.util.spec_from_loader(
-                    'rosetta.build', loader=None, origin=buildfile)
+                spec = importlib.util.spec_from_loader('rosetta.build', loader=None, origin=buildfile)
                 module = importlib.util.module_from_spec(spec)
                 globals = module.__dict__
                 scriptdir = buildfile.parent
@@ -96,7 +95,11 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     for a in args:
                         if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target', 'sycl'}:
                             ppm = a
-                        elif isinstance(a, registry.GenParam) or isinstance(a, registry.SizeParam) or isinstance(a, registry.TuneParam):
+                        elif (
+                            isinstance(a, registry.GenParam)
+                            or isinstance(a, registry.SizeParam)
+                            or isinstance(a, registry.TuneParam)
+                        ):
                             params = (params or []) + [a]
                         else:
                             die(f"Unknown argument to add_benchmark in {buildfile}: {a}")
@@ -125,18 +128,27 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                     target = basename + '.' + ppm
                     pbsize = config.getint(basename, 'n')
 
-                    bench = runner.Benchmark(basename=basename, target=target, exepath=None, ppm=ppm,
-                                             configname=configname, buildtype=None, sources=mysources, pbsize=pbsize, params=params)
+                    bench = runner.Benchmark(
+                        basename=basename,
+                        target=target,
+                        exepath=None,
+                        ppm=ppm,
+                        configname=configname,
+                        buildtype=None,
+                        sources=mysources,
+                        pbsize=pbsize,
+                        params=params,
+                    )
                     benchs.append(bench)
 
                 globals['add_benchmark'] = add_benchmark
                 globals['__file__'] = relbuildfile
 
-                globals['GenParam'] = registry. GenParam
-                globals['SizeParam'] = registry. SizeParam
-                globals['TuneParam'] = registry.  TuneParam
-                globals['runtime'] = registry. runtime
-                globals['compiletime'] = registry. compiletime
+                globals['GenParam'] = registry.GenParam
+                globals['SizeParam'] = registry.SizeParam
+                globals['TuneParam'] = registry.TuneParam
+                globals['runtime'] = registry.runtime
+                globals['compiletime'] = registry.compiletime
 
                 # Common PPMs for convenience
                 globals['serial'] = 'serial'
@@ -157,13 +169,11 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
         print("# Build instructions were found in these", file=out)
         print("  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
-        print('"' + ';'.join(pyescape(s)
-              for s in configdepfiles) + '")', file=out)
+        print('"' + ';'.join(pyescape(s) for s in configdepfiles) + '")', file=out)
 
         print("# These were searched for build instructions", file=out)
         print("  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS", file=out)
-        print('"' + ';'.join(pyescape(s)
-              for s in potentialbuildfiles if s not in configdepfiles) + '")', file=out)
+        print('"' + ';'.join(pyescape(s) for s in potentialbuildfiles if s not in configdepfiles) + '")', file=out)
 
         print("endif ()", file=out)
         print(file=out)
@@ -183,7 +193,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
             print(f"add_benchmark_sycl({bench.basename}", file=out)
         else:
             die("Unhandled ppm")
-        print("    PBSIZE", bench. pbsize, file=out)
+        print("    PBSIZE", bench.pbsize, file=out)
         print("    SOURCES", *(cmakequote(bs.as_posix()) for bs in bench.sources), file=out)
         print("  )", file=out)
 
@@ -191,9 +201,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
 
 def main():
-    #print("stage1 argv", sys.argv)
-    parser = argparse.ArgumentParser(
-        description="Generate CMakeLists.txt include file", allow_abbrev=False)
+    # print("stage1 argv", sys.argv)
+    parser = argparse.ArgumentParser(description="Generate CMakeLists.txt include file", allow_abbrev=False)
     parser.add_argument('--output', type=pathlib.Path)
     parser.add_argument('--problemsizefile', type=pathlib.Path)
     parser.add_argument('--benchdir', type=pathlib.Path)
@@ -202,9 +211,14 @@ def main():
     add_filter_args(parser)
     args = parser.parse_args()
 
-
-    gen_benchtargets(outfile=args.output, problemsizefile=args.problemsizefile, benchdir=args.benchdir,
-                     builddir=args.builddir, configname=args.configname, filter=args)
+    gen_benchtargets(
+        outfile=args.output,
+        problemsizefile=args.problemsizefile,
+        benchdir=args.benchdir,
+        builddir=args.builddir,
+        configname=args.configname,
+        filter=args,
+    )
 
 
 if __name__ == '__main__':

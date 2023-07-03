@@ -30,12 +30,15 @@ class BuildConfig:
         # TODO: Combine with (-D, -DCMAKE_<lang>_FLAGS) from compiler/cmake_arg
         cmake_opts = self.cmake_arg[:]
         for k, d in self.cmake_def.items():
-            cmake_opts .append(f"-D{k}={d}")
+            cmake_opts.append(f"-D{k}={d}")
         if compiler_args:
             # TODO: Only set the ones relevant for enable PPMs
             opt_args = shjoin(compiler_args)
-            cmake_opts += [f"-DCMAKE_C_FLAGS={opt_args}", f"-DCMAKE_CXX_FLAGS={opt_args}",
-                           f"-DCMAKE_CUDA_FLAGS={opt_args}"]  # TODO: Release flags?
+            cmake_opts += [
+                f"-DCMAKE_C_FLAGS={opt_args}",
+                f"-DCMAKE_CXX_FLAGS={opt_args}",
+                f"-DCMAKE_CUDA_FLAGS={opt_args}",
+            ]  # TODO: Release flags?
 
         if self.ppm:
             # TODO: Case, shortcuts

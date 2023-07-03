@@ -50,7 +50,7 @@ class StrConcat:  # Rename: Twine
             a = normalize(a)
             if isinstance(a, StrAlign):
                 prefixlen = sum(printlength(a) for a in self.args[:i])
-                return StrAlign(StrConcat(self.args[:i] + [a.s] + self.args[i + 1:]), prefixlen + a.align)
+                return StrAlign(StrConcat(self.args[:i] + [a.s] + self.args[i + 1 :]), prefixlen + a.align)
         return self
 
     def consolestr(self):
@@ -78,10 +78,29 @@ class StrColor:
 
     def consolestr(self):
         from colorama import Fore, Back, Style
-        if self.style in {Fore.BLACK, Fore.RED, Fore.GREEN, Fore.YELLOW,
-                          Fore. BLUE, Fore.MAGENTA, Fore.CYAN, Fore.WHITE, Fore.BWHITE}:
+
+        if self.style in {
+            Fore.BLACK,
+            Fore.RED,
+            Fore.GREEN,
+            Fore.YELLOW,
+            Fore.BLUE,
+            Fore.MAGENTA,
+            Fore.CYAN,
+            Fore.WHITE,
+            Fore.BWHITE,
+        }:
             reset = Fore.RESET
-        elif self.style in {Back.BLACK, Back.RED, Back.GREEN, Back.YELLOW, Back. BLUE, Back.MAGENTA, Back.CYAN, Back.WHITE}:
+        elif self.style in {
+            Back.BLACK,
+            Back.RED,
+            Back.GREEN,
+            Back.YELLOW,
+            Back.BLUE,
+            Back.MAGENTA,
+            Back.CYAN,
+            Back.WHITE,
+        }:
             reset = Back.RESET
         elif self.style in {Style.DIM, Style.NORMAL, Style.BRIGHT}:
             reset = Style.RESET_ALL
@@ -173,7 +192,7 @@ class Table:
         self.supercolumns[name] = subcolumns
 
     def add_row(self, **kwargs):
-        self.rows .append(kwargs)
+        self.rows.append(kwargs)
 
     def print(self):
         matrix = []
@@ -243,8 +262,9 @@ class Table:
                 # supercolumn is wider than subcolumns: divide additional space evenly between subcolumns
                 overhang = supercollen - subcollen
                 for i, subcol in enumerate(subcols):
-                    addlen = ((i + 1) * overhang + len(subcols) // 2) // len(subcols) - \
-                        (i * overhang + len(subcols) // 2) // len(subcols)
+                    addlen = ((i + 1) * overhang + len(subcols) // 2) // len(subcols) - (
+                        i * overhang + len(subcols) // 2
+                    ) // len(subcols)
                     collen[colname_to_idx.get(subcol)] += addlen
             elif subcollen > supercollen:
                 # subcolumns are wider than supercolumn: extend supercolumn
@@ -271,8 +291,12 @@ class Table:
                 return ' ' * indent + cs + ' ' * (maxlen - printlen - indent)
 
         def linesep():
-            print(*(colorama.Style.DIM + '-' * collen[colname_to_idx.get(colname)] +
-                  colorama.Style.RESET_ALL for i, colname in leafidx_to_name.items()))
+            print(
+                *(
+                    colorama.Style.DIM + '-' * collen[colname_to_idx.get(colname)] + colorama.Style.RESET_ALL
+                    for i, colname in leafidx_to_name.items()
+                )
+            )
 
         def print_row(rowdata: dict):
             leafcolnum = len(name_to_leafidx)
@@ -291,12 +315,13 @@ class Table:
                     currow[i] += 1
                 needlines = max(currow[cur] for cur in range(start, stop + 1))
                 while len(lines) < needlines:
-                    lines.append([" " * collen[colname_to_idx.get(leafidx_to_name.get(j))]
-                                 for j in range(0, leafcolnum)])
+                    lines.append(
+                        [" " * collen[colname_to_idx.get(leafidx_to_name.get(j))] for j in range(0, leafcolnum)]
+                    )
 
                 def colval(s, maxlen, maxleft, maxright):
-                    #maxlen = collen[i]
-                    #maxleft = colleft[i]
+                    # maxlen = collen[i]
+                    # maxleft = colleft[i]
 
                     if isinstance(s, StrAlign):
                         if s.pos == StrAlign.LEFT:
@@ -320,8 +345,11 @@ class Table:
                     # Left align by default
                     return raggedright(s, maxlen)
 
-                totallen = sum(collen[colname_to_idx.get(leafidx_to_name.get(j))]
-                               for j in range(start, stop + 1)) + stop - start
+                totallen = (
+                    sum(collen[colname_to_idx.get(leafidx_to_name.get(j))] for j in range(start, stop + 1))
+                    + stop
+                    - start
+                )
                 totalleft = colleft[colname_to_idx.get(supercol)]
                 totalright = colright[colname_to_idx.get(supercol)]
                 lines[needlines - 1][start] = colval(celldata, totallen, totalleft, totalright)
@@ -352,6 +380,7 @@ class Table:
         linesep()
 
         for j in range(nrows):
+
             def colval(i, name):
                 maxlen = collen[i]
                 maxleft = colleft[i]

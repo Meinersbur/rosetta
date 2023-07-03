@@ -29,7 +29,7 @@ struct AtomicMin<double> {
       // Three possibilities:
       // 1. Noone interferred and we set the new min value, even if it was NaN.
       if (assumed == newold)
-        return  __longlong_as_double(old);
+        return __longlong_as_double(old);
 
       // 2. Someone else overwrote dst with a value between val and old.
       // Will continue the loop again, same problem except that dst now contains old

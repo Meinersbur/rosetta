@@ -16,7 +16,7 @@ class TestFiltering(unittest.TestCase):
             Benchmark("idioms.assign", "target1", "exepath1", "buildtype1", "serial", "configname1"),
             Benchmark("idioms.assign", "target2", "exepath2", "buildtype2", "cuda", "configname2"),
             Benchmark("polybench.cholesky", "target3", "exepath3", "buildtype3", "cuda", "configname3"),
-            Benchmark("polybench.gemm", "target3", "exepath3", "buildtype3", "openmp-parallel", "configname3")
+            Benchmark("polybench.gemm", "target3", "exepath3", "buildtype3", "openmp-parallel", "configname3"),
         ]
         self.reset_args()
 
@@ -142,6 +142,7 @@ class TestFiltering(unittest.TestCase):
         filtered_benchmarks = get_filtered_benchmarks(self.benchmarks, self.args)
         self.assertEqual(len(filtered_benchmarks), 1, "Length should be 1")
         self.assertTrue(self.benchmarks[1] in filtered_benchmarks, "Should match second benchmark")
+
 
 if __name__ == '__main__':
     unittest.main()

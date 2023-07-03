@@ -42,7 +42,6 @@ def check_format(srcdir: pathlib.Path):
     files = updateable_files(srcdir=srcdir, framework=True, benchmarks=True)
     anyerror = False
 
-
     retcode = invoke.run(
         'clang-format',
         '-Werror',
@@ -54,7 +53,6 @@ def check_format(srcdir: pathlib.Path):
     if retcode:
         anyerror = True
 
-
     retcode = invoke.run(
         'cmake-format',
         '--check',
@@ -64,7 +62,6 @@ def check_format(srcdir: pathlib.Path):
     )
     if retcode:
         anyerror = True
-
 
     retcode = invoke.run(
         'black', '--check', '--diff', *(black_options + files.py), print_command=True, onerror=invoke.Invoke.IGNORE

@@ -25,7 +25,7 @@ shsplit = shlex.split
 
 def shquote(arg, windows=None):
     if windows is None:
-        windows = (platform.system() == 'Windows')
+        windows = platform.system() == 'Windows'
     if windows:
         arg = str(arg)
         arg = arg.replace(r'"', r'""')
@@ -55,10 +55,10 @@ def shcombine(arg=None, args=None):
 
 def cmakequote(arg):
     """Escape a string for use as a string argument in CMake
-    
+
     Ref: https://cmake.org/cmake/help/latest/manual/cmake-language.7.html#quoted-argument
     """
-    escaped = arg.replace('\\', '\\\\').replace('"', r'\"') 
+    escaped = arg.replace('\\', '\\\\').replace('"', r'\"')
     return f'"{escaped}"'
 
 
@@ -74,6 +74,7 @@ def version_cmp(v1, v2):
                 break
             result.append(i)
         return result
+
     parts1 = convert_int(v1)
     parts2 = convert_int(v2)
     parts1, parts2 = zip(*itertools.zip_longest(parts1, parts2, fillvalue=0))
@@ -103,6 +104,7 @@ def remove_readonly(func, path, _):
 
 
 if os.name == 'nt' and sys.version_info < (3, 8):
+
     class TemporaryDirectory(object):
         """Also delete read-only files on Windows
         See https://bugs.python.org/issue26660
@@ -110,8 +112,9 @@ if os.name == 'nt' and sys.version_info < (3, 8):
 
         def __init__(self, suffix="", prefix=tempfile.template, dir=None):
             self.name = tempfile.mkdtemp(suffix, prefix, dir)
-            self._finalizer = weakref.finalize(self, self._cleanup, self.name,
-                                               warn_message="Implicitly cleaning up {!r}".format(self))
+            self._finalizer = weakref.finalize(
+                self, self._cleanup, self.name, warn_message="Implicitly cleaning up {!r}".format(self)
+            )
 
         @classmethod
         def _cleanup(cls, name, warn_message):
@@ -130,6 +133,7 @@ if os.name == 'nt' and sys.version_info < (3, 8):
         def cleanup(self):
             if self._finalizer.detach():
                 shutil.rmtree(self.name, onerror=remove_readonly)
+
 else:
     TemporaryDirectory = tempfile.TemporaryDirectory
 
@@ -208,6 +212,7 @@ def first_existing(*args):
             return arg
     return args[-1]
 
+
 # Like (.. or .. or ..) but only considers 'None' being false-y (and no short-circuit)
 # fallback= not really necessary, just to make it explicit
 
@@ -282,7 +287,7 @@ def predefined_strict(word, *substitutions, default=PREDEFINED_NODEFAULT):
         return result
 
     result, rounds = predefined(word, *substitutions, default=default)
-    #assert rounds, "word must be one of the predefined values"
+    # assert rounds, "word must be one of the predefined values"
     if not rounds or rounds is True:
         raise Exception("{word} is not one of the predefined values".format(word=word))
     return result
@@ -334,13 +339,13 @@ def createfile(filename, contents):
         with filename.open(mode='w+') as f:
             print(contents, file=f)
     else:
-        with open(filename, 'w+')as f:
+        with open(filename, 'w+') as f:
             print(contents, file=f)
 
 
 def updatefile(filename, contents):
     """Only write files if it has changed.
-Useful for build tools that determine state using file times."""
+    Useful for build tools that determine state using file times."""
     filename = mkpath(filename)
     try:
         old_content = readfile(filename)
@@ -403,13 +408,13 @@ def pystr(s):
 
 def removeprefix(s: str, prefix: str):
     if s.startswith(prefix):
-        return s[len(prefix):]
+        return s[len(prefix) :]
     return s
 
 
 def removesuffix(s: str, suffix: str):
     if s.endswith(suffix):
-        return s[:-len(suffix)]
+        return s[: -len(suffix)]
     return s
 
 
@@ -458,6 +463,7 @@ class cached_generator:
                 retval = func(self)
                 retval = list(retval)
                 return retval
+
             return functools.cached_property.__init__(self, newfunc)
         return functools.cached_property.__init__(self, func)
 

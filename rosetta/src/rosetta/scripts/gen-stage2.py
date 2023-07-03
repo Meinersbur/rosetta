@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 if not sys.version_info >= (3, 9):
     print("Requires python 3.9 or later", file=sys.stderr)
     print(f"Python interpreter {sys.executable} reports version {sys.version}", file=sys.stderr)
@@ -92,9 +93,8 @@ def gen_stage2(builddir, benchdir, benchlistfile, config, resultsdir):
 
 
 def main():
-    #print("stage2 argv", sys.argv)
-    parser = argparse.ArgumentParser(
-        description="Generate make-time files", allow_abbrev=False)
+    # print("stage2 argv", sys.argv)
+    parser = argparse.ArgumentParser(description="Generate make-time files", allow_abbrev=False)
     parser.add_argument('--builddir', type=pathlib.Path)
     parser.add_argument('--benchdir', type=pathlib.Path)
     parser.add_argument('--resultsdir', type=pathlib.Path)
@@ -107,8 +107,7 @@ def main():
     benchfile = args.benchfile
     config = args.config
 
-    gen_stage2(builddir=builddir, benchdir=benchdir,
-               benchlistfile=benchfile, config=config, resultsdir=args.resultsdir)
+    gen_stage2(builddir=builddir, benchdir=benchdir, benchlistfile=benchfile, config=config, resultsdir=args.resultsdir)
 
 
 if __name__ == '__main__':

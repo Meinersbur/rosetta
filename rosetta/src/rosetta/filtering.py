@@ -2,30 +2,78 @@ import re
 
 
 def add_filter_args(parser):
-    parser.add_argument('--filter-include-program-substr', action='append', default=[],
-                        help="Only look into filenames that contain this substring")
-    parser.add_argument('--filter-include-program-exact', action='append', default=[],
-                        help="Only look into filename that exactly matches this string")
-    parser.add_argument('--filter-include-program-regex', action='append', default=[],
-                        help="Only look into filenames that match this regular expression")
-    parser.add_argument('--filter-exclude-program-substr', action='append', default=[],
-                        help="Only exclude filenames that contain this substring")
-    parser.add_argument('--filter-exclude-program-exact', action='append', default=[],
-                        help="Only exclude filename that exactly matches this string")
-    parser.add_argument('--filter-exclude-program-regex', action='append', default=[],
-                        help="Only exclude filenames that match this regular expression")
-    parser.add_argument('--filter-include-ppm-substr', action='append', default=[],
-                        help="Only look into programming models that contain this substring")
-    parser.add_argument('--filter-include-ppm-exact', action='append', default=[],
-                        help="Only look into programming model that exactly matches this string")
-    parser.add_argument('--filter-include-ppm-regex', action='append', default=[],
-                        help="Only look into programming models that match this regular expression")
-    parser.add_argument('--filter-exclude-ppm-substr', action='append', default=[],
-                        help="Only exclude programming models that contain this substring")
-    parser.add_argument('--filter-exclude-ppm-exact', action='append', default=[],
-                        help="Only exclude programming model that exactly matches this string")
-    parser.add_argument('--filter-exclude-ppm-regex', action='append', default=[],
-                        help="Only exclude programming models that match this regular expression")
+    parser.add_argument(
+        '--filter-include-program-substr',
+        action='append',
+        default=[],
+        help="Only look into filenames that contain this substring",
+    )
+    parser.add_argument(
+        '--filter-include-program-exact',
+        action='append',
+        default=[],
+        help="Only look into filename that exactly matches this string",
+    )
+    parser.add_argument(
+        '--filter-include-program-regex',
+        action='append',
+        default=[],
+        help="Only look into filenames that match this regular expression",
+    )
+    parser.add_argument(
+        '--filter-exclude-program-substr',
+        action='append',
+        default=[],
+        help="Only exclude filenames that contain this substring",
+    )
+    parser.add_argument(
+        '--filter-exclude-program-exact',
+        action='append',
+        default=[],
+        help="Only exclude filename that exactly matches this string",
+    )
+    parser.add_argument(
+        '--filter-exclude-program-regex',
+        action='append',
+        default=[],
+        help="Only exclude filenames that match this regular expression",
+    )
+    parser.add_argument(
+        '--filter-include-ppm-substr',
+        action='append',
+        default=[],
+        help="Only look into programming models that contain this substring",
+    )
+    parser.add_argument(
+        '--filter-include-ppm-exact',
+        action='append',
+        default=[],
+        help="Only look into programming model that exactly matches this string",
+    )
+    parser.add_argument(
+        '--filter-include-ppm-regex',
+        action='append',
+        default=[],
+        help="Only look into programming models that match this regular expression",
+    )
+    parser.add_argument(
+        '--filter-exclude-ppm-substr',
+        action='append',
+        default=[],
+        help="Only exclude programming models that contain this substring",
+    )
+    parser.add_argument(
+        '--filter-exclude-ppm-exact',
+        action='append',
+        default=[],
+        help="Only exclude programming model that exactly matches this string",
+    )
+    parser.add_argument(
+        '--filter-exclude-ppm-regex',
+        action='append',
+        default=[],
+        help="Only exclude programming models that match this regular expression",
+    )
 
 
 def apply_program_filter(benchmarks, args):

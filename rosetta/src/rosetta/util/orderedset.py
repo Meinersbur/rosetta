@@ -205,9 +205,7 @@ class OrderedSet(MutableSet[T], Sequence[T]):
             for item in sequence:
                 item_index = self.add(item)
         except TypeError:
-            raise ValueError(
-                "Argument needs to be an iterable, got %s" % type(sequence)
-            )
+            raise ValueError("Argument needs to be an iterable, got %s" % type(sequence))
         return item_index
 
     @overload
@@ -508,6 +506,4 @@ class OrderedSet(MutableSet[T], Sequence[T]):
         """
         items_to_add = [item for item in other if item not in self]
         items_to_remove = set(other)
-        self._update_items(
-            [item for item in self.items if item not in items_to_remove] + items_to_add
-        )
+        self._update_items([item for item in self.items if item not in items_to_remove] + items_to_add)

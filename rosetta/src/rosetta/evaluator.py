@@ -50,11 +50,22 @@ class BenchResult:
         'cupti_todev',
         'cupti_fromdev',
         'maxrss',
-        'peak_alloc'
+        'peak_alloc',
     ]
 
-    def __init__(self, name: str, ppm: str, buildtype: str, configname: str, timestamp: str,
-                 count: int, durations, maxrss=None, cold_count=None, peak_alloc=None):
+    def __init__(
+        self,
+        name: str,
+        ppm: str,
+        buildtype: str,
+        configname: str,
+        timestamp: str,
+        count: int,
+        durations,
+        maxrss=None,
+        cold_count=None,
+        peak_alloc=None,
+    ):
         # self.bench=bench
         self.name = name
         self.ppm = ppm
@@ -89,8 +100,8 @@ class BenchResultSummary:
         self.count = sum(r.count for r in results)
         measures = unique(k for r in results for k in r.durations.keys())
         self.durations = {
-            m: statistic(
-                v for r in results if m in r.durations for v in r.durations[m]._samples) for m in measures}
+            m: statistic(v for r in results if m in r.durations for v in r.durations[m]._samples) for m in measures
+        }
 
 
 # TODO: Member of BenchResult
@@ -195,16 +206,24 @@ def duration_formatter(best=None, worst=None):
             errstr = ''
 
         if v >= 1:
-            return highlight_extremes(align_decimal(f"{v:.2}")) + StrColor("s",
-                                                                           colorama.Style.DIM) + (
-                str_concat(' ', errstr) if errstr else '')
+            return (
+                highlight_extremes(align_decimal(f"{v:.2}"))
+                + StrColor("s", colorama.Style.DIM)
+                + (str_concat(' ', errstr) if errstr else '')
+            )
         if v * 1000 >= 1:
             return highlight_extremes(align_decimal(f"{v * 1000:.2f}")) + StrColor("ms", colorama.Style.DIM) + errstr
         if v * 1000 * 1000 >= 1:
-            return highlight_extremes(align_decimal(f"{v * 1000 * 1000:.2f}")) + StrColor("µs",
-                                                                                          colorama.Style.DIM) + errstr
-        return highlight_extremes(align_decimal(f"{v * 1000 * 1000 * 1000:.2f}")) + \
-            StrColor("ns", colorama.Style.DIM) + errstr
+            return (
+                highlight_extremes(align_decimal(f"{v * 1000 * 1000:.2f}"))
+                + StrColor("µs", colorama.Style.DIM)
+                + errstr
+            )
+        return (
+            highlight_extremes(align_decimal(f"{v * 1000 * 1000 * 1000:.2f}"))
+            + StrColor("ns", colorama.Style.DIM)
+            + errstr
+        )
 
     return formatter
 
@@ -301,9 +320,18 @@ def load_resultfiles(resultfiles, filterfunc=None):
             for k, data in time_per_key.items():
                 stat_per_key[k] = statistic(data)
 
-            item = BenchResult(name=name, ppm=ppm, buildtype=buildtype, timestamp=timestamp, count=count,
-                               durations=stat_per_key,
-                               cold_count=cold_count, peak_alloc=peak_alloc, configname=configname, maxrss=maxrss)
+            item = BenchResult(
+                name=name,
+                ppm=ppm,
+                buildtype=buildtype,
+                timestamp=timestamp,
+                count=count,
+                durations=stat_per_key,
+                cold_count=cold_count,
+                peak_alloc=peak_alloc,
+                configname=configname,
+                maxrss=maxrss,
+            )
             if filterfunc and not filterfunc(item):
                 continue
             results.append(item)
@@ -330,17 +358,23 @@ def default_columns(groups, compare_by, always_columns, never_columns):
     return columns
 
 
-def results_compare(results, compare_by=None, group_by=None, compare_val=None, show_groups=None,
-                    always_columns=['program'], never_columns=[], columns=None):
+def results_compare(
+    results,
+    compare_by=None,
+    group_by=None,
+    compare_val=None,
+    show_groups=None,
+    always_columns=['program'],
+    never_columns=[],
+    columns=None,
+):
     groups = GroupedBenches(data=results, group_by=group_by, compare_by=compare_by)
     compare_by = compare_by or []
 
     if columns is None:
         columns = default_columns(
-            groups,
-            compare_by=compare_by,
-            always_columns=always_columns,
-            never_columns=never_columns)
+            groups, compare_by=compare_by, always_columns=always_columns, never_columns=never_columns
+        )
 
     compare_columns = set()
     if compare_by:
@@ -381,7 +415,7 @@ def colsortkey(item, col):
         # Return programs alphabetically
         return item
     if col == 'ppm':
-        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4, 'sycl':5}.get(item, 6)
+        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4, 'sycl': 5}.get(item, 6)
     return 0  # Keep the original order of everything else
 
 
@@ -395,8 +429,12 @@ def sort_keys(key_tuples, compare_by):
 def sort_results(benchresults):
     # TODO: Should be configurable
     def keyfunc(x):
-        return (colsortkey(x.name, 'program'), colsortkey(x.configname, 'configname'),
-                colsortkey(x.configname, 'buildtype'), colsortkey(x.ppm, 'ppm'))
+        return (
+            colsortkey(x.name, 'program'),
+            colsortkey(x.configname, 'configname'),
+            colsortkey(x.configname, 'buildtype'),
+            colsortkey(x.ppm, 'ppm'),
+        )
 
     return sorted(benchresults, key=keyfunc)
 
@@ -408,15 +446,15 @@ class GroupedBenches:
     def __init__(self, data, group_by=None, compare_by=None):
         """Group results into two levels of buckets.
 
-group_by buckets are meant to each have its own table for, or if a box blot, having different positions on the x-axis.
+        group_by buckets are meant to each have its own table for, or if a box blot, having different positions on the x-axis.
 
-compare_by is meant to be shown on the same table row but each bucket having a separate column for its summerized data, or if a box boxplot, having the bars directly next to each other.
+        compare_by is meant to be shown on the same table row but each bucket having a separate column for its summerized data, or if a box boxplot, having the bars directly next to each other.
 
-If group_by is specified, but compare_by is not, then each group_by bucket has only a single compare_by bucket where the entrire group_by bucket is summerized (equivalent to compare_by=[])
+        If group_by is specified, but compare_by is not, then each group_by bucket has only a single compare_by bucket where the entrire group_by bucket is summerized (equivalent to compare_by=[])
 
-If group_by is not specified, but compare_by is, then group by all other (non-compared) benchmark categories.
+        If group_by is not specified, but compare_by is, then group by all other (non-compared) benchmark categories.
 
-If both are unspecified, every result gets its own group_by backet with a single compare_by bucket.
+        If both are unspecified, every result gets its own group_by backet with a single compare_by bucket.
         """
 
         # Sort data
@@ -434,8 +472,9 @@ If both are unspecified, every result gets its own group_by backet with a single
             return
 
         all_compare_keys = OrderedSet(first_defined(compare_by, []))
-        all_compare_tuples = OrderedSet(tuple(get_column_data(result, col)
-                                              for col in all_compare_keys) for result in data)
+        all_compare_tuples = OrderedSet(
+            tuple(get_column_data(result, col) for col in all_compare_keys) for result in data
+        )
         all_compare_tuples = sort_keys(all_compare_tuples, compare_by=all_compare_keys)
 
         if group_by is None:
@@ -573,8 +612,11 @@ def evaluate(resultfiles):
     table.add_column('buildtype', title="Buildtype")
     table.add_column('n', title=StrColor("Repeats", colorama.Style.BRIGHT), formatter=count_formatter)
     for k, summary in summary_per_key.items():
-        table.add_column(k, title=StrColor(getMeasureDisplayStr(k), colorama.Style.BRIGHT),
-                         formatter=duration_formatter(summary.minimum, summary.maximum))
+        table.add_column(
+            k,
+            title=StrColor(getMeasureDisplayStr(k), colorama.Style.BRIGHT),
+            formatter=duration_formatter(summary.minimum, summary.maximum),
+        )
 
     for r in results:
         # TODO: acceltime doesn't always apply
@@ -585,26 +627,34 @@ def evaluate(resultfiles):
 
 # TODO: Rename: getColumnDisplayString
 def getMeasureDisplayStr(s: str):
-    return {'program': "Benchmark",
-            'ppm': "PPM",
-            'buildtype': "Buildtype",
-            'configname': "Configuration",
-            'count': "# Samples",
-            'walltime': "Wall",
-            'usertime': "User",
-            'kerneltime': "Kernel",
-            'acceltime': "CUDA Event",
-            'cupti': "nvprof",
-            'cupti_compute': "nvprof Kernel",
-            'cupti_todev': "nvprof H->D",
-            'cupti_fromdev': "nvprof D->H",
-            'maxrss': "Max RSS",
-            'peak_alloc': "Peak Allocation"}.get(s, s)
+    return {
+        'program': "Benchmark",
+        'ppm': "PPM",
+        'buildtype': "Buildtype",
+        'configname': "Configuration",
+        'count': "# Samples",
+        'walltime': "Wall",
+        'usertime': "User",
+        'kerneltime': "Kernel",
+        'acceltime': "CUDA Event",
+        'cupti': "nvprof",
+        'cupti_compute': "nvprof Kernel",
+        'cupti_todev': "nvprof H->D",
+        'cupti_fromdev': "nvprof D->H",
+        'maxrss': "Max RSS",
+        'peak_alloc': "Peak Allocation",
+    }.get(s, s)
 
 
 def getPPMDisplayStr(s: str):
-    return {'serial': "Serial", 'cuda': "CUDA", 'omp_parallel': "OpenMP parallel",
-            'omp_task': "OpenMP task", 'omp_target': "OpenMP Target Offloading", 'sycl':"SYCL"}.get(s, s)
+    return {
+        'serial': "Serial",
+        'cuda': "CUDA",
+        'omp_parallel': "OpenMP parallel",
+        'omp_task': "OpenMP task",
+        'omp_target': "OpenMP Target Offloading",
+        'sycl': "SYCL",
+    }.get(s, s)
 
 
 def print_comparison(benchgroups: GroupedBenches, columns, compare_columns):
@@ -617,37 +667,26 @@ def print_comparison(benchgroups: GroupedBenches, columns, compare_columns):
             # Make a supercolumn for value comparisons
             subcolumns = []
             table.add_column(
-                col,
-                StrAlign(
-                    StrColor(
-                        getMeasureDisplayStr(col),
-                        colorama.Style.BRIGHT),
-                    pos=StrAlign.CENTER))
+                col, StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Style.BRIGHT), pos=StrAlign.CENTER)
+            )
             for i, resulttuple in enumerate(benchgroups.compare_tuples):
                 sol = f"{col}_{i}"
                 subcolumns.append(sol)
                 resultname = ','.join(
-                    formatColumnVal(
-                        ccat, resulttuple[i]) for i, ccat in enumerate(
-                        benchgroups.compare_by))
+                    formatColumnVal(ccat, resulttuple[i]) for i, ccat in enumerate(benchgroups.compare_by)
+                )
                 table.add_column(
                     sol,
-                    title=StrAlign(
-                        StrColor(
-                            resultname,
-                            colorama.Style.BRIGHT),
-                        pos=StrAlign.CENTER),
-                    formatter=getColumnFormatter(col))
+                    title=StrAlign(StrColor(resultname, colorama.Style.BRIGHT), pos=StrAlign.CENTER),
+                    formatter=getColumnFormatter(col),
+                )
             table.make_supercolumn(f"{col}", subcolumns)
         else:
             table.add_column(
                 col,
-                title=StrAlign(
-                    StrColor(
-                        getMeasureDisplayStr(col),
-                        colorama.Fore.BWHITE),
-                    pos=StrAlign.CENTER),
-                formatter=getColumnFormatter(col))
+                title=StrAlign(StrColor(getMeasureDisplayStr(col), colorama.Fore.BWHITE), pos=StrAlign.CENTER),
+                formatter=getColumnFormatter(col),
+            )
 
     # Set the table data
     for rowsummery, row in zip(benchgroups.groupsummary, benchgroups.benchgroups):
@@ -668,19 +707,18 @@ def print_comparison(benchgroups: GroupedBenches, columns, compare_columns):
 def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baseline_cmpval=None, relcompare=True):
     """Create a results plot
 
-:param groups: The data, grouped
+    :param groups: The data, grouped
 
-:param data_col: The data to use for the y-axis
+    :param data_col: The data to use for the y-axis
 
-:param logscale: If true, use a logarithmic y-axis
+    :param logscale: If true, use a logarithmic y-axis
 
-:param baseline_cmpval: If set, the compare_tuple the others are compared to;
-                        If not set, show absolute values
+    :param baseline_cmpval: If set, the compare_tuple the others are compared to;
+                            If not set, show absolute values
 
-:param relcompare: If True, show the ratio between the value and the baseline
-                   If False, show the different to the baseline value
-                   Only meaningful when baseline_cmpval is set
-"""
+    :param relcompare: If True, show the ratio between the value and the baseline
+                       If False, show the different to the baseline value
+                       Only meaningful when baseline_cmpval is set"""
 
     if groups.group_by:
         label_groups = groups.group_by
@@ -688,8 +726,9 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
         label_groups = BenchResult.categorical_cols
 
     # Find the diverging categories
-    label_groups = divergent_keys(label_groups, [tuple(get_summary_data(r, col)
-                                                       for col in label_groups) for r in groups.groupsummary])
+    label_groups = divergent_keys(
+        label_groups, [tuple(get_summary_data(r, col) for col in label_groups) for r in groups.groupsummary]
+    )
     if not label_groups:
         label_groups = ['program']
 
@@ -721,9 +760,9 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
         baseline_idx = None
         if baseline_cmpval:
             # FIXME: What if missing?
-            [(baseline_idx, baseline_result)] = ((i, c)
-                                                 for i, (t, c) in enumerate(zip(groups.compare_tuples, group_data)) if
-                                                 t == baseline_cmpval)
+            [(baseline_idx, baseline_result)] = (
+                (i, c) for i, (t, c) in enumerate(zip(groups.compare_tuples, group_data)) if t == baseline_cmpval
+            )
             baseline_stat = get_column_data(baseline_result, data_col)
             if not baseline_stat:
                 log.warn(f"No baseline {baseline_cmpval}; skipping group f{group_idx}")
@@ -759,11 +798,16 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
             if baseline_cmpval:
                 bar = ax.bar(x=xpos, height=val, width=barwidth, color=colors[compare_idx], bottom=1)
             else:
-                bar = ax.boxplot(stat.samples, positions=[xpos],
-                                 notch=True, showmeans=False, showfliers=True, sym='+',
-                                 widths=barwidth,
-                                 patch_artist=True,  # fill with color
-                                 )
+                bar = ax.boxplot(
+                    stat.samples,
+                    positions=[xpos],
+                    notch=True,
+                    showmeans=False,
+                    showfliers=True,
+                    sym='+',
+                    widths=barwidth,
+                    patch_artist=True,  # fill with color
+                )
 
     if logscale:
         ax.set_yscale('log')
@@ -772,11 +816,15 @@ def results_speedupplot(groups: GroupedBenches, data_col, logscale=True, baselin
     # Set bar colors
     for c, label in zip(colors, compare_tuples_without_baseline):
         # Dummy item to add a legend handle; like seaborn does
-        rect = plt.Rectangle([0, 0], 0, 0,
-                             # linewidth=self.linewidth / 2,
-                             # edgecolor=self.gray,
-                             facecolor=c,
-                             label=label)
+        rect = plt.Rectangle(
+            [0, 0],
+            0,
+            0,
+            # linewidth=self.linewidth / 2,
+            # edgecolor=self.gray,
+            facecolor=c,
+            label=label,
+        )
         ax.add_patch(rect)
 
     # TODO: Compute conf_intervals consistently like the table, preferable using the student-t test.
@@ -839,9 +887,8 @@ class AllResultsSection(ReportSection):
                 if col in compare_columns:
                     for i, resulttuple in enumerate(benchgroups.compare_tuples):
                         resultname = ','.join(
-                            formatColumnVal(
-                                ccat, resulttuple[i]) for i, ccat in enumerate(
-                                benchgroups.compare_by))
+                            formatColumnVal(ccat, resulttuple[i]) for i, ccat in enumerate(benchgroups.compare_by)
+                        )
                         yield f'<th scope="col">{resultname}</th>'
                 else:
                     yield f"<th></th>"
@@ -917,13 +964,8 @@ class SpeedupPlotSection(ReportSection):
         benchgroups = self.groups
 
         fig = results_speedupplot(
-            benchgroups,
-            data_col='walltime',
-            baseline_cmpval=(
-                self.base_cat,
-            ),
-            relcompare=True,
-            logscale=True)
+            benchgroups, data_col='walltime', baseline_cmpval=(self.base_cat,), relcompare=True, logscale=True
+        )
         s = fig_to_svg(fig)
         yield s
 

@@ -11,7 +11,6 @@ static unsigned num_blocks(int num, int factor) {
 
 
 
-
 // Dynamic programming wavefront
 __global__ void kernel_max_score(pbsize_t n, real seq[], real table[], real oldtable[], idx_t w) {
   idx_t j = blockDim.x * blockIdx.x + threadIdx.x;

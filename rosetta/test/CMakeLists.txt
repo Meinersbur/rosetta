@@ -1,6 +1,7 @@
 # Python Unittest ##############################################################
 
-message("Executing: ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/list_tests.py")
+message(
+  "Executing: ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/list_tests.py")
 execute_process(
   COMMAND "${Python_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/list_tests.py"
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -9,16 +10,17 @@ execute_process(
 
 separate_arguments(TEST_LIST UNIX_COMMAND ${STR_TESTS})
 
-foreach (ATEST ${TEST_LIST})
+foreach(ATEST ${TEST_LIST})
   add_test(
     NAME "${ATEST}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMAND "${Python_EXECUTABLE}" "-m" "unittest" "-v" "${ATEST}")
-endforeach (ATEST)
+endforeach(ATEST)
 
-# Catch2-Powered C++ tests ######################################################
+# Catch2-Powered C++ tests
+# ##############################################################################
 
-if (TARGET Catch2::Catch2WithMain AND TARGET rosetta-serial)
+if(TARGET Catch2::Catch2WithMain AND TARGET rosetta-serial)
   add_executable(cpptests test_stat.cpp)
   target_link_libraries(cpptests PRIVATE Catch2::Catch2WithMain)
   target_link_libraries(cpptests PRIVATE rosetta-serial)
@@ -29,4 +31,4 @@ if (TARGET Catch2::Catch2WithMain AND TARGET rosetta-serial)
   include(Catch)
   catch_discover_tests(cpptests)
   add_dependencies(check cpptests)
-endif ()
+endif()
