@@ -5,6 +5,23 @@ on:
   pull_request: {}
 
 jobs:
+  formatting:
+    name: Check source formatting
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cmake-format clang-format black
+
+      - name: Check format
+        run: |
+          python3 "${GITHUB_WORKSPACE}/rosetta.py" --check-format
+
+
   user:
     name: User Builddir
     runs-on: ubuntu-22.04
@@ -88,3 +105,4 @@ jobs:
             name: Managed-Builddir Report
             path: |
               results/**/*.html
+

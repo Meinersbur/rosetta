@@ -2,10 +2,7 @@
 
 """Run the Benchmarks"""
 
-import typing
 import configparser
-import math
-import colorama
 import datetime
 import os
 import pathlib

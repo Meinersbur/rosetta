@@ -10,8 +10,7 @@ from rosetta.driver import driver_main, DriverMode
 
 
 def main(argv=sys.argv, rootdir=None):
-    srcdir = os.path.join(__file__, '..', '..', '..', '..', '..')
-    print(srcdir)
+    srcdir = mkpath(__file__).parent.parent.parent.parent.parent
     driver_main(argv=argv, mode=DriverMode.MANAGEDBUILDDIR,
                 rootdir=rootdir, srcdir=srcdir)
 

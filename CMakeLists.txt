@@ -10,7 +10,7 @@ include(CheckIncludeFileCXX)
 
 # Custom modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/rosetta/cmake/modules")
-include(Formatting)
+
 
 
 # Testing
@@ -586,26 +586,7 @@ endif ()
 add_subdirectory(benchmarks)
 
 
-# Maintanance #################################################################
 
-if (NOT ROSETTA_MAINTAINER_MODE)
-  add_format_target(
-    CLANG_RGLOB
-# Disable formatting because clang-format does not handle #pragma well.
-#    benchmarks/*.cxx
-#    benchmarks/*.cu
-#    benchmarks/*.h
-    rosetta/*.h
-    rosetta/*.cpp
-    PY_RGLOB
-    rosetta/src/*.py
-    rosetta/tests/*.py
-    CMAKE
-    CMakeLists.txt
-    CMAKE_RGLOB
-    rosetta/CMakeLists.txt
-    rosetta/cmake/*.cmake)
-endif ()
 
 
 # Run #########################################################################
