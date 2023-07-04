@@ -35,16 +35,9 @@ static void kernel(pbsize_t tsteps, pbsize_t n,
 
 
 void run(State &state, pbsize_t pbsize) {
-  pbsize_t tsteps = pbsize; // 500
-  if (pbsize <= 40) {
-      pbsize_t n = pbsize / 2;
-  } else if (pbsize <= 100) {
-      pbsize_t n = (pbsize / 2) - (pbsize / 10);
-  } else if (pbsize <= 500) {
-      pbsize_t n = (pbsize / 4) + (pbsize / 25); // 120
-  } else {
-      pbsize_t n = pbsize / 5;
-  }
+  pbsize_t tsteps = 1; // 500
+  pbsize_t n = pbsize; // 120
+
 
 
   auto A = state.allocate_array<real>({n, n, n}, /*fakedata*/ true, /*verify*/ false, "A");

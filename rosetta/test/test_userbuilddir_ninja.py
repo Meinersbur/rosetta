@@ -23,10 +23,20 @@ class UserBuilddirNinja(unittest.TestCase):
         cls.builddir = mkpath(cls.test_dir)
         print("srcdir: ", cls.srcdir)
         print("builddir: ", cls.builddir)
-        invoke.diag('cmake', '-S', cls.srcdir, '-B', cls.builddir, '-GNinja', '-DCMAKE_BUILD_TYPE=Release',
-                    '-DROSETTA_PPM_DEFAULT=OFF', '-DROSETTA_PPM_SERIAL=ON',
-                    '-DROSETTA_BENCH_FILTER=--filter-include-program-substr=cholesky', cwd=cls.builddir,
-                    onerror=invoke.Invoke.EXCEPTION)
+        invoke.diag(
+            'cmake',
+            '-S',
+            cls.srcdir,
+            '-B',
+            cls.builddir,
+            '-GNinja',
+            '-DCMAKE_BUILD_TYPE=Release',
+            '-DROSETTA_PPM_DEFAULT=OFF',
+            '-DROSETTA_PPM_SERIAL=ON',
+            '-DROSETTA_BENCH_FILTER=--filter-include-program-substr=cholesky',
+            cwd=cls.builddir,
+            onerror=invoke.Invoke.EXCEPTION,
+        )
         cls.resultsdir = cls.builddir / 'results'
         cls.benchlistfile = cls.builddir / 'benchmarks' / 'benchlist.py'
 
@@ -41,16 +51,25 @@ class UserBuilddirNinja(unittest.TestCase):
         # self.resultsdir.mkdir(parents=True)
 
     def test_build(self):
-        rosetta.driver.driver_main(argv=[None, '--build'], mode=DriverMode.USERBUILDDIR,
-                                   benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
-        self.assertTrue((self.builddir / 'benchmarks' /
-                         'suites.polybench.cholesky.serial').exists())
+        rosetta.driver.driver_main(
+            argv=[None, '--build'],
+            mode=DriverMode.USERBUILDDIR,
+            benchlistfile=self.benchlistfile,
+            builddir=self.builddir,
+            srcdir=self.srcdir,
+        )
+        self.assertTrue((self.builddir / 'benchmarks' / 'suites.polybench.cholesky.serial').exists())
 
     def test_probe(self):
         problemsizefile = self.builddir / 'proberesult.ini'
-        rosetta.driver.driver_main(argv=[None, '--problemsizefile-out', problemsizefile, '--limit-walltime=100ms'],
-                                   default_action=DefaultAction.PROBE, mode=DriverMode.USERBUILDDIR,
-                                   benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+        rosetta.driver.driver_main(
+            argv=[None, '--problemsizefile-out', problemsizefile, '--limit-walltime=100ms'],
+            default_action=DefaultAction.PROBE,
+            mode=DriverMode.USERBUILDDIR,
+            benchlistfile=self.benchlistfile,
+            builddir=self.builddir,
+            srcdir=self.srcdir,
+        )
 
         with problemsizefile.open('r') as f:
             s = f.read()
@@ -60,74 +79,112 @@ class UserBuilddirNinja(unittest.TestCase):
     def test_verify(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--verify'], mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--verify'],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         s = f.getvalue()
-        self.assertTrue(
-            re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
 
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             problemsizefile = 'mini'
-            rosetta.driver.driver_main(argv=[None, '--verify', '--problemsizefile', problemsizefile],
-                                       mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--verify', '--problemsizefile', problemsizefile],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         s = f.getvalue()
-        self.assertTrue(
-            re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
 
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             problemsizefile = 'small'
-            rosetta.driver.driver_main(argv=[None, '--verify', '--problemsizefile', problemsizefile],
-                                       mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--verify', '--problemsizefile', problemsizefile],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         s = f.getvalue()
-        self.assertTrue(
-            re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
 
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             problemsizefile = 'medium'
-            rosetta.driver.driver_main(argv=[None, '--verify', '--problemsizefile', problemsizefile],
-                                       mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--verify', '--problemsizefile', problemsizefile],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         s = f.getvalue()
-        self.assertTrue(
-            re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
 
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             problemsizefile = 'large'
-            rosetta.driver.driver_main(argv=[None, '--verify', '--problemsizefile', problemsizefile],
-                                       mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--verify', '--problemsizefile', problemsizefile],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         s = f.getvalue()
-        self.assertTrue(
-            re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
 
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             problemsizefile = 'extralarge'
-            rosetta.driver.driver_main(argv=[None, '--verify', '--problemsizefile', problemsizefile],
-                                       mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--verify', '--problemsizefile', problemsizefile],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         s = f.getvalue()
-        self.assertTrue(
-            re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
+        self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
+
+        with contextlib.redirect_stdout(Tee(f, sys.stdout)):
+            problemsizefile = 'benchmarks/extralarge.problemsize.ini'
+            rosetta.driver.driver_main(
+                argv=[None, '--verify', '--problemsizefile', problemsizefile],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
+
+        s = f.getvalue()
+        self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
 
     def test_bench(self):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
-            rosetta.driver.driver_main(argv=[None, '--bench'], mode=DriverMode.USERBUILDDIR,
-                                       benchlistfile=self.benchlistfile, builddir=self.builddir, srcdir=self.srcdir)
+            rosetta.driver.driver_main(
+                argv=[None, '--bench'],
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
 
         # Check terminal output
         s = f.getvalue()

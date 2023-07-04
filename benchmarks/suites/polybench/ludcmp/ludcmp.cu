@@ -120,16 +120,14 @@ static void kernel(pbsize_t n, thrust::device_ptr<real> A, thrust::device_ptr<re
   for (idx_t i = 0; i < n; i++) {
     for (idx_t  j = 0; j < i; j++) {
       real w = A[i][j];
-#pragma omp parallel for default(none) firstprivate(i, j, n, A) schedule(static) reduction(+ \
-                                                                                           : w)
+#pragma omp parallel for default(none) firstprivate(i, j, n, A) schedule(static) reduction(+ : w)
       for (idx_t k = 0; k < j; k++) 
         w -= A[i][k] * A[k][j];
       A[i][j] = w / A[j][j];
     }
     for (idx_t j = i; j < n; j++) {
       real w = A[i][j];
-#pragma omp parallel for default(none) firstprivate(i, j, n, A) schedule(static) reduction(+ \
-                                                                                           : w)
+#pragma omp parallel for default(none) firstprivate(i, j, n, A) schedule(static) reduction(+ : w)
       for (idx_t k = 0; k < i; k++) 
         w -= A[i][k] * A[k][j];
       A[i][j] = w;
@@ -138,8 +136,7 @@ static void kernel(pbsize_t n, thrust::device_ptr<real> A, thrust::device_ptr<re
 
   for (idx_t i = 0; i < n; i++) {
     real w = b[i];
-#pragma omp parallel for default(none) firstprivate(i, n, A, y) schedule(static) reduction(+ \
-                                                                                           : w)
+#pragma omp parallel for default(none) firstprivate(i, n, A, y) schedule(static) reduction(+ : w)
     for (idx_t j = 0; j < i; j++)
       w -= A[i][j] * y[j];
     y[i] = w;
@@ -147,8 +144,7 @@ static void kernel(pbsize_t n, thrust::device_ptr<real> A, thrust::device_ptr<re
 
   for (idx_t i = n - 1; i >= 0; i--) {
     real w = y[i];
-#pragma omp parallel for default(none) firstprivate(i, n, A, x) schedule(static) reduction(+ \
-                                                                                           : w)
+#pragma omp parallel for default(none) firstprivate(i, n, A, x) schedule(static) reduction(+ : w)
     for (idx_t j = i + 1; j < n; j++)
       w -= A[i][j] * x[j];
     x[i] = w / A[i][i];

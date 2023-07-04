@@ -164,7 +164,7 @@ python rosetta/test/test_filtering.py
 ```
 
 ### (Optional) Run with predefined problem sizes
-- Optionally, you can utilize the `--problemsizefile` argument to specify a predefined problem sizes for the benchmarks. Available values for `--problemsizefile` argument are: `mini`, `small`, `medium`, `large`, and `extralarge`. If the `--problemsizefile` argument is not provided, the default `medium` problemsize file will be used.
+- Optionally, you can utilize the `--problemsizefile` argument to specify a predefined problem sizes for the benchmarks. Available values for `--problemsizefile` argument are: `mini`, `small`, `medium`, `large`, and `extralarge` or the the path of the `problemsizefile`. If the `--problemsizefile` argument is not provided, the default `medium` problemsize file will be used.
 ```shell
 python rosetta.py --bench --problemsizefile large
 ```

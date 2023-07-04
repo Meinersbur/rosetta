@@ -13,8 +13,9 @@ from rosetta.util.support import *
 
 def tablecellre(*args):
     return '.+'.join(
-        a.replace('\\', r'\\').replace('.', r'\.').replace('-', r'\-').replace('%', r'\%').replace(' ', r'\ ') for a in
-        args)
+        a.replace('\\', r'\\').replace('.', r'\.').replace('-', r'\-').replace('%', r'\%').replace(' ', r'\ ')
+        for a in args
+    )
 
 
 class EvaluateTests(unittest.TestCase):
@@ -41,7 +42,10 @@ class EvaluateTests(unittest.TestCase):
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             rosetta.driver.driver_main(
                 argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__).parent / 'resultfiles' / 'single'],
-                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)
+                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR,
+                rootdir=self.rootdir,
+                srcdir=self.srcdir,
+            )
 
         # Search for the table header
         s = f.getvalue().splitlines()
@@ -63,7 +67,10 @@ class EvaluateTests(unittest.TestCase):
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             rosetta.driver.driver_main(
                 argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__).parent / 'resultfiles' / 'multi_ppm'],
-                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir, srcdir=self.srcdir)
+                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR,
+                rootdir=self.rootdir,
+                srcdir=self.srcdir,
+            )
 
         # Search for the table header
         s = f.getvalue().splitlines()
@@ -80,9 +87,17 @@ class EvaluateTests(unittest.TestCase):
         f = io.StringIO()
         with contextlib.redirect_stdout(Tee(f, sys.stdout)):
             rosetta.driver.driver_main(
-                argv=[None, '--evaluate', '--use-results-rdir', mkpath(__file__).parent / 'resultfiles' / 'multi_ppm',
-                      '--compare-by=ppm'], mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR, rootdir=self.rootdir,
-                srcdir=self.srcdir)
+                argv=[
+                    None,
+                    '--evaluate',
+                    '--use-results-rdir',
+                    mkpath(__file__).parent / 'resultfiles' / 'multi_ppm',
+                    '--compare-by=ppm',
+                ],
+                mode=rosetta.driver.DriverMode.MANAGEDBUILDDIR,
+                rootdir=self.rootdir,
+                srcdir=self.srcdir,
+            )
 
             # Search for the table header
         s = f.getvalue().splitlines()

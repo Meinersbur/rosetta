@@ -48,11 +48,9 @@ void run(State &state, pbsize_t pbsize) {
   auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");
   auto z = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "z");
 
-  for (auto &&_ : state.manual()) {
-    initialize_input_vector(n, r);
-    {
-      auto &&scope = _.scope();
-      kernel(n, r, y, z);
-    }
+  initialize_input_vector(n, r);
+  for (auto &&_ : state) {
+    kernel(n, r, y, z);
   }
+
 }

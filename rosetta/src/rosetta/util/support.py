@@ -478,10 +478,18 @@ class cached_generator:
 
 def get_problemsizefile_path(problemsize, srcdir=None, rootdir=None):
     if problemsize:
+        filepath = pathlib.Path(problemsize)
+        if filepath.exists():
+            return filepath
         if rootdir:
-            return pathlib.Path(f'{rootdir}/benchmarks/{problemsize}.problemsize.ini')
+            filepath = pathlib.Path(f'{rootdir}/benchmarks/{problemsize}.problemsize.ini')
+            if filepath.exists():
+                return filepath
         if srcdir:
-            return pathlib.Path(f'{srcdir}/benchmarks/{problemsize}.problemsize.ini')
-        return pathlib.Path(f'benchmarks/{problemsize}.problemsize.ini')
+            filepath = pathlib.Path(f'{srcdir}/benchmarks/{problemsize}.problemsize.ini')
+            if filepath.exists():
+                return filepath
+        print(f'Could not find problemsizefile for {problemsize} or path. Using default.')
+        return None
     else:
         return None

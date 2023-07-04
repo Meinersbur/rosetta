@@ -53,9 +53,7 @@ def do_run(bench, args, resultfile, timestamp=None):
         args.append(f'--timestamp={timestamp.isoformat(sep=" ")}')
     # print("Executing", shjoin([exe] + args))
 
-    invoke.diag(exe, *args,
-                setenv={'OMP_TARGET_OFFLOAD': 'mandatory'}  # TODO: Make configurable per-PPM
-                )
+    invoke.diag(exe, *args, setenv={'OMP_TARGET_OFFLOAD': 'mandatory'})  # TODO: Make configurable per-PPM
     assert resultfile.is_file(), "Expecting result file to be written by benchmark"
     return resultfile
 
@@ -130,8 +128,7 @@ def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
         if configname:
             thisresultdir /= configname
         thisresultdir /= f'{e.name}.{e.ppm}.xml'
-        results.append(run_gbench(
-            e, problemsizefile=problemsizefile, resultfile=thisresultdir, timestamp=timestamp))
+        results.append(run_gbench(e, problemsizefile=problemsizefile, resultfile=thisresultdir, timestamp=timestamp))
     return results, resultssubdir
 
 
