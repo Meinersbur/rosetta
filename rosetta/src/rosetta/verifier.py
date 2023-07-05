@@ -59,10 +59,11 @@ def ensure_reffiles(refdir, problemsizefile, filterfunc=None, srcdir=None):
         ensure_reffile(bench, refdir=refdir, problemsizefile=problemsizefile)
 
 
-def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None, args=None):
+def run_verify(problemsizefile, filterfunc=None, srcdir=None, refdir=None):
     problemsizefile = get_problemsizefile(srcdir=srcdir, problemsizefile=problemsizefile)
 
     refdir.mkdir(exist_ok=True, parents=True)
+
     for e in registry.benchmarks:
         if filterfunc and not filterfunc(e):
             continue
