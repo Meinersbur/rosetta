@@ -55,12 +55,10 @@ class EvaluateTests(unittest.TestCase):
             s.pop(0)
 
         self.assertRegex(s[1], tablecellre('---', '---', '---', '---'))
-        try:
-            self.assertRegex(s[2], tablecellre('idioms.assign', '42.00', '71.00', '78.12'))
-            self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '27.38', '78.12'))
-        except AssertionError:
-            self.assertRegex(s[2], tablecellre('idioms.assign', '42.00', '27.38', '78.12'))
-            self.assertRegex(s[3], tablecellre('idioms.assign', '42.00', '71.00', '78.12'))
+        self.assertRegex(s[2], tablecellre('idioms.assign', '42.00', '27.38', '78.12'))
+        self.assertRegex(
+            s[3], tablecellre('idioms.assign', '42.00', '71.00', '78.12')
+        )  # Should it combine multiple different runs?
 
     def test_ppm_maxrss_peak_alloc(self):
         f = io.StringIO()

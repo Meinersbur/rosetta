@@ -18,7 +18,7 @@ import typing
 from functools import partial
 
 from .builder import *
-from . import runner, prober, verifier, registry
+from . import registry
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
@@ -532,6 +532,8 @@ def driver_main(
         registry.benchmarks = get_filtered_benchmarks(registry.benchmarks, args)
 
         if args.probe:
+            from . import prober
+
             assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
             prober.run_probe(
                 problemsizefile=args.problemsizefile_out,
@@ -541,6 +543,8 @@ def driver_main(
             )
 
         if args.verify:
+            from . import verifier
+
             if mode == DriverMode.MANAGEDBUILDDIR:
                 refdir = (refconfig.builddir if refconfig else None) / 'refout'
             else:
@@ -548,6 +552,8 @@ def driver_main(
             verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
 
         if args.bench:
+            from . import runner
+
             resultfiles, resultssubdir = runner.run_bench(
                 srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir()
             )
@@ -558,6 +564,7 @@ def driver_main(
             for use_results_rdir in args.use_results_rdir:
                 resultfiles = resultfiles or []
                 resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
+            resultfiles = sorted(resultfiles)
 
             # If there is no other source of results, source all previous ones
             if resultfiles is None:
