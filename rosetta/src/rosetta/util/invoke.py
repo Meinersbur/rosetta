@@ -137,7 +137,6 @@ class Invoke:
         std_prefixed=None,
         forcepopen=False,
     ):
-
         cmdline = [str(s) for s in self.cmdline]
         cwd = None if (self.cwd is None) else str(self.cwd)
         env = (

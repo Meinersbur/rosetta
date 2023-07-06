@@ -2,7 +2,10 @@
 
 """Run the Benchmarks"""
 
+import typing
 import configparser
+import math
+import colorama
 import datetime
 import os
 import pathlib
@@ -15,7 +18,6 @@ from .util import invoke
 from .common import *
 from .registry import Benchmark
 from . import registry
-from .filtering import *
 
 
 # Not included batteries
@@ -82,7 +84,7 @@ def get_problemsizefile(srcdir=None, problemsizefile=None):
     if problemsizefile:
         if not problemsizefile.is_file():
             # TODO: Embed default sizes
-            die(f"Problemsize file {problemsizefile} does not exist.", file=sys.stderr)
+            die(f"Problemsize file {problemsizefile} does not exist.")
         return problemsizefile
 
     # Default, embedded into executable
@@ -115,13 +117,12 @@ def make_resultssubdir(within):
         suffix = f'_{i}'
 
 
-def run_bench(problemsizefile=None, srcdir=None, resultdir=None, args=None):
+def run_bench(problemsizefile=None, srcdir=None, resultdir=None):
     problemsizefile = get_problemsizefile(srcdir, problemsizefile)
     results = []
     resultssubdir = make_resultssubdir(within=resultdir)
     timestamp = datetime.datetime.now(datetime.timezone.utc)
-    filtered_benchmarks = get_filtered_benchmarks(registry.benchmarks, args)
-    for e in filtered_benchmarks:
+    for e in registry.benchmarks:
         thisresultdir = resultssubdir
         configname = e.configname
         if configname:

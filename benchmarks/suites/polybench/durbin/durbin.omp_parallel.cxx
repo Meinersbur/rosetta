@@ -1,5 +1,6 @@
-// BUILD: add_benchmark(ppm=omp_parallel)
+// BUILD: add_benchmark(ppm=omp_parallel,sources=[__file__, "durbin-common.cxx"])
 
+#include "durbin-common.h"
 #include <rosetta.h>
 
 
@@ -43,10 +44,13 @@ void run(State &state, pbsize_t pbsize) {
 
 
 
-  auto r = state.allocate_array<real>({n}, /*fakedata*/ true, /*verify*/ false, "r");
+  auto r = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "r");
   auto y = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "y");
   auto z = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ false, "z");
 
-  for (auto &&_ : state)
+  initialize_input_vector(n, r);
+  for (auto &&_ : state) {
     kernel(n, r, y, z);
+  }
+
 }
