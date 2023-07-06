@@ -8,8 +8,9 @@ if __name__ == '__main__':
 
     scriptdir = pathlib.Path(__file__).parent
     sys.path.insert(0, str(scriptdir / 'rosetta' / 'src'))
-    
+
     from rosetta.scripts.rosetta import main
-    retcode = main(argv=sys.argv,rootdir=scriptdir)
+
+    retcode = main(argv=sys.argv, rootdir=scriptdir)
     if retcode:
         exit(retcode)

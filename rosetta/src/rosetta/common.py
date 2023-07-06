@@ -53,9 +53,10 @@ def request_tempdir(subdir=None):
             # Ensure we don't try to reuse the same (deleted) tempdir
             global mytempdir
             mytempdir = None
+
         globalctxmgr.callback(clear_tempdirhandle)
 
-    #print(f"Tempdir is: {mytempdir}")
+    # print(f"Tempdir is: {mytempdir}")
     if subdir:
         subtmpdir = mytempdir / subdir
         subtmpdir.mkdir(exist_ok=True)

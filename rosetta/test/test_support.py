@@ -37,14 +37,15 @@ class SupportTests(unittest.TestCase):
 
             @cached_generator
             def cacheme(self):
-                self.called+=1
+                self.called += 1
                 yield "one"
                 yield "two"
+
         obj = Testclass()
         self.assertEqual(obj.called, 0)
-        self.assertSequenceEqual(obj.cacheme, ["one", "two"] )
+        self.assertSequenceEqual(obj.cacheme, ["one", "two"])
         self.assertEqual(obj.called, 1)
-        self.assertSequenceEqual(obj.cacheme, ["one", "two"] )
+        self.assertSequenceEqual(obj.cacheme, ["one", "two"])
         self.assertEqual(obj.called, 1)
 
         # Should work like cache_property if not a generator
@@ -54,14 +55,14 @@ class SupportTests(unittest.TestCase):
 
             @cached_generator
             def cacheme(self):
-                self.called+=1
+                self.called += 1
                 return ["eins", "zwei"]
 
         obj = Testclass2()
         self.assertEqual(obj.called, 0)
-        self.assertSequenceEqual(obj.cacheme, ["eins", "zwei"] )
+        self.assertSequenceEqual(obj.cacheme, ["eins", "zwei"])
         self.assertEqual(obj.called, 1)
-        self.assertSequenceEqual(obj.cacheme, ["eins", "zwei"] )
+        self.assertSequenceEqual(obj.cacheme, ["eins", "zwei"])
         self.assertEqual(obj.called, 1)
 
 

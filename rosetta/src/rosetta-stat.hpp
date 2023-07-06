@@ -1,11 +1,11 @@
 #ifndef ROSETTA_STAT_H
 #define ROSETTA_STAT_H
 
-#include <cstddef>
-#include <initializer_list>
 #include "ndtr.hpp"
 #include "ndtri.hpp"
 #include "stdtr.hpp"
+#include <cstddef>
+#include <initializer_list>
 
 
 namespace rosetta {

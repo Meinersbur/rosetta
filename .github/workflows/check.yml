@@ -4,16 +4,27 @@ on:
   push: {}
   pull_request: {}
 
-env:
-  ACTIONS_STEP_DEBUG: true
-  ACTIONS_RUNNER_DEBUG: true
-
 jobs:
+  formatting:
+    name: Check source formatting
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install requirements
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install cmake-format clang-format black
+
+      - name: Check format
+        run: |
+          python3 "${GITHUB_WORKSPACE}/rosetta.py" --check-format
+
+
   user:
     name: User Builddir
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: true
 
     steps:
       - uses: actions/checkout@v3
@@ -32,6 +43,7 @@ jobs:
           cmake -GNinja -S "${GITHUB_WORKSPACE}" -B ${{runner.workspace}}/_build -DCMAKE_BUILD_TYPE=Release -DROSETTA_PPM_DEFAULT=OFF -DROSETTA_PLATFORM_DEFAULT=OFF -DROSETTA_PPM_SERIAL=ON
 
       - name: Print CMakeCache.txt
+        if: always()
         run: |
           cat "${{runner.workspace}}/_build/CMakeCache.txt"
 
@@ -39,7 +51,8 @@ jobs:
         run: |
           ninja -C "${{runner.workspace}}/_build" check
 
-      - name: Print Check Logfile
+      - name: Print Check Log
+        if: always()
         run: |
           cat "${{runner.workspace}}/_build/Testing/Temporary/LastTest.log"
 
@@ -59,8 +72,6 @@ jobs:
   managed:
     name: Managed Builddirs
     runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: true
 
     steps:
       - uses: actions/checkout@v3
@@ -72,14 +83,15 @@ jobs:
       - name: Install system requirements
         run: |
           sudo apt-get update
-          sudo apt-get -y install cmake git ninja-build python3-colorama python3-dateutil python3-scipy python3-matplotlib python3-cwcwidth 
+          sudo apt-get -y install cmake git ninja-build python3-colorama python3-dateutil python3-scipy python3-matplotlib python3-cwcwidth clang g++
 
       - name: Rosetta
         run: |
-          python3 "${GITHUB_WORKSPACE}/rosetta.py" --verify --bench
+          python3 "${GITHUB_WORKSPACE}/rosetta.py" --verify --bench --cmake-def=clang:CMAKE_CXX_COMPILER=clang++ --cmake-def=clang:CMAKE_CUDA_COMPILER=clang++ --cmake-def=gcc:CMAKE_CXX_COMPILER=g++  --cmake-def=ROSETTA_PPM_DEFAULT=OFF --cmake-def=ROSETTA_PPM_SERIAL=ON
 
       - name: Log Artifacts
         uses: actions/upload-artifact@v3
+        if: always()
         with:
             if-no-files-found: error
             name: Managed-Builddir Logs
@@ -93,3 +105,4 @@ jobs:
             name: Managed-Builddir Report
             path: |
               results/**/*.html
+

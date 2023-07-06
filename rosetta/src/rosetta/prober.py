@@ -52,10 +52,8 @@ def probe_bench(bench: Benchmark, limit_walltime, limit_rss, limit_alloc):
     # Bisect between lower_n and n
 
     def func(n):
-        resultfile = request_tempfilename(
-            subdir='probe', prefix=f'{bench.target}-pbsize{n}', suffix='.xml')
-        do_run(bench, args=[f'--pbsize={n}',
-               '--repeats=1'], resultfile=resultfile)
+        resultfile = request_tempfilename(subdir='probe', prefix=f'{bench.target}-pbsize{n}', suffix='.xml')
+        do_run(bench, args=[f'--pbsize={n}', '--repeats=1'], resultfile=resultfile)
         [result] = load_resultfiles([resultfile])
         if is_too_large(result):
             return -1
@@ -74,15 +72,9 @@ def run_probe(problemsizefile, limit_walltime, limit_rss, limit_alloc):
 
     problemsizecontent = []
     for bench in registry.benchmarks:
-        n = probe_bench(bench=bench, limit_walltime=limit_walltime,
-                        limit_rss=limit_rss, limit_alloc=limit_alloc)
+        n = probe_bench(bench=bench, limit_walltime=limit_walltime, limit_rss=limit_rss, limit_alloc=limit_alloc)
 
-        problemsizecontent.extend(
-            [f"[{bench.name}]",
-             f"n={n}",
-             ""
-             ]
-        )
+        problemsizecontent.extend([f"[{bench.name}]", f"n={n}", ""])
     with problemsizefile.open(mode='w+') as f:
         for line in problemsizecontent:
             print(line, file=f)

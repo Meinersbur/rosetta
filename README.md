@@ -110,7 +110,7 @@ export Thrust_DIR=/usr/local/cuda-12/lib64/cmake/thrust
 sudo apt install cmake
 sudo apt-get install ninja-build
 ```
-- Using rosetta's own script: 
+- Using Rosetta's own script: 
 ```
 python /path/to/rosetta/rosetta.py <subcommand>
 ```
@@ -120,4 +120,43 @@ For example:
 python rosetta.py -h 
 python rosetta.py --build
 python rosetta.py --bench
+```
+
+### Filters for programming models and programs
+
+Rosetta benchmarks can be executed using two types of filters:
+- Program filter:
+  - `--filter-include-program-substr`: Include a specific program to the benchmark that contains this substring. 
+  - `--filter-include-program-exact`: Include a specific program to the benchmark that exactly matches this string. 
+  - `--filter-include-program-regex`: Include a specific program to the benchmark that matches this regex. 
+  - `--filter-exclude-program-substr`: Exclude a specific program from the benchmark that contains this substring. 
+  - `--filter-exclude-program-exact`: Exclude a specific program from the benchmark that exactly matches this string.
+  - `--filter-exclude-program-regex`: Exclude a specific program from the benchmark that matches this regex. 
+- Programming models filter: 
+  - `--filter-include-ppm-substr`: Include a specific programming model to the benchmark that contains this substring. 
+  - `--filter-include-ppm-exact`: Include a specific programming model to the benchmark that exactly matches this string. 
+  - `--filter-include-ppm-regex`: Include a specific programming model to the benchmark that matches this regex. 
+  - `--filter-exclude-ppm-substr`: Exclude a specific programming model from the benchmark that contains this substring.
+  - `--filter-exclude-ppm-exact`: Exclude a specific programming model from the benchmark that exactly matches this string.
+  - `--filter-exclude-ppm-regex`: Exclude a specific programming model from the benchmark that matches this regex. 
+
+Example of using filters:
+  - `python rosetta.py --bench --filter-include-program-substr assign --filter-include-program-regex ".*polybench.*" --filter-exclude-program-substr heat-3d --filter-include-ppm-substr serial`
+  - `python rosetta.py --bench --filter-include-program-substr assign`
+  - `python rosetta.py --bench --filter-include-program-substr assign --filter-include-ppm-substr serial --filter-include-ppm-substr cuda`
+  - `python rosetta.py --bench --filter-exclude-program-substr polybench --filter-exclude-ppm-regex "openmp.*"`
+  - `python rosetta.py --bench --filter-include-program-exact idioms.assign`
+  - `python rosetta.py --bench --filter-include-program-regex ".*mm$" --filter-include-ppm-substr serial`
+  - `python rosetta.py --bench --filter-exclude-program-regex ".*polybench.*" --filter-include-ppm-substr serial`
+  - `python rosetta.py --bench --filter-exclude-ppm-substr cuda --filter-exclude-ppm-substr openmp-parallel --filter-exclude-program-substr polybench`
+
+To use filtering please make sure `ROSETTA_BENCH_FILTER:STRING` is not set in `CMakeCache.txt` in `build/defaultbuild` directory:
+```shell
+//Benchmark filter switches
+ROSETTA_BENCH_FILTER:STRING=
+```
+
+To run any of the unittests, execute the relevant test file. For run unittest for filtering:
+```shell
+python rosetta/test/test_filtering.py
 ```

@@ -66,11 +66,13 @@ class TuneParam(Param):
 
 class UnsizedBenchmark:
     """Fixed generator parameters (including ppm)"""
+
     pass
 
 
 class SizedBenchmark:
     """Fixed generator (and size, if compiletime) parameters"""
+
     pass
 
 
@@ -101,8 +103,23 @@ class ComparableBenchmark:
 class Benchmark:
     """A benchmark executable with fixed static parameters"""
 
-    def __init__(self, basename, target, exepath, buildtype, ppm, configname, sources=None,
-                 benchpropfile=None, compiler=None, compilerflags=None, pbsize=None, benchlistfile=None, is_ref=None, params=[]):
+    def __init__(
+        self,
+        basename,
+        target,
+        exepath,
+        buildtype,
+        ppm,
+        configname,
+        sources=None,
+        benchpropfile=None,
+        compiler=None,
+        compilerflags=None,
+        pbsize=None,
+        benchlistfile=None,
+        is_ref=None,
+        params=[],
+    ):
         self.basename = basename
         self.target = target
         self.exepath = exepath
@@ -139,12 +156,34 @@ benchmarks: typing.List[Benchmark] = []
 comparables = []
 
 
-def register_benchmark(basename, target, exepath, buildtype, ppm, configname,
-                       benchpropfile=None, compiler=None, compilerflags=None, pbsize=None):
+def register_benchmark(
+    basename,
+    target,
+    exepath,
+    buildtype,
+    ppm,
+    configname,
+    benchpropfile=None,
+    compiler=None,
+    compilerflags=None,
+    pbsize=None,
+):
     assert basename is not None
 
-    bench = Benchmark(basename=basename, target=target, exepath=mkpath(exepath), buildtype=buildtype, ppm=ppm, configname=configname,
-                      benchpropfile=benchpropfile, compiler=compiler, compilerflags=compilerflags, pbsize=pbsize, benchlistfile=benchlistfile, is_ref=import_is_ref)
+    bench = Benchmark(
+        basename=basename,
+        target=target,
+        exepath=mkpath(exepath),
+        buildtype=buildtype,
+        ppm=ppm,
+        configname=configname,
+        benchpropfile=benchpropfile,
+        compiler=compiler,
+        compilerflags=compilerflags,
+        pbsize=pbsize,
+        benchlistfile=benchlistfile,
+        is_ref=import_is_ref,
+    )
     benchmarks.append(bench)
     global comparables
     for c in comparables:
@@ -168,8 +207,7 @@ def load_register_file(filename, is_ref=False):
     benchlistfile = filename
     import_is_ref = is_ref
     try:
-        spec = importlib.util.spec_from_file_location(
-            filename.stem, str(filename))
+        spec = importlib.util.spec_from_file_location(filename.stem, str(filename))
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     finally:
@@ -180,9 +218,9 @@ def load_register_file(filename, is_ref=False):
 # TODO: Use global contenxt manager from support
 def reset_registered_benchmarks():
     """
-Reset loaded benchmarks for unittsts
+    Reset loaded benchmarks for unittsts
 
-A better approach would be if load_register_file returns the availailable benchmarks and the caller to pass them on
+    A better approach would be if load_register_file returns the availailable benchmarks and the caller to pass them on
     """
     global benchmarks
     benchmarks = []

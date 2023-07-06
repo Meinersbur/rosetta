@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 if not sys.version_info >= (3, 9):
     print("Requires python 3.9 or later", file=sys.stderr)
     print(f"Python interpreter {sys.executable} reports version {sys.version}", file=sys.stderr)
@@ -17,21 +18,19 @@ import logging as log
 import typing
 
 from .builder import *
-from . import runner, prober, verifier, registry
+from . import registry
 from .util.cmdtool import *
 from .util.orderedset import OrderedSet
 from .util.support import *
 from .util import invoke
 from .common import *
+from .filtering import *
 
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
-configsplitdef = re.compile(
-    r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)(\=(?P<defvalue>.*))?')
-configsplitdefrequired = re.compile(
-    r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)\=(?P<defvalue>.*)')
-configppm = re.compile(
-    r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<ppm>[a-zA-Z\-]+)')
+configsplitdef = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)(\=(?P<defvalue>.*))?')
+configsplitdefrequired = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)\=(?P<defvalue>.*)')
+configppm = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<ppm>[a-zA-Z\-]+)')
 
 
 def parse_build_configs(args, implicit_reference):
@@ -51,8 +50,7 @@ def parse_build_configs(args, implicit_reference):
         if l is None:
             return raw
         for arg in l:
-            m = (configsplitdefrequired if valrequired else configsplitdefrequired).fullmatch(
-                arg)
+            m = (configsplitdefrequired if valrequired else configsplitdefrequired).fullmatch(arg)
             configname = m.group('configname') or ''
             defname = m.group('defname')
             defvalue = m.group('defvalue')  # Can be none
@@ -74,7 +72,7 @@ def parse_build_configs(args, implicit_reference):
 
     selected_keys = OrderedSet()
     selected_keys |= [k for k in specified_keys if k]
-    selected_keys |= (args.config or [])
+    selected_keys |= args.config or []
 
     # Use single config if no "CONFIG:" is specified
     if not selected_keys:
@@ -83,13 +81,22 @@ def parse_build_configs(args, implicit_reference):
     if implicit_reference:
         # TODO: Reference configuration (only reference PPM)
         selected_keys.add("REF")
-        specified_keys.add('REF')
+        # specified_keys.add('REF')
 
     configs = []
     for k in selected_keys:
         # TODO: Handle duplicate defs (specific override general)
-        configs.append(BuildConfig(name=k, ppm=ppm[''] + ppm[k], cmake_arg=cmake_arg[''] + cmake_arg[k], cmake_def=cmake_def[''] | cmake_def[k],
-                       compiler_arg=compiler_arg[''] + compiler_arg[k], compiler_def=compiler_def[''] | compiler_def[k], usecur=not k in specified_keys))
+        configs.append(
+            BuildConfig(
+                name=k,
+                ppm=ppm[''] + ppm[k],
+                cmake_arg=cmake_arg[''] + cmake_arg[k],
+                cmake_def=cmake_def[''] | cmake_def[k],
+                compiler_arg=compiler_arg[''] + compiler_arg[k],
+                compiler_def=compiler_def[''] | compiler_def[k],
+                usecur=not k in specified_keys,
+            )
+        )
 
     return configs
 
@@ -108,7 +115,9 @@ def invoke_verbose(*args, **kwargs):
 
 def subcommand_default_actions(args):
     # Determine actions
-    any_explicit_action = args.clean or args.configure or args.build or args.probe or args.verify or args.bench or args.evaluate
+    any_explicit_action = (
+        args.clean or args.configure or args.build or args.probe or args.verify or args.bench or args.evaluate
+    )
     if not any_explicit_action:
         # No explicit action selected: Use default (configure -> build -> bench -> evaluate)
         args.bench = first_defined(args.bench, True)
@@ -123,8 +132,7 @@ def subcommand_default_actions(args):
         args.bench = first_defined(args.bench, False)
 
     # Build by default of required by a later step
-    args.build = first_defined(
-        args.build, args.probe or args.verify or args.bench, False)
+    args.build = first_defined(args.build, args.probe or args.verify or args.bench, False)
 
     # Configure by default when building
     args.configure = first_defined(args.configure, args.build, False)
@@ -188,19 +196,13 @@ def apply_default_action(default_action, args):
 
     # Analysis actions
     args.evaluate = first_defined(
-        args.evaluate,
-        default_action in {
-            DefaultAction.EVALUATE,
-            DefaultAction.BENCH,
-            DefaultAction.VERIFY_THEN_BENCH})
+        args.evaluate, default_action in {DefaultAction.EVALUATE, DefaultAction.BENCH, DefaultAction.VERIFY_THEN_BENCH}
+    )
     args.report = first_defined(
         args.report,
-        bool(
-            args.reportfile) or None,
-        default_action in {
-            DefaultAction.BENCH,
-            DefaultAction.VERIFY_THEN_BENCH,
-            DefaultAction.REPORT})
+        bool(args.reportfile) or None,
+        default_action in {DefaultAction.BENCH, DefaultAction.VERIFY_THEN_BENCH, DefaultAction.REPORT},
+    )
 
 
 verbose = None
@@ -208,6 +210,7 @@ verbose = None
 
 class DriverMode:
     """Multiple builddirs managed by rosetta.py. May create+deleta builddirs as needed."""
+
     MANAGEDBUILDDIR = NamedSentinel('managed builddir(s)')
 
     """Running from a user-created cmake builddir. Must not change any CMakeCache settings. Also, only one config (Debug, Release, Minsize, ...) available"""
@@ -236,55 +239,72 @@ class DefaultAction:
 
 
 def driver_main(
-        mode: DriverMode,
-        argv: typing.List[str] = [None],
-        default_action: DefaultAction = None,
-        benchlistfile: pathlib.Path = None,
-        srcdir: pathlib.Path = None,
-        builddir: pathlib.Path = None,
-        rootdir: pathlib.Path = None):
+    mode: DriverMode,
+    argv: typing.List[str] = [None],
+    default_action: DefaultAction = None,
+    benchlistfile: pathlib.Path = None,
+    srcdir: pathlib.Path = None,
+    builddir: pathlib.Path = None,
+    rootdir: pathlib.Path = None,
+):
     assert mode in {DriverMode.USERBUILDDIR, DriverMode.MANAGEDBUILDDIR}
-    assert default_action in {None, DefaultAction. CLEAN, DefaultAction. CONFIGURE, DefaultAction. BUILD,
-                              DefaultAction.PROBE, DefaultAction.VERIFY, DefaultAction.BENCH, DefaultAction.EVALUATE}
+    assert default_action in {
+        None,
+        DefaultAction.CLEAN,
+        DefaultAction.CONFIGURE,
+        DefaultAction.BUILD,
+        DefaultAction.PROBE,
+        DefaultAction.VERIFY,
+        DefaultAction.BENCH,
+        DefaultAction.EVALUATE,
+    }
 
     probestages = ['hybrid', 'runtime', 'compiletime'] if DriverMode.MANAGEDBUILDDIR else ['runtime']
 
     # TODO: Description according default_action
-    parser = argparse.ArgumentParser(
-        description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
+    parser = argparse.ArgumentParser(description="Benchmark configure, build, execute & evaluate", allow_abbrev=False)
     parser.add_argument('--verbose', '-v', action='count')
+
+    # Maintainance
+    if mode == DriverMode.MANAGEDBUILDDIR:
+        parser.add_argument(
+            '--update-format',
+            action='store_true',
+            help="Reformat Rosetta's source files using clang-format, cmake-format and autopep8",
+        )
+        parser.add_argument(
+            '--check-format', action='store_true', help="Return with error if --update-format would change any files"
+        )
 
     if mode == DriverMode.MANAGEDBUILDDIR:
         # Used by launcher which is itself in the repository root directory
-        parser.add_argument('--rootdir', type=pathlib.Path,
-                            default=rootdir, help=argparse.SUPPRESS)
+        parser.add_argument('--rootdir', type=pathlib.Path, default=rootdir, help=argparse.SUPPRESS)
 
     # Clean step (before configure if managed builddir)
-    add_boolean_argument(parser, 'clean', default=False,
-                         help="Start from scratch")
+    add_boolean_argument(parser, 'clean', default=False, help="Start from scratch")
 
     if mode == DriverMode.MANAGEDBUILDDIR:
         # Configure step
-        add_boolean_argument(parser, 'configure', default=None,
-                             help="Enable configure (CMake) step (Default: if necessary)")
+        add_boolean_argument(
+            parser, 'configure', default=None, help="Enable configure (CMake) step (Default: if necessary)"
+        )
         # TODO: Add switches that parse multiple arguments using shsplit
-        parser.add_argument('--config', metavar="CONFIG", action='append',
-                            help="Configuration selection (must exist from previous invocations)", default=None)
+        parser.add_argument(
+            '--config',
+            metavar="CONFIG",
+            action='append',
+            help="Configuration selection (must exist from previous invocations)",
+            default=None,
+        )
         parser.add_argument('--ppm', metavar="CONFIG:PPM", action='append')
-        parser.add_argument(
-            '--cmake-arg', metavar="CONFIG:ARG", action='append')
-        parser.add_argument(
-            '--cmake-def', metavar="CONFIG:DEF[=VAL]", action='append')
-        parser.add_argument(
-            '--compiler-arg', metavar="CONFIG:ARG", action='append')
-        parser.add_argument(
-            '--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
+        parser.add_argument('--cmake-arg', metavar="CONFIG:ARG", action='append')
+        parser.add_argument('--cmake-def', metavar="CONFIG:DEF[=VAL]", action='append')
+        parser.add_argument('--compiler-arg', metavar="CONFIG:ARG", action='append')
+        parser.add_argument('--compiler-def', metavar="CONFIG:DEF[=VAL]", action='append')
 
     # Build step
-    add_boolean_argument(parser, 'build', default=None,
-                         help="Enable build step")
-    add_boolean_argument(parser, 'buildondemand', default=True,
-                         help="build to ensure executables are up-to-date")
+    add_boolean_argument(parser, 'build', default=None, help="Enable build step")
+    add_boolean_argument(parser, 'buildondemand', default=True, help="build to ensure executables are up-to-date")
 
     # Probe step
     add_boolean_argument(parser, 'probe', default=None, help="Enable probing")
@@ -296,43 +316,43 @@ def driver_main(
         '--probe-stage',
         choices=probestages,
         default=probestages[0],
-        help="What toolchain stage to probe; compiletime allows the compiler to see the problem size")
+        help="What toolchain stage to probe; compiletime allows the compiler to see the problem size",
+    )
 
     # Tune step
-    add_boolean_argument(parser, 'tune', default=None,
-                         help="Benchmark performance tuning")
+    add_boolean_argument(parser, 'tune', default=None, help="Benchmark performance tuning")
     parser.add_argument(
         '--tune-stage',
         choices=probestages,
         default=probestages[0],
-        help="What toolchain stage to tune; compiletime allows tuning source and compiler parameters")
+        help="What toolchain stage to tune; compiletime allows tuning source and compiler parameters",
+    )
 
     # Verify step
-    add_boolean_argument(parser, 'verify', default=None,
-                         help="Enable check step")
+    add_boolean_argument(parser, 'verify', default=None, help="Enable check step")
 
     # Benchmark step
     add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
-    parser.add_argument('--problemsizefile', type=pathlib.Path,
-                        help="Problem sizes to use (.ini file)")  # Also used by --verify
-
+    parser.add_argument(
+        '--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)"
+    )  # Also used by --verify
+    add_filter_args(parser)
     # Evaluate step
-    add_boolean_argument(parser, 'evaluate', default=None,
-                         help="Evaluate result")
+    add_boolean_argument(parser, 'evaluate', default=None, help="Evaluate result")
     parser.add_argument(
         '--use-results-rdir',
         type=pathlib.Path,
         action='append',
         default=[],
-        help="Use these result xml files from this dir (recursive); otherwise use result from benchmarking")
+        help="Use these result xml files from this dir (recursive); otherwise use result from benchmarking",
+    )
     parser.add_argument('--group-by', help="Comma-separated list of categories to group")
     parser.add_argument('--compare-by', help="Comma-separated list of categories to compare")
     parser.add_argument('--cols', help="Comma-separated list of columns to display (overrides auto selection)")
     parser.add_argument(
-        '--cols-always',
-        help="Comma-separated list of columns to display even if it does not contains data")
+        '--cols-always', help="Comma-separated list of columns to display even if it does not contains data"
+    )
     parser.add_argument('--cols-never', help="Comma-separated list of columns to not display")
-
     # Report step
     add_boolean_argument(parser, 'report', default=None, help="Create HTML report")
     parser.add_argument('--reportfile', type=pathlib.Path, help="Path to write the report.html to")
@@ -345,11 +365,21 @@ def driver_main(
     log.basicConfig(level=level, format='{message}', style='{')
     try:
         import colorlog
+
         for h in log.root.handlers:
-            h.setFormatter(colorlog.ColoredFormatter(
-                '{log_color}{message}', style='{'))
+            h.setFormatter(colorlog.ColoredFormatter('{log_color}{message}', style='{'))
     except BaseException:
         pass
+
+    if mode == DriverMode.MANAGEDBUILDDIR:
+        if args.update_format:
+            from . import formatting
+
+            return formatting.update_format(srcdir)
+        elif args.check_format:
+            from . import formatting
+
+            return formatting.check_format(srcdir)
 
     if mode == DriverMode.USERBUILDDIR:
         args.configure = False
@@ -377,9 +407,9 @@ def driver_main(
             return resultsdir
 
         if mode == DriverMode.MANAGEDBUILDDIR:
-
-            configs = parse_build_configs(args, implicit_reference=args.verify)
-            if len(configs) >= 2:
+            # Always also create a REF dir in case we need it when running --verify
+            configs = parse_build_configs(args, implicit_reference=True)
+            if len(configs) >= 3:  # Not counting REF
                 default_compare_by = ['configname']
 
             rootdir = mkpath(first_defined(args.rootdir, pathlib.Path.cwd()))
@@ -420,8 +450,16 @@ def driver_main(
                 configdescfile = builddir / 'RosettaCache.txt'
 
                 if args.configure is not False:
-                    opts = ['cmake', '-S', srcdir, '-B', builddir, '-GNinja Multi-Config',
-                            '-DCMAKE_CROSS_CONFIGS=all', f'-DROSETTA_RESULTS_DIR={get_resultsdir()}']
+                    opts = [
+                        'cmake',
+                        '-S',
+                        srcdir,
+                        '-B',
+                        builddir,
+                        '-GNinja Multi-Config',
+                        '-DCMAKE_CROSS_CONFIGS=all',
+                        f'-DROSETTA_RESULTS_DIR={get_resultsdir()}',
+                    ]
                     opts += config.gen_cmake_args()
                     expectedopts = shjoin(opts).rstrip()
 
@@ -458,14 +496,16 @@ def driver_main(
             # Load all available benchmarks
             if args.verify or args.bench or args.probe:
                 for config in configs:
-                    registry.load_register_file(
-                        config.builddir / 'benchmarks' / 'benchlist.py')
+                    if config.name == 'REF':
+                        continue
+                    registry.load_register_file(config.builddir / 'benchmarks' / 'benchlist.py')
 
             def only_REF(bench):
                 return bench.configname == 'REF'
 
             def no_ref(bench):
                 return bench.configname != 'REF' and bench.ppm in config.ppm
+
             if args.bench or args.verify or args.probe:
                 refconfigs = list(c for c in configs if c.name == 'REF')
                 refconfig = None
@@ -483,18 +523,25 @@ def driver_main(
                 return
 
             if not configure_uptodate:
-                invoke_verbose('cmake', '--build', builddir,
-                               '--target', 'build.ninja', cwd=builddir)
+                invoke_verbose('cmake', '--build', builddir, '--target', 'build.ninja', cwd=builddir)
 
             # Discover available benchmarks
             registry.load_register_file(benchlistfile)
 
         if args.probe:
+            from . import prober
+
             assert args.problemsizefile_out, "Requires to set a problemsizefile to set"
-            prober.run_probe(problemsizefile=args.problemsizefile_out, limit_walltime=args.limit_walltime,
-                             limit_rss=args.limit_rss, limit_alloc=args.limit_alloc)
+            prober.run_probe(
+                problemsizefile=args.problemsizefile_out,
+                limit_walltime=args.limit_walltime,
+                limit_rss=args.limit_rss,
+                limit_alloc=args.limit_alloc,
+            )
 
         if args.verify:
+            from . import verifier
+
             if mode == DriverMode.MANAGEDBUILDDIR:
                 refdir = (refconfig.builddir if refconfig else None) / 'refout'
             else:
@@ -502,8 +549,11 @@ def driver_main(
             verifier.run_verify(problemsizefile=args.problemsizefile, refdir=refdir)
 
         if args.bench:
+            from . import runner
+
             resultfiles, resultssubdir = runner.run_bench(
-                srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir())
+                srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir(), args=args
+            )
 
         if args.evaluate or args.report:
             from . import evaluator
@@ -511,12 +561,13 @@ def driver_main(
             for use_results_rdir in args.use_results_rdir:
                 resultfiles = resultfiles or []
                 resultfiles += mkpath(use_results_rdir).glob('**/*.xml')
+            resultfiles = sorted(resultfiles)
 
-            # If there is no other source of results, source all prebious ones
+            # If there is no other source of results, source all previous ones
             if resultfiles is None:
                 resultfiles = resultfiles or []
                 if resultsdir:
-                    for xmlfile in resultsdir .rglob("*.xml"):
+                    for xmlfile in resultsdir.rglob("*.xml"):
                         resultfiles.append(xmlfile)
 
             if resultfiles is None:
@@ -525,6 +576,8 @@ def driver_main(
                 die("No results")
 
             results = evaluator.load_resultfiles(resultfiles)
+            # if not match_filter(e, args):
+            #     continue
 
             if args.evaluate:
                 group_by = None
@@ -544,7 +597,8 @@ def driver_main(
                     group_by=group_by,
                     always_columns=cols_always,
                     never_columns=cols_never,
-                    columns=cols)
+                    columns=cols,
+                )
 
             if args.report:
                 if args.reportfile:

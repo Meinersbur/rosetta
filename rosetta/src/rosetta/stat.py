@@ -19,57 +19,59 @@ class Statistic:
     # https://pythonguides.com/scipy-confidence-interval/
     # https://www.scribbr.com/statistics/students-t-table/
 
-    studentt_density_95 = list({
-        1: 12.706,
-        2: 4.303,
-        3: 3.182,
-        4: 2.776,
-        5: 2.571,
-        6: 2.447,
-        7: 2.365,
-        8: 2.306,
-        9: 2.262,
-        10: 2.228,
-        11: 2.201,
-        12: 2.179,
-        13: 2.160,
-        14: 2.145,
-        15: 2.131,
-        16: 2.120,
-        17: 2.110,
-        18: 2.101,
-        19: 2.093,
-        20: 2.086,
-        21: 2.080,
-        22: 2.074,
-        23: 2.069,
-        24: 2.064,
-        25: 2.060,
-        26: 2.056,
-        27: 2.052,
-        28: 2.048,
-        29: 2.045,
-        30: 2.042,
-        35: 2.030,
-        40: 2.021,
-        45: 2.014,
-        50: 2.009,
-        60: 2.000,
-        70: 1.994,
-        80: 1.990,
-        90: 1.987,
-        100: 1.984,
-        150: 1.976,
-        200: 1.972,
-        250: 1.969,
-        300: 1.968,
-        400: 1.966,
-        500: 1.965,
-        600: 1.964,
-        800: 1.963,
-        1000: 1.962,
-        100000: 1.960,
-    }.items())
+    studentt_density_95 = list(
+        {
+            1: 12.706,
+            2: 4.303,
+            3: 3.182,
+            4: 2.776,
+            5: 2.571,
+            6: 2.447,
+            7: 2.365,
+            8: 2.306,
+            9: 2.262,
+            10: 2.228,
+            11: 2.201,
+            12: 2.179,
+            13: 2.160,
+            14: 2.145,
+            15: 2.131,
+            16: 2.120,
+            17: 2.110,
+            18: 2.101,
+            19: 2.093,
+            20: 2.086,
+            21: 2.080,
+            22: 2.074,
+            23: 2.069,
+            24: 2.064,
+            25: 2.060,
+            26: 2.056,
+            27: 2.052,
+            28: 2.048,
+            29: 2.045,
+            30: 2.042,
+            35: 2.030,
+            40: 2.021,
+            45: 2.014,
+            50: 2.009,
+            60: 2.000,
+            70: 1.994,
+            80: 1.990,
+            90: 1.987,
+            100: 1.984,
+            150: 1.976,
+            200: 1.972,
+            250: 1.969,
+            300: 1.968,
+            400: 1.966,
+            500: 1.965,
+            600: 1.964,
+            800: 1.963,
+            1000: 1.962,
+            100000: 1.960,
+        }.items()
+    )
 
     def __init__(self, samples, sum, sumabs, sumsqr, sumreciproc, geomean):
         self._samples = list(samples)  # Assumed sorted
@@ -184,10 +186,11 @@ class Statistic:
     def variance(self):
         def sqr(x):
             return x * x
+
         n = self.count
         if n == 0:
             return 0
-        
+
         result = self._sumsqr / n - sqr(self.mean)
         if result <= 0:
             # Due to floating-point inaccuracy (https://en.wikipedia.org/wiki/Catastrophic_cancellation), result can be negative when close to zero. In this case just assume zero.
@@ -223,6 +226,7 @@ class Statistic:
     def mse(self):
         def sqr(x):
             return x * x
+
         e = self.median  # Using median as estimator
         return sum(sqr(x - e) for x in self._vals) / self.count
 
@@ -252,14 +256,16 @@ class Statistic:
             return None  # Concept not defined with just one value
 
         import scipy.stats as stats
+
         mean = self.mean
         q = 1 - (1 - ratio) / 2  # Two-sided
-        abserr = stats.t.ppf(q,
-                             loc=mean,  # Middle point
-                             df=n - 1,
-                             scale=self.stddev / math.sqrt(n)  # Standard error of the mean
-                             ) - mean
-        #assert abserr >= 0
+        abserr = (
+            stats.t.ppf(
+                q, loc=mean, df=n - 1, scale=self.stddev / math.sqrt(n)  # Middle point  # Standard error of the mean
+            )
+            - mean
+        )
+        # assert abserr >= 0
         return abserr
 
         assert ratio == 0.95, r"Only two-sided 95% confidence interval supported atm"
@@ -277,7 +283,6 @@ class Statistic:
             c = Statistic.studentt_density_95[-1][1]
 
         return c * self.corrected_variance / math.sqrt(n)
-
 
     def relerr(self, ratio=0.95):
         mean = self.mean  # Mean is actually unknown
@@ -313,6 +318,6 @@ def statistic(data):
         geomean = None
         sumreciproc = None
     else:
-        geomean = prod**(1 / n)
+        geomean = prod ** (1 / n)
 
     return Statistic(samples=vals, sum=sum, sumabs=sumabs, sumsqr=sumsqr, geomean=geomean, sumreciproc=sumreciproc)
