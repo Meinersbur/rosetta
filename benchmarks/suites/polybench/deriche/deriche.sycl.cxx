@@ -112,7 +112,7 @@ void run(State &state, pbsize_t pbsize) {
 
   auto imgIn = state.allocate_array<real>({w, h}, /*fakedata*/ true, /*verify*/ false, "imgIn");
   auto imgOut = state.allocate_array<real>({w, h}, /*fakedata*/ false, /*verify*/ true, "imgOut");
-  
+
   queue q(default_selector{});
   {
     buffer<real, 1> imgIn_buf(imgIn.data(), range<1>(w * h));

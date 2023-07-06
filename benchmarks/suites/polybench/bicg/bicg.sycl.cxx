@@ -12,7 +12,7 @@ static void mykernel(queue &myQ, pbsize_t m, pbsize_t n, buffer<real, 1> &A_buf,
     cgh.parallel_for<class compute_q>(range<1>(n), [=](id<1> i) {
       q_acc[i] = 0;
       for (idx_t j = 0; j < m; j++) {
-       q_acc[i] += A_acc[i * m + j] * p_acc[j];
+        q_acc[i] += A_acc[i * m + j] * p_acc[j];
       }
     });
   });
