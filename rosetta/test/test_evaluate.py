@@ -97,7 +97,7 @@ class EvaluateTests(unittest.TestCase):
                 srcdir=self.srcdir,
             )
 
-        # Search for the table header
+            # Search for the table header
         s = f.getvalue().splitlines()
         while s:
             if re.search(tablecellre('Benchmark', 'Wall', 'Max RSS', 'Peak Allocation'), s[0]):

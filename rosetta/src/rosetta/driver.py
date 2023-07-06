@@ -7,7 +7,6 @@ if not sys.version_info >= (3, 9):
     print(f"Python interpreter {sys.executable} reports version {sys.version}", file=sys.stderr)
     sys.exit(1)
 
-
 import typing
 from collections import defaultdict
 import datetime
@@ -16,6 +15,7 @@ import argparse
 import re
 import logging as log
 import typing
+from functools import partial
 
 from .builder import *
 from . import registry
@@ -25,7 +25,6 @@ from .util.support import *
 from .util import invoke
 from .common import *
 from .filtering import *
-
 
 configsplitarg = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<arg>.*)')
 configsplitdef = re.compile(r'((?P<configname>[a-zA-Z0-9_]+)\:)?(?P<defname>[a-zA-Z0-9_]+)(\=(?P<defvalue>.*))?')
@@ -334,7 +333,9 @@ def driver_main(
     # Benchmark step
     add_boolean_argument(parser, 'bench', default=None, help="Enable run step")
     parser.add_argument(
-        '--problemsizefile', type=pathlib.Path, help="Problem sizes to use (.ini file)"
+        '--problemsizefile',
+        type=partial(get_problemsizefile_path, srcdir=srcdir, rootdir=rootdir),
+        help="Problem sizes to use ('mini', 'small', 'medium', 'large' or 'extralarge') or problemsizefile path",
     )  # Also used by --verify
     add_filter_args(parser)
     # Evaluate step
@@ -528,6 +529,8 @@ def driver_main(
             # Discover available benchmarks
             registry.load_register_file(benchlistfile)
 
+        registry.benchmarks = get_filtered_benchmarks(registry.benchmarks, args)
+
         if args.probe:
             from . import prober
 
@@ -552,7 +555,7 @@ def driver_main(
             from . import runner
 
             resultfiles, resultssubdir = runner.run_bench(
-                srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir(), args=args
+                srcdir=srcdir, problemsizefile=args.problemsizefile, resultdir=get_resultsdir()
             )
 
         if args.evaluate or args.report:
