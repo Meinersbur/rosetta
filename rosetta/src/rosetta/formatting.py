@@ -7,7 +7,8 @@ Formatting of Rosetta's own source files using clang-format, cmake-format, and a
 from .common import *
 import pathlib
 from .util import invoke
-
+from itertools import chain
+import sys
 
 clangformat_options = ['--color=1']
 cmakeformat_options = [
@@ -26,6 +27,20 @@ autopep8_options = ['--max-line-length', '120', '-aa']
 black_options = ['--line-length', '120', '--skip-string-normalization', '--color']
 
 
+def ensure_lf(filepath: pathlib.Path, update=None):
+    """Check (and optionally fix) that all files have LF line endings"""
+    with filepath.open('r', newline='') as f:
+        text_orig = f.read()
+    with filepath.open('r', newline=None) as f:
+        text_lf = f.read()
+    if text_orig == text_lf:
+        return False
+    if update:
+        with filepath.open('w+') as f:
+            f.write(text_lf)
+    return True
+
+
 def update_format(srcdir: pathlib.Path):
     files = updateable_files(srcdir=srcdir, framework=True, benchmarks=True)
 
@@ -36,6 +51,9 @@ def update_format(srcdir: pathlib.Path):
     invoke.run('cmake-format', '--in-place', *(cmakeformat_options + files.cmake), print_command=True)
 
     invoke.run('black', *(black_options + files.py), print_command=True)
+
+    for filepath in chain(files.cpp, files.cmake, files.py):
+        ensure_lf(filepath, update=True)
 
 
 def check_format(srcdir: pathlib.Path):
@@ -48,7 +66,7 @@ def check_format(srcdir: pathlib.Path):
         '--dry-run',
         *(clangformat_options + files.cpp),
         print_command=True,
-        onerror=invoke.Invoke.IGNORE
+        onerror=invoke.Invoke.IGNORE,
     )
     if retcode:
         anyerror = True
@@ -58,7 +76,7 @@ def check_format(srcdir: pathlib.Path):
         '--check',
         *(cmakeformat_options + files.cmake),
         print_command=True,
-        onerror=invoke.Invoke.IGNORE
+        onerror=invoke.Invoke.IGNORE,
     )
     if retcode:
         anyerror = True
@@ -68,6 +86,11 @@ def check_format(srcdir: pathlib.Path):
     )
     if retcode:
         anyerror = True
+
+    for filepath in chain(files.cpp, files.cmake, files.py):
+        if ensure_lf(filepath):
+            print(f"File '{filepath}' does not have LF line endings", file=sys.stderr)
+            anyerror = True
 
     if anyerror:
         print("")
