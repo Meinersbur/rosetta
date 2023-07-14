@@ -4,7 +4,7 @@
 
 static real kernel(pbsize_t n) {
     real sum = 0;
-    #pragma omp target teams distribute parrallel for reduction(+:sum) schedule(static) dist_schedule(static)
+    #pragma omp target teams distribute parallel for reduction(+:sum) schedule(static) dist_schedule(static)
     for (idx_t i = 0; i < n; i += 1)
         sum += i;
     return sum;
