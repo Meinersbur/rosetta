@@ -34,7 +34,7 @@ void run(State &state, int pbsize) {
   pbsize_t n = pbsize; // 2000
 
 
-
+  //Changed verify to false. Result is non-deterministic by the algorithm by design
   auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false, "A");
   queue q(default_selector{});
   {

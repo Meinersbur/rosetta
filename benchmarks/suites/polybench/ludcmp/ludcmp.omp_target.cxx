@@ -18,7 +18,6 @@ static void kernel(pbsize_t n, multarray<real, 2> A, real b[], real x[], real y[
 #define AccA(i, j) (pA[(i)*n + (j)])
     int k = 0;
     for (idx_t i = 0; i < n; i++) {
-      fprintf(stderr, "a i=%d, k=%d\n", i, k);
       for (idx_t j = 0; j < i; j++) {
         real w1 = 0;
         //#pragma omp target
