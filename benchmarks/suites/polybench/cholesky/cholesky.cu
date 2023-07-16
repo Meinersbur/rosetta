@@ -3,7 +3,6 @@
 #include "cholesky-common.h"
 #include <rosetta.h>
 
-
 // https://dl.acm.org/doi/pdf/10.1145/3038228.3038237
 // https://people.ast.cam.ac.uk/~stg20/cuda/cholesky/
 
@@ -19,7 +18,8 @@ __global__ void kernel1(pbsize_t n, idx_t j, real *A) {
   idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
   if (j < n && i > j)
-    A[i * n + j] /= A[j * n + j];
+    if ((i * n + j) < (n * n) && (j * n + j) < (n * n))
+      A[i * n + j] /= A[j * n + j];
 }
 
 
