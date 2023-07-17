@@ -11,7 +11,7 @@ void mykernel(queue &q, pbsize_t n, buffer<real, 1> &A_buf) {
     q.submit([&](handler &cgh) {
       auto A_acc = A_buf.get_access<access::mode::read_write>(cgh);
       cgh.single_task([=]() {
-        A_acc[j * n + j] = std::sqrt(A_acc[j * n + j]);
+        A_acc[j * n + j] = sqrt(A_acc[j * n + j]);
       });
     });
     q.submit([&](handler &cgh) {
@@ -42,11 +42,10 @@ void run(State &state, pbsize_t pbsize) {
 
   queue q(default_selector{});
   {
-
+    buffer<real, 1> A_buf(A.data(), range<1>(n * n));
     for (auto &&_ : state) {
       ensure_posdefinite(n, A);
       {
-        buffer<real, 1> A_buf(A.data(), range<1>(n * n));
         mykernel(q, n, A_buf);
       }
     }
