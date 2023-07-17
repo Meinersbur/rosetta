@@ -17,9 +17,8 @@ __global__ void kernel0(pbsize_t n, idx_t j, real *A) {
 __global__ void kernel1(pbsize_t n, idx_t j, real *A) {
   idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
-  if (j < n && i > j)
-    if ((i * n + j) < (n * n) && (j * n + j) < (n * n))
-      A[i * n + j] /= A[j * n + j];
+  if (j < n && i > j && (i * n + j) < (n * n) && (j * n + j) < (n * n))
+    A[i * n + j] /= A[j * n + j];
 }
 
 
