@@ -3,20 +3,6 @@
 #include <CL/sycl.hpp>
 #include <rosetta.h>
 
-// void ensure_fullrank(pbsize_t n, multarray<real, 2> A) {
-//   real maximum = 0;
-//   for (idx_t i = 0; i < n; i++)
-//     for (idx_t j = 0; j < n; j++) {
-//       auto val = std::abs(A[i][j]);
-//       if (val > maximum)
-//         maximum = val;
-//     }
-
-//   // Make the diagnonal elements too large to be a linear combination of the other columns without also making the other vector elements too large.
-//   for (idx_t i = 0; i < n; i++)
-//     A[i][i] = std::abs(A[i][i]) + 1 + maximum;
-// }
-
 void mykernel(sycl::queue &queue, pbsize_t n, cl::sycl::buffer<real> &A_buf) {
 
   for (idx_t k = 0; k < n - 1; k++) {
@@ -50,12 +36,12 @@ void run(State &state, pbsize_t pbsize) {
 
   cl::sycl::queue q(cl::sycl::default_selector{});
   //{
-    for (auto &&_ : state) {
-      ensure_fullrank(n, A);
-      {
-        cl::sycl::buffer<real, 1> A_buf(A.data(), cl::sycl::range<1>(n * n));
-        mykernel(q, n, A_buf);
-      }
+  for (auto &&_ : state) {
+    ensure_fullrank(n, A);
+    {
+      cl::sycl::buffer<real, 1> A_buf(A.data(), cl::sycl::range<1>(n * n));
+      mykernel(q, n, A_buf);
     }
+  }
   //}
 }
