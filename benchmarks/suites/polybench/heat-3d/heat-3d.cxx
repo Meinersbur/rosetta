@@ -29,7 +29,17 @@ void run(State &state, pbsize_t pbsize) {
   pbsize_t tsteps = 1; // 500
   pbsize_t n = pbsize; // 120
 
-
+  // Linear interpolation of tsteps using the formula
+  // Estimated tsteps = tsteps1 + (tsteps2 - tsteps1) * ((pbsize - pbsize1) / (pbsize2 - pbsize1))
+  if (pbsize <= 20) {
+    tsteps = pbsize * 2;
+  } else if (pbsize > 20 && pbsize <= 40) {
+    tsteps = (3 * pbsize) - 20;
+  } else if (pbsize > 40 && pbsize <= 120) {
+    tsteps = (5 * pbsize) - 100;
+  } else if (pbsize > 120) {
+    tsteps = (6.25 * pbsize) - 250;
+  }
 
   auto A = state.allocate_array<real>({n, n, n}, /*fakedata*/ true, /*verify*/ false, "A");
   auto B = state.allocate_array<real>({n, n, n}, /*fakedata*/ false, /*verify*/ true, "B");
