@@ -7,14 +7,6 @@ using namespace sycl;
 void mykernel(queue q, buffer<real, 1> L_buf, buffer<real, 1> x_buf, buffer<real, 1> b_buf, buffer<real, 1> sum_buf, pbsize_t n) {
 
   for (idx_t i = 0; i < n; i++) {
-    if (i == 0) {
-      q.submit([&](handler &cgh) {
-        auto sum_acc = sum_buf.get_access<access::mode::write>(cgh);
-        cgh.single_task<class init_task>([=]() {
-          sum_acc[0] = 0;
-        });
-      });
-    }
     q.submit([&](handler &cgh) {
       auto L_acc = L_buf.get_access<access::mode::read>(cgh);
       auto x_acc = x_buf.get_access<access::mode::read>(cgh);
