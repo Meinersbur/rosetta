@@ -1,8 +1,6 @@
 // BUILD: add_benchmark(ppm=sycl,sources=[__file__, "gramschmidt-common.cxx"])
 
 #include "gramschmidt-common.h"
-#include <CL/sycl.hpp>
-#include <cmath>
 #include <rosetta.h>
 #include <sycl/sycl.hpp>
 
