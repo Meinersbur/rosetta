@@ -54,7 +54,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
     buildfiles = []
     potentialbuildfiles = []
     for path in benchdir.rglob('*'):
-        if not path.suffix.lower() in {'.cxx', '.cu', '.build'}:
+        if not path.suffix.lower() in {'.cxx', '.cu', '.hip', '.build'}:
             continue
         potentialbuildfiles.append(path)
 
@@ -93,7 +93,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
 
                 def add_benchmark(*args, sources=None, basename=None, ppm=None, params=None):
                     for a in args:
-                        if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target', 'sycl'}:
+                        if a in {'serial', 'cuda', 'omp_parallel', 'omp_task', 'omp_target', 'sycl', 'hip'}:
                             ppm = a
                         elif (
                             isinstance(a, registry.GenParam)
@@ -123,6 +123,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                         basename = removesuffix(basename, '.omp_task')
                         basename = removesuffix(basename, '.omp_target')
                         basename = removesuffix(basename, '.sycl')
+                        basename = removesuffix(basename, '.hip')
                         basename = '.'.join(list(rel.parts) + [basename])
 
                     target = basename + '.' + ppm
@@ -157,6 +158,7 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
                 globals['omp_task'] = 'omp_task'
                 globals['omp_target'] = 'omp_target'
                 globals['sycl'] = 'sycl'
+                globals['hip'] = 'hip'
                 globals['mpi'] = 'mpi'
 
                 exec(script, module.__dict__)
@@ -191,6 +193,8 @@ def gen_benchtargets(outfile, problemsizefile, benchdir, builddir, configname, f
             print(f"add_benchmark_cuda({bench.basename}", file=out)
         elif bench.ppm == 'sycl':
             print(f"add_benchmark_sycl({bench.basename}", file=out)
+        elif bench.ppm == 'hip':
+            print(f"add_benchmark_hip({bench.basename}", file=out)
         else:
             die("Unhandled ppm")
         print("    PBSIZE", bench.pbsize, file=out)

@@ -415,7 +415,9 @@ def colsortkey(item, col):
         # Return programs alphabetically
         return item
     if col == 'ppm':
-        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4, 'sycl': 5}.get(item, 6)
+        return {'serial': 0, 'omp_parallel': 1, 'omp_task': 2, 'omp_target': 3, 'cuda': 4, 'sycl': 5, 'hip': 6}.get(
+            item, -1
+        )
     return 0  # Keep the original order of everything else
 
 
@@ -654,6 +656,7 @@ def getPPMDisplayStr(s: str):
         'omp_task': "OpenMP task",
         'omp_target': "OpenMP Target Offloading",
         'sycl': "SYCL",
+        'hip': "HIP",
     }.get(s, s)
 
 
