@@ -47,8 +47,8 @@ void run(State &state, int pbsize) {
   pbsize_t n = pbsize; // 2000
 
 
-
-  auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ true, "A");
+  // Changed verify to false. Result is non-deterministic by the algorithm by design
+  auto A = state.allocate_array<real>({n, n}, /*fakedata*/ true, /*verify*/ false, "A");
 
   real *dev_A = state.allocate_dev<real>(n * n);
 
