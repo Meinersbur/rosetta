@@ -1,8 +1,8 @@
 // BUILD: add_benchmark(ppm=sycl)
+#include <CL/sycl.hpp>
 #include <rosetta.h>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
 void mykernel(queue q, buffer<real, 1> L_buf, buffer<real, 1> x_buf, buffer<real, 1> b_buf, buffer<real, 1> sum_buf, pbsize_t n) {
 

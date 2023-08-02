@@ -334,7 +334,9 @@ elseif (ROSETTA_PPM_SYCL)
     endif ()
   endif ()
 endif ()
-if (IntelSYCL_FOUND OR IntelDPCPP_FOUND OR LLVMSYCL_FOUND)
+if (IntelSYCL_FOUND
+    OR IntelDPCPP_FOUND
+    OR LLVMSYCL_FOUND)
   set(autodetect_ppm_sycl "ON")
 endif ()
 

@@ -33,7 +33,7 @@
 #endif
 
 #if ROSETTA_PPM_SYCL
-#include <sycl/sycl.hpp>
+#include <CL/sycl.hpp>
 #endif
 
 #include <cerrno>

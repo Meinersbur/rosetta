@@ -1,10 +1,10 @@
 // BUILD: add_benchmark(ppm=sycl,sources=[__file__, "cholesky-common.cxx"])
 #include "cholesky-common.h"
+#include <CL/sycl.hpp>
 #include <cmath>
 #include <rosetta.h>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
 void mykernel(queue &q, pbsize_t n, buffer<real, 1> &A_buf) {
   for (idx_t j = 0; j < n; j++) {

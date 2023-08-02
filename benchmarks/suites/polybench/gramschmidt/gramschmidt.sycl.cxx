@@ -1,10 +1,10 @@
 // BUILD: add_benchmark(ppm=sycl,sources=[__file__, "gramschmidt-common.cxx"])
 
 #include "gramschmidt-common.h"
+#include <CL/sycl.hpp>
 #include <rosetta.h>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
 void mykernel(queue &q, pbsize_t m, pbsize_t n, buffer<real, 1> &A_buf, buffer<real, 1> &R_buf, buffer<real, 1> &Q_buf, buffer<real, 1> &sum_buf) {
   for (idx_t k = 0; k < n; k++) {

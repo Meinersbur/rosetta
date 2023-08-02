@@ -1,10 +1,10 @@
 // BUILD: add_benchmark(ppm=sycl,sources=[__file__,"ludcmp-common.cxx"])
 
 #include "ludcmp-common.h"
+#include <CL/sycl.hpp>
 #include <rosetta.h>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
 void mykernel(queue &q, pbsize_t n, buffer<real, 1> &A_buf,
               buffer<real, 1> &b_buf, buffer<real, 1> &x_buf, buffer<real, 1> &y_buf) {

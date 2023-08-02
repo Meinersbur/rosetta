@@ -1,10 +1,8 @@
 // BUILD: add_benchmark(ppm=sycl)
 #include <CL/sycl.hpp>
 #include <rosetta.h>
-// #include <vector>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
 static void mykernel(queue q, buffer<real, 1> &res_Buf, pbsize_t n) {
   q.submit([&](handler &cgh) {

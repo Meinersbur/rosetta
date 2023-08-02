@@ -1,10 +1,10 @@
 // BUILD: add_benchmark(ppm=sycl,sources=[__file__, "durbin-common.cxx"])
 
 #include "durbin-common.h"
+#include <CL/sycl.hpp>
 #include <rosetta.h>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
 void mykernel(queue &q, pbsize_t n, buffer<real, 1> &r_buf,
               buffer<real, 1> &y_buf, buffer<real, 1> &z_buf, buffer<real, 1> &sum_buf) {
