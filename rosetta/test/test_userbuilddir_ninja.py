@@ -78,24 +78,17 @@ class UserBuilddirNinja(unittest.TestCase):
 
     def test_verify(self, problemsizefile=None):
         f = io.StringIO()
+        argv = [None, '--verify']
         if problemsizefile:
-            with contextlib.redirect_stdout(Tee(f, sys.stdout)):
-                rosetta.driver.driver_main(
-                    argv=[None, '--verify', '--problemsizefile', problemsizefile],
-                    mode=DriverMode.USERBUILDDIR,
-                    benchlistfile=self.benchlistfile,
-                    builddir=self.builddir,
-                    srcdir=self.srcdir,
-                )
-        else:
-            with contextlib.redirect_stdout(Tee(f, sys.stdout)):
-                rosetta.driver.driver_main(
-                    argv=[None, '--verify'],
-                    mode=DriverMode.USERBUILDDIR,
-                    benchlistfile=self.benchlistfile,
-                    builddir=self.builddir,
-                    srcdir=self.srcdir,
-                )
+            argv.extend(['--problemsizefile', problemsizefile])
+        with contextlib.redirect_stdout(Tee(f, sys.stdout)):
+            rosetta.driver.driver_main(
+                argv=argv,
+                mode=DriverMode.USERBUILDDIR,
+                benchlistfile=self.benchlistfile,
+                builddir=self.builddir,
+                srcdir=self.srcdir,
+            )
         s = f.getvalue()
         self.assertTrue(re.search(r'^Output of .* considered correct$', s, re.MULTILINE))
         self.assertFalse(re.search(r'^Array data mismatch\:', s, re.MULTILINE))
