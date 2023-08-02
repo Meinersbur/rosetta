@@ -1,4 +1,4 @@
-// NABUILD: add_benchmark(ppm=omp_target)
+// BUILD: add_benchmark(ppm=omp_target)
 
 #include "rosetta.h"
 
