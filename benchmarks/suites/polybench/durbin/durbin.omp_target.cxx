@@ -41,7 +41,7 @@ static void kernel(pbsize_t n,
 #pragma omp target update from(alpha, beta) // FIXME: alpha,beta should stay on the device, why doesn't it?
 
 
-#pragma omp target teams distribute parallel for schedule(static) default(none) firstprivate(k, z, y, alpha, y)
+#pragma omp target teams distribute parallel for schedule(static) default(none) firstprivate(k, z, y, alpha)
       for (idx_t i = 0; i < k; i++)
         z[i] = y[i] + alpha * y[k - i - 1];
 
