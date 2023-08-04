@@ -21,14 +21,17 @@ void mykernel(queue &q, pbsize_t n, buffer<real, 1> &r_buf,
     });
   });
   for (idx_t k = 1; k < n; k++) {
+    pbsize_t k_rounded = (k + 255) / 256 * 256;
     q.submit([&](handler &cgh) {
       auto r_acc = r_buf.get_access<access::mode::read>(cgh);
       auto y_acc = y_buf.get_access<access::mode::read>(cgh);
       auto sumr = reduction(sum_buf, cgh, plus<>());
-      cgh.parallel_for<class reductionKernel>(nd_range<1>(k, 256), sumr,
+      cgh.parallel_for<class reductionKernel>(nd_range<1>(k_rounded, 256), sumr,
                                               [=](nd_item<1> item, auto &sumr_arg) {
                                                 idx_t i = item.get_global_id(0);
-                                                sumr_arg += r_acc[k - i - 1] * y_acc[i];
+                                                if (i < k) {
+                                                  sumr_arg += r_acc[k - i - 1] * y_acc[i];
+                                                }
                                               });
     });
     q.submit([&](handler &cgh) {

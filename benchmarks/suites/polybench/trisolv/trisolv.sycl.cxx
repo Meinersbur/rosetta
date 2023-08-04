@@ -7,16 +7,21 @@ using namespace cl::sycl;
 void mykernel(queue q, buffer<real, 1> L_buf, buffer<real, 1> x_buf, buffer<real, 1> b_buf, buffer<real, 1> sum_buf, pbsize_t n) {
 
   for (idx_t i = 0; i < n; i++) {
-    q.submit([&](handler &cgh) {
-      auto L_acc = L_buf.get_access<access::mode::read>(cgh);
-      auto x_acc = x_buf.get_access<access::mode::read>(cgh);
-      auto sumr = reduction(sum_buf, cgh, plus<>());
-      cgh.parallel_for<class reductionKernel>(nd_range<1>(i, 1024), sumr,
-                                              [=](nd_item<1> item, auto &sumr_arg) {
-                                                idx_t j = item.get_global_id(0);
-                                                sumr_arg += L_acc[i * n + j] * x_acc[j];
-                                              });
-    });
+    pbsize_t i_rounded = (i + 255) / 256 * 256;
+    if (i_rounded > 0) {
+      q.submit([&](handler &cgh) {
+        auto L_acc = L_buf.get_access<access::mode::read>(cgh);
+        auto x_acc = x_buf.get_access<access::mode::read>(cgh);
+        auto sumr = reduction(sum_buf, cgh, plus<>());
+        cgh.parallel_for<class reductionKernel>(nd_range<1>(i_rounded, 256), sumr,
+                                                [=](nd_item<1> item, auto &sumr_arg) {
+                                                  idx_t j = item.get_global_id(0);
+                                                  if (j < i) {
+                                                    sumr_arg += L_acc[i * n + j] * x_acc[j];
+                                                  }
+                                                });
+      });
+    }
     q.submit([&](handler &cgh) {
       auto L_acc = L_buf.get_access<access::mode::read>(cgh);
       auto x_acc = x_buf.get_access<access::mode::read_write>(cgh);
