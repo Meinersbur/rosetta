@@ -130,8 +130,14 @@ if(ROSETTA_PPM_SYCL)
                         ${SYCL_INCLUDE_DIR})
   # https://intel.github.io/llvm-docs/GetStartedGuide.html
   # target_link_options(rosetta-sycl PUBLIC ${SYCL_FLAGS})
-  # target_link_options(rosetta-sycl PUBLIC  -fsycl-targets=nvptx64-nvidia-cuda)
-  if(IntelSYCL_FOUND)
+  # target_link_options(rosetta-sycl PUBLIC -fsycl
+  # -fsycl-targets=nvptx64-nvidia-cuda) target_compile_options(rosetta-sycl
+  # PUBLIC ${SYCL_CXX_FLAGS})
+  if(LLVMSYCL_FOUND)
+    target_link_libraries(rosetta-sycl PUBLIC SYCL::SYCL_CXX)
+    target_compile_options(rosetta-sycl PUBLIC ${SYCL_CXX_FLAGS})
+    # message(STATUS "Added SYCL CXX flags: '${SYCL_CXX_FLAGS}'")
+  elseif(IntelSYCL_FOUND)
     target_link_libraries(rosetta-sycl PUBLIC IntelSYCL::SYCL_CXX)
   endif()
 endif()

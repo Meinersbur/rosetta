@@ -21,7 +21,7 @@ void run(State &state, pbsize_t n) {
   auto pdata = data.data();
 
 
-  cl::sycl::queue q(cl::sycl::default_selector_v);
+  cl::sycl::queue q(cl::sycl::default_selector{});
   {
     cl::sycl::buffer<real, 1> buf(pdata, cl::sycl::range<1>(n));
     for (auto &&_ : state) {

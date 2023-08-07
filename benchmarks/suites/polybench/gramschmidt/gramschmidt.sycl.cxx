@@ -1,20 +1,22 @@
 // BUILD: add_benchmark(ppm=sycl,sources=[__file__, "gramschmidt-common.cxx"])
 
 #include "gramschmidt-common.h"
+#include <CL/sycl.hpp>
 #include <rosetta.h>
-#include <sycl/sycl.hpp>
 
-using namespace sycl;
+using namespace cl::sycl;
 
-void mykernel(queue &q, pbsize_t m, pbsize_t n, buffer<real, 1> &A_buf, buffer<real, 1> &R_buf, buffer<real, 1> &Q_buf, buffer<real, 1> &sum_buf) {
+void mykernel(queue &q, pbsize_t m, pbsize_t n, buffer<real, 1> &A_buf, buffer<real, 1> &R_buf, buffer<real, 1> &Q_buf, buffer<real, 1> &sum_buf, pbsize_t m_rounded) {
   for (idx_t k = 0; k < n; k++) {
     q.submit([&](handler &cgh) {
       auto A_acc = A_buf.get_access<access::mode::read>(cgh);
       auto sumr = reduction(sum_buf, cgh, plus<>());
-      cgh.parallel_for<class reductionKernel>(nd_range<1>(m, 256), sumr,
+      cgh.parallel_for<class reductionKernel>(nd_range<1>(m_rounded, 256), sumr,
                                               [=](nd_item<1> item, auto &sumr_arg) {
                                                 idx_t i = item.get_global_id(0);
-                                                sumr_arg += A_acc[i * n + k] * A_acc[i * n + k];
+                                                if (i < m) {
+                                                  sumr_arg += A_acc[i * n + k] * A_acc[i * n + k];
+                                                }
                                               });
     });
 
@@ -67,6 +69,7 @@ void mykernel(queue &q, pbsize_t m, pbsize_t n, buffer<real, 1> &A_buf, buffer<r
 void run(State &state, pbsize_t pbsize) {
   pbsize_t m = pbsize;              // 1200
   pbsize_t n = pbsize - pbsize / 6; // 1000
+  pbsize_t m_rounded = (m + 255) / 256 * 256;
 
 
   auto A = state.allocate_array<real>({m, n}, /*fakedata*/ true, /*verify*/ true, "A");
@@ -85,7 +88,7 @@ void run(State &state, pbsize_t pbsize) {
       {
         auto &&scope = _.scope();
 
-        mykernel(q, m, n, A_buf, R_buf, Q_buf, sum_buf);
+        mykernel(q, m, n, A_buf, R_buf, Q_buf, sum_buf, m_rounded);
       }
     }
   }
