@@ -141,3 +141,19 @@ if(ROSETTA_PPM_SYCL)
     target_link_libraries(rosetta-sycl PUBLIC IntelSYCL::SYCL_CXX)
   endif()
 endif()
+
+if(ROSETTA_PPM_HIP)
+  add_library(rosetta-hip rosetta-hip.cpp ${_common_sources})
+  set_target_properties(rosetta-hip PROPERTIES FOLDER "Runtime")
+  target_compile_features(rosetta-hip PUBLIC cxx_std_17)
+  target_compile_features(rosetta-hip PUBLIC hip_std_17)
+
+  # Adding the feature cxx_std_17 does not forward to compiling the rosetta-hip
+  # library. Seems to be a CMake bug. CXX_STANDARD_REQUIRED also does not work
+  set_property(TARGET rosetta-hip PROPERTY CXX_STANDARD 17)
+
+  target_compile_definitions(rosetta-hip PUBLIC ROSETTA_PPM_HIP=1)
+  target_include_directories(rosetta-hip
+                             PUBLIC "${CMAKE_SOURCE_DIR}/rosetta/include")
+  target_link_libraries(rosetta-hip PUBLIC hip::host)
+endif()

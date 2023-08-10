@@ -22,7 +22,6 @@ function (add_benchmark_ppm basename ppm ppm_shortname _library)
   string(REPLACE "/" "." _relpath_dots "${_relpath}")
   set(benchname "${basename}")
   set(_benchprop_filename "${CMAKE_CURRENT_BINARY_DIR}/${benchname}.${ppm_shortname}.$<CONFIG>.benchprop.cxx")
-
   set(_bench_target "${basename}.${ppm_shortname}")
   set(_sources ${_arg_SOURCES} "${_benchprop_filename}")
 
@@ -88,6 +87,13 @@ function (add_benchmark_sycl basename)
     return()
   endif ()
   add_benchmark_ppm("${basename}" "sycl" "sycl" "rosetta-sycl" ${ARGN})
+endfunction ()
+
+function (add_benchmark_hip basename)
+  if (NOT ROSETTA_PPM_HIP)
+    return()
+  endif ()
+  add_benchmark_ppm("${basename}" "hip" "hip" "rosetta-hip" ${ARGN})
 endfunction ()
 
 # https://stackoverflow.com/a/52714922

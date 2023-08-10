@@ -120,6 +120,7 @@ add_ppm(OpenMP_Parallel DISPLAYNAME "OpenMP-Parallel" ENABLEDHELP "Enable OpenMP
 add_ppm(OpenMP_Task DISPLAYNAME "OpenMP-Task" ENABLEDHELP "Enable OpenMP '#pragma omp task' PPM")
 add_ppm(OpenMP_Target DISPLAYNAME "OpenMP-Target" ENABLEDHELP "Enable OpenMP '#pragma omp target' PPM")
 add_ppm(SYCL)
+add_ppm(HIP)
 add_ppm(OpenACC)
 add_ppm(MPI)
 
@@ -340,24 +341,24 @@ if (IntelSYCL_FOUND
   set(autodetect_ppm_sycl "ON")
 endif ()
 
-# OpenACC
-if (NOT DEFINED ROSETTA_PPM_OPENACC)
-  find_package(OpenACC)
-elseif (ROSETTA_PPM_OPENACC)
-  find_package(OpenACC REQUIRED)
-endif ()
-if (OpenACC_CXX_FOUND)
-  set(autodetect_ppm_openacc "ON")
+# HIP
+if (ROSETTA_PPM_HIP)
+  enable_language(HIP)
+  find_package(HIP QUIET)
+  if (NOT CMAKE_HIP_COMPILER)
+    message(FATAL_ERROR "HIP enabled but no HIP found")
+  endif ()
+elseif (NOT DEFINED ROSETTA_PPM_HIP)
+  check_language(HIP)
+  if (CMAKE_HIP_COMPILER)
+    enable_language(HIP)
+    find_package(HIP REQUIRED)
+  endif ()
 endif ()
 
-# MPI
-if (NOT DEFINED ROSETTA_PPM_MPI)
-  find_package(MPI)
-elseif (ROSETTA_PPM_MPI)
-  find_package(MPI REQUIRED)
-endif ()
-if (MPI_CXX_FOUND)
-  set(autodetect_ppm_mpi "ON")
+# For HIP PPM
+if (CMAKE_HIP_COMPILER AND HIP_FOUND)
+  set(autodetect_ppm_hip "ON")
 endif ()
 
 # Introspection ################################################################
@@ -558,6 +559,11 @@ if (ROSETTA_PPM_SYCL)
   set_target_properties(build-sycl PROPERTIES FOLDER "Benchmarks")
   add_dependencies(build build-sycl)
 endif ()
+if (ROSETTA_PPM_HIP)
+  add_custom_target(build-hip)
+  set_target_properties(build-hip PROPERTIES FOLDER "Benchmarks")
+  add_dependencies(build build-hip)
+endif ()
 
 add_subdirectory(benchmarks)
 
@@ -735,6 +741,9 @@ set(verinfo_ppm_openmp_target "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VER
 
 set(clargs_ppm_sycl ${SYCL_COMPILER} ${SYCL_CXX_FLAGS} ${_extra_flags})
 set(verinfo_ppm_sycl "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "SYCL ${SYCL_LANGUAGE_VERSION}")
+
+set(clargs_ppm_hip ${CMAKE_HIP_COMPILER} ${CMAKE_CXX_FLAGS} ${_extra_flags})
+set(verinfo_ppm_hip "${CMAKE_HIP_COMPILER_ID} ${CMAKE_HIP_COMPILER_VERSION}" "HIP ${HIP_LANGUAGE_VERSION}")
 
 set(clargs_ppm_openacc ${CMAKE_CXX_COMPILER} ${OpenACC_CXX_FLAGS} ${_extra_flags})
 set(verinfo_ppm_openacc "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}" "OpenACC ${OpenACC_CXX_VERSION}")

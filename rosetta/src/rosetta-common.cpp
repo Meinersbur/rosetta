@@ -36,6 +36,10 @@
 #include <CL/sycl.hpp>
 #endif
 
+#if ROSETTA_PPM_HIP
+#include <hip/hip_runtime.h>
+#endif
+
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -1421,9 +1425,11 @@ struct Rosetta {
 #if ROSETTA_PPM_OPENMP_TARGET
       const char *ppm_variant = "openmp-target";
 #endif
-
 #if ROSETTA_PPM_SYCL
       const char *ppm_variant = "sycl";
+#endif
+#if ROSETTA_PPM_HIP
+      const char *ppm_variant = "hip";
 #endif
 
       std::cout << "Benchmarking done, " << numMeasures << " measurements recorded.\n";

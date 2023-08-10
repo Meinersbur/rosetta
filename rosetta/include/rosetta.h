@@ -24,6 +24,10 @@
 #include "rosetta-cuda.h"
 #endif
 
+#if ROSETTA_PPM_HIP
+#include "rosetta-hip.h"
+#include <hip/hip_runtime.h>
+#endif
 
 // From Google benchmark
 // TODO: remove, make standalone
@@ -35,7 +39,6 @@
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
-
 
 
 using benchmark::ClobberMemory;
@@ -714,6 +717,22 @@ public:
   template <typename T>
   void free_dev(T *dev_ptr) {
     BENCH_CUDA_TRY(cudaFree(dev_ptr));
+  }
+
+#endif
+
+#ifdef ROSETTA_PPM_HIP
+  template <typename T>
+  T *allocate_dev_hip(size_t n) {
+    T *devptr = nullptr;
+    // TODO: Count device memory allocation
+    BENCH_HIP_TRY(hipMalloc((void **)&devptr, n * sizeof(real)));
+    return devptr;
+  }
+
+  template <typename T>
+  void free_dev_hip(T *dev_ptr) {
+    BENCH_HIP_TRY(hipFree(dev_ptr));
   }
 
 #endif
