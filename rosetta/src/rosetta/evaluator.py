@@ -93,8 +93,8 @@ class BenchResultSummary:
         self.buildtype = name_or_list(unique(r.buildtype for r in results))
         self.configname = name_or_list(unique(r.configname for r in results))
         self.timestamp = name_or_list(unique(r.timestamp for r in results))
-        self.maxrss = name_or_list(unique(r.maxrss for r in results))
-        self.peak_alloc = name_or_list(unique(r.peak_alloc for r in results))
+        self.maxrss = max(r.maxrss for r in results)
+        self.peak_alloc = max(r.peak_alloc for r in results)
 
         # Combine all durations to a single statistic; TODO: Should we do something like mean-of-means?
         self.count = sum(r.count for r in results)
