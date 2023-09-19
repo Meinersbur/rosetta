@@ -39,10 +39,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # TODO: Don't fix -march=sm_80
   message("CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(OPENMP_OFFLOADING_CFLAGS
-      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_80"
+      "-fopenmp-targets=nvptx64-nvidia-cuda"
       CACHE STRING "Compiler arguments for OpenMP offloading")
   set(OPENMP_OFFLOADING_LDFLAGS
-      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_80;-lomptarget;-v"
+      "-fopenmp-targets=nvptx64-nvidia-cuda;-lomptarget;-v"
       CACHE STRING "Linker arguments for OpenMP offloading")
 endif()
 
