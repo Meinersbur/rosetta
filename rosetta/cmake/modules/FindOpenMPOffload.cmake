@@ -36,19 +36,18 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       "-foffload=nvptx-none=\"-fcf-protection=none -fno-stack-protector\" -fno-stack-protector -no-pie"
       CACHE STRING "Linker arguments for OpenMP offloading")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # TODO: Don't fix -march=sm_80
-  message("CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(OPENMP_OFFLOADING_CFLAGS
-      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_80"
+      "-fopenmp-targets=nvptx64-nvidia-cuda"
       CACHE STRING "Compiler arguments for OpenMP offloading")
   set(OPENMP_OFFLOADING_LDFLAGS
-      "-fopenmp-targets=nvptx64-nvidia-cuda;-Xopenmp-target;-march=sm_80;-lomptarget;-v"
+      "-fopenmp-targets=nvptx64-nvidia-cuda;-lomptarget;-v"
       CACHE STRING "Linker arguments for OpenMP offloading")
 endif()
 
 # Doesn't mean that it actually offloads, just that it compiles and links.
 separate_arguments(_offload_required_cflags "${OPENMP_OFFLOADING_CFLAGS}"
                    NATIVE_COMMAND)
+
 set(CMAKE_REQUIRED_FLAGS ${OpenMP_CXX_FLAGS} ${_offload_required_cflags})
 set(CMAKE_REQUIRED_INCLUDES ${OpenMP_CXX_INCLUDE_DIRS})
 separate_arguments(_offload_required_ldflags "${OPENMP_OFFLOADING_LDFLAGS}"
