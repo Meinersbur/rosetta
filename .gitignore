@@ -6,3 +6,4 @@ venv/
 release/
 results/
 html_report/
+cmake-build-debug/
