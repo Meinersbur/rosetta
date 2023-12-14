@@ -10,6 +10,21 @@ int TwinPrimeB[] = {5,7,13,19,31,43,61,73,103,109,139};
 #pragma omp target data map(to:TwinPrimeA[0:11],TwinPrimeB[0:11]) map(tofrom:A[0:n*n+139],B[0:n*n+139])
 {
 
+#if 0
+#pragma omp target teams distribute parallel for map(to:TwinPrimeA[0:11],TwinPrimeB[0:11]) map(tofrom:A[0:n*n+139],B[0:n*n+139])  collapse(2)
+#pragma omp fuse depth(2)
+{
+  for (auto a : TwinPrimeA)
+    for (int i = 0; i < n; i += 1)
+      A[i*n+a] = sin(i*2*M_PI/n + a);
+
+#pragma omp distribute parallel for collapse(2) 
+  for (auto b : TwinPrimeB)
+    for (int j = 1; j < n-1; j += 1)
+      B[j*n+b] = cos(j*2*M_PI/n + b);
+}
+#endif 
+
 #pragma omp target teams distribute parallel for collapse(2) 
   for (int k = 0; k < 11; ++k) {
     for (int i = 0; i < n; i += 1) {
