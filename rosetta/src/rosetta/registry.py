@@ -202,6 +202,7 @@ def register_benchmark(
 def load_register_file(filename, is_ref=False):
     global benchlistfile, import_is_ref
     import importlib
+    import importlib.util
 
     filename = mkpath(filename)
     benchlistfile = filename
