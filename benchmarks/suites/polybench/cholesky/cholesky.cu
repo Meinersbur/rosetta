@@ -45,7 +45,7 @@ static void kernel_polly(pbsize_t n, real *dev_A) {
   for (idx_t j = 0; j < n; j++) {
     kernel0<<<1, 1>>>(n, j, dev_A);
 
-    kernel1<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, j, dev_A);
+    kernel1<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, j, dev_A);
 
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(n, block.x), num_blocks(n, block.y), 1};

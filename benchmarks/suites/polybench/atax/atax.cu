@@ -56,8 +56,8 @@ void run(State &state, int pbsize) {
 
 
     const int threadsPerBlock = 256;
-    kernel3<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, dev_A, dev_x, dev_y, dev_tmp);
-    kernel4<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(m, n, dev_A, dev_x, dev_y, dev_tmp);
+    kernel3<<<num_blocks(m, threadsPerBlock), threadsPerBlock>>>(m, n, dev_A, dev_x, dev_y, dev_tmp);
+    kernel4<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(m, n, dev_A, dev_x, dev_y, dev_tmp);
 
     cudaMemcpy(y.data(), dev_y, n * sizeof(real), cudaMemcpyDeviceToHost);
 

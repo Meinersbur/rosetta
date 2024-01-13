@@ -40,13 +40,13 @@ static void kernel(pbsize_t n, pbsize_t m,
   const unsigned int threadsPerBlock = 256;
 
 
-  kernel_contract<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, m, alpha, B, A);
+  kernel_contract<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, m, alpha, B, A);
 
 
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(m, block.x), num_blocks(n, block.y), 1};
-    kernel_alpha<<<block, grid>>>(n, m, alpha, B, A);
+    kernel_alpha<<<grid, block>>>(n, m, alpha, B, A);
   }
 
 

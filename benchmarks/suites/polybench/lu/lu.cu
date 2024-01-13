@@ -36,12 +36,12 @@ kernel(pbsize_t n, real *A) {
   const unsigned int threadsPerBlock = 256;
 
   for (idx_t k = 0; k < n - 1; k++) {
-    kernel_div<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(n, A, k);
+    kernel_div<<<num_blocks(n - (k + 1), threadsPerBlock), threadsPerBlock>>>(n, A, k);
 
 
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(n - (k + 1), block.x), num_blocks(n - (k + 1), block.y), 1};
-    kernel_A<<<block, grid>>>(n, A, k);
+    kernel_A<<<grid, block>>>(n, A, k);
   }
 }
 

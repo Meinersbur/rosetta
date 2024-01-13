@@ -70,7 +70,7 @@ static void kernel(pbsize_t n,
     beta = (1 - alpha * alpha) * beta;
     alpha = -(r[k] + sum) / beta;
 
-    kernel_z<<<threadsPerBlock, num_blocks(k, threadsPerBlock)>>>(n, r.get(), y.get(), z.get(), k, alpha);
+    kernel_z<<<num_blocks(k, threadsPerBlock), threadsPerBlock>>>(n, r.get(), y.get(), z.get(), k, alpha);
 
     BENCH_CUDA_TRY(cudaMemcpy(y.get(), z.get(), k * sizeof(real), cudaMemcpyDeviceToDevice));
 

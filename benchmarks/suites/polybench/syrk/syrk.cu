@@ -45,13 +45,13 @@ static void kernel(pbsize_t n, pbsize_t m,
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(n, block.x), num_blocks(n, block.y), 1};
-    kernel_beta<<<block, grid>>>(n, m, alpha, beta, C, A);
+    kernel_beta<<<grid, block>>>(n, m, alpha, beta, C, A);
   }
 
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(n, block.x), num_blocks(n, block.y), 1};
-    kernel_product<<<block, grid>>>(n, m, alpha, beta, C, A);
+    kernel_product<<<grid, block>>>(n, m, alpha, beta, C, A);
   }
 
 

@@ -63,7 +63,7 @@ static void kernel(pbsize_t m, pbsize_t n,
                    real mean[]) {
   const unsigned threadsPerBlock = 256;
 
-  kernel_mean<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, data, cov, mean);
+  kernel_mean<<<num_blocks(m, threadsPerBlock), threadsPerBlock>>>(m, n, data, cov, mean);
 
 
   {

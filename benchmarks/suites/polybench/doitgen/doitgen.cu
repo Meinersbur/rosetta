@@ -31,7 +31,7 @@ static void kernel(pbsize_t nr, pbsize_t nq, pbsize_t np,
 
   dim3 block{1, threadsPerBlock / 32, 32};
   dim3 grid{num_blocks(nr, block.x), num_blocks(nq, block.y), num_blocks(np, block.z)};
-  kernel_sum<<<block, grid>>>(nr, nq, np, A, C4, sum);
+  kernel_sum<<<grid, block>>>(nr, nq, np, A, C4, sum);
 }
 
 

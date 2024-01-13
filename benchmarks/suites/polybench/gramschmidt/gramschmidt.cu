@@ -96,9 +96,9 @@ static void kernel(pbsize_t m, pbsize_t n,
     wrapped_R[k * n + k] = std::sqrt(sum);
 
 
-    kernel_Q<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, A, R, Q, k);
-    kernel_R<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(m, n, A, R, Q, k);
-    kernel_A<<<threadsPerBlock, num_blocks(n - (k + 1), threadsPerBlock)>>>(m, n, A, R, Q, k);
+    kernel_Q<<<num_blocks(m, threadsPerBlock), threadsPerBlock>>>(m, n, A, R, Q, k);
+    kernel_R<<<num_blocks(n - (k + 1), threadsPerBlock), threadsPerBlock>>>(m, n, A, R, Q, k);
+    kernel_A<<<num_blocks(n - (k + 1), threadsPerBlock), threadsPerBlock>>>(m, n, A, R, Q, k);
   }
 }
 

@@ -117,8 +117,8 @@ static void kernel(pbsize_t m, pbsize_t n,
                    real stddev[]) {
   const unsigned threadsPerBlock = 256;
 
-  kernel_mean<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, data, corr, mean, stddev);
-  kernel_stddev<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, data, corr, mean, stddev);
+  kernel_mean<<<num_blocks(m, threadsPerBlock), threadsPerBlock>>>(m, n, data, corr, mean, stddev);
+  kernel_stddev<<<num_blocks(m, threadsPerBlock), threadsPerBlock>>>(m, n, data, corr, mean, stddev);
 
 
   {

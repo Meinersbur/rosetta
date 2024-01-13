@@ -61,7 +61,7 @@ static void kernel(pbsize_t n, real *path) {
   for (idx_t k = 0; k < n; k++) {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(n, block.x), num_blocks(n, block.y), 1};
-    kernel_min<<<block, grid>>>(n, path, k);
+    kernel_min<<<grid, block>>>(n, path, k);
   }
 }
 

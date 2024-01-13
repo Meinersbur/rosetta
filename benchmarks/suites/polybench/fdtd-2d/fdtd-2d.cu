@@ -70,20 +70,20 @@ static void kernel(pbsize_t tmax,
     {
       dim3 block{threadsPerBlock / 32, 32, 1};
       dim3 grid{num_blocks(nx - 1, block.x), num_blocks(ny, block.y), 1};
-      kernel_ey<<<block, grid>>>(tmax, nx, ny, ex, ey, hz, fict, t);
+      kernel_ey<<<grid, block>>>(tmax, nx, ny, ex, ey, hz, fict, t);
     }
 
 
     {
       dim3 block{threadsPerBlock / 32, 32, 1};
       dim3 grid{num_blocks(nx, block.x), num_blocks(ny - 1, block.y), 1};
-      kernel_ex<<<block, grid>>>(tmax, nx, ny, ex, ey, hz, fict, t);
+      kernel_ex<<<grid, block>>>(tmax, nx, ny, ex, ey, hz, fict, t);
     }
 
     {
       dim3 block{threadsPerBlock / 32, 32, 1};
       dim3 grid{num_blocks(nx - 1, block.x), num_blocks(ny - 1, block.y), 1};
-      kernel_hz<<<block, grid>>>(tmax, nx, ny, ex, ey, hz, fict, t);
+      kernel_hz<<<grid, block>>>(tmax, nx, ny, ex, ey, hz, fict, t);
     }
   }
 }

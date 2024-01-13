@@ -28,8 +28,8 @@ static void kernel(pbsize_t tsteps, pbsize_t n, real *A, real *B) {
   for (idx_t t = 1; t <= tsteps; t++) {
     dim3 block{1, threadsPerBlock / 32, 32};
     dim3 grid{num_blocks(n - 2, block.x), num_blocks(n - 2, block.y), num_blocks(n - 2, block.z)};
-    kernel_stencil<<<block, grid>>>(n, A, B);
-    kernel_stencil<<<block, grid>>>(n, B, A);
+    kernel_stencil<<<grid, block>>>(n, A, B);
+    kernel_stencil<<<grid, block>>>(n, B, A);
   }
 }
 

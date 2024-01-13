@@ -39,7 +39,7 @@ static void kernel(pbsize_t n,
                    real x[],
                    real y[]) {
   const unsigned threadsPerBlock = 256;
-  kernel_y<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, alpha, beta, A, B, tmp, x, y);
+  kernel_y<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, alpha, beta, A, B, tmp, x, y);
 }
 
 

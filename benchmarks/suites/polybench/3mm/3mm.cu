@@ -39,18 +39,18 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk, pbsize_t nl, pbsize_t 
 
   {
     dim3 grid{num_blocks(ni, block.x), num_blocks(nj, block.y), 1};
-    kernel_A_mul_B<<<block, grid>>>(ni, nj, nk, E, A, B);
+    kernel_A_mul_B<<<grid, block>>>(ni, nj, nk, E, A, B);
   }
 
 
   {
     dim3 grid{num_blocks(nj, block.x), num_blocks(nl, block.y), 1};
-    kernel_A_mul_B<<<block, grid>>>(nj, nl, nm, F, C, D);
+    kernel_A_mul_B<<<grid, block>>>(nj, nl, nm, F, C, D);
   }
 
   {
     dim3 grid{num_blocks(ni, block.x), num_blocks(nl, block.y), 1};
-    kernel_A_mul_B<<<block, grid>>>(ni, nl, nj, G, E, F);
+    kernel_A_mul_B<<<grid, block>>>(ni, nl, nj, G, E, F);
   }
 }
 

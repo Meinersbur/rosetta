@@ -37,7 +37,7 @@ static void kernel(pbsize_t ni, pbsize_t nj, pbsize_t nk,
   unsigned threadsPerBlock = 256;
   dim3 block{threadsPerBlock / 32, 32, 1};
   dim3 grid{num_blocks(ni, block.x), num_blocks(nj, block.y), 1};
-  kernel_dev<<<block, grid>>>(ni, nj, nk, alpha, beta, C, A, B);
+  kernel_dev<<<grid, block>>>(ni, nj, nk, alpha, beta, C, A, B);
 }
 
 

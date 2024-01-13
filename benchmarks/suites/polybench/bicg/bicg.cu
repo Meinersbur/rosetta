@@ -34,8 +34,8 @@ __global__ void kernel_s(pbsize_t m, pbsize_t n, real *A, real s[], real q[], re
 
 static void kernel(pbsize_t m, pbsize_t n, real *A, real s[], real q[], real p[], real r[]) {
   const unsigned threadsPerBlock = 256;
-  kernel_q<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(m, n, A, s, q, p, r);
-  kernel_s<<<threadsPerBlock, num_blocks(m, threadsPerBlock)>>>(m, n, A, s, q, p, r);
+  kernel_q<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(m, n, A, s, q, p, r);
+  kernel_s<<<num_blocks(m, threadsPerBlock), threadsPerBlock>>>(m, n, A, s, q, p, r);
 }
 
 

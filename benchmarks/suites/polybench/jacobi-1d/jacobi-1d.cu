@@ -25,8 +25,8 @@ static void kernel(pbsize_t tsteps, pbsize_t n, real A[], real B[]) {
   const unsigned int threadsPerBlock = 256;
 
   for (idx_t t = 1; t <= tsteps; t++) {
-    kernel_stencil<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, A, B);
-    kernel_stencil<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, B, A);
+    kernel_stencil<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, A, B);
+    kernel_stencil<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, B, A);
   }
 }
 

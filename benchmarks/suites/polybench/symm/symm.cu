@@ -66,21 +66,21 @@ static void kernel(pbsize_t m, pbsize_t n,
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(m, block.x), num_blocks(n, block.y), 1};
-    kernel_tmp<<<block, grid>>>(m, n, alpha, beta, C, A, B, tmp);
+    kernel_tmp<<<grid, block>>>(m, n, alpha, beta, C, A, B, tmp);
   }
 
 
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(m, block.x), num_blocks(n, block.y), 1};
-    kernel_C<<<block, grid>>>(m, n, alpha, beta, C, A, B, tmp);
+    kernel_C<<<grid, block>>>(m, n, alpha, beta, C, A, B, tmp);
   }
 
   // TODO: Combine both kernels?
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(m - 1, block.x), num_blocks(n, block.y), 1};
-    kernel_sum<<<block, grid>>>(m, n, alpha, beta, C, A, B, tmp);
+    kernel_sum<<<grid, block>>>(m, n, alpha, beta, C, A, B, tmp);
   }
 
 

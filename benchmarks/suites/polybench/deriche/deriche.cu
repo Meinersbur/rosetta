@@ -155,8 +155,8 @@ static void kernel(pbsize_t w, pbsize_t h,
 
   const unsigned threadsPerBlock = 256;
 
-  kernel_y1_rowsweep<<<threadsPerBlock, num_blocks(w, threadsPerBlock)>>>(w, h, alpha, imgIn, imgOut, y1, y2, a1, a2, b1, b2);
-  kernel_y2_rowsweep<<<threadsPerBlock, num_blocks(w, threadsPerBlock)>>>(w, h, alpha, imgIn, imgOut, y1, y2, a3, a4, b1, b2);
+  kernel_y1_rowsweep<<<num_blocks(w, threadsPerBlock), threadsPerBlock>>>(w, h, alpha, imgIn, imgOut, y1, y2, a1, a2, b1, b2);
+  kernel_y2_rowsweep<<<num_blocks(w, threadsPerBlock), threadsPerBlock>>>(w, h, alpha, imgIn, imgOut, y1, y2, a3, a4, b1, b2);
 
 
   {

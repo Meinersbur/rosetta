@@ -60,13 +60,13 @@ static void kernel(pbsize_t n, real alpha, real beta,
   {
     dim3 block{threadsPerBlock / 32, 32, 1};
     dim3 grid{num_blocks(n, block.x), num_blocks(n, block.y), 1};
-    kernel_A<<<block, grid>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
+    kernel_A<<<grid, block>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
   }
 
 
-  kernel_x<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
-  kernel_y<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
-  kernel_w<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
+  kernel_x<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
+  kernel_y<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
+  kernel_w<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, alpha, beta, A, u1, v1, u2, v2, w, x, y, z);
 }
 
 

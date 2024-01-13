@@ -49,8 +49,8 @@ static void kernel(pbsize_t n,
   const unsigned threadsPerBlock = 256;
 
 
-  kernel_x1<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, x1, x2, y_1, y_2, A);
-  kernel_x2<<<threadsPerBlock, num_blocks(n, threadsPerBlock)>>>(n, x1, x2, y_1, y_2, A);
+  kernel_x1<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, x1, x2, y_1, y_2, A);
+  kernel_x2<<<num_blocks(n, threadsPerBlock), threadsPerBlock>>>(n, x1, x2, y_1, y_2, A);
 }
 
 
