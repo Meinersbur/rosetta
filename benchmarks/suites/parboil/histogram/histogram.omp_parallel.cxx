@@ -1,6 +1,4 @@
-// BUILD: add_benchmark(omp_parallel,
-// BUILD:                SizeParam('n', pbsize, runtime, verify=129, train=1024, ref=6000, min=0)
-// BUILD:              )
+// IGNORE: add_benchmark(omp_parallel)
 
 #include <rosetta.h>
 

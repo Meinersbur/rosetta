@@ -477,6 +477,35 @@ protected:
 };
 
 template <>
+class DataHandler<unsigned char> : public DataHandlerBase {
+  friend class State;
+
+public:
+  explicit DataHandler(BenchmarkRun *impl) : DataHandlerBase(impl) {}
+
+  void fake(unsigned char *data, ssize_t count);
+  void verify(unsigned char *data, ssize_t count, std::vector<size_t> dims, std::string_view name);
+};
+
+
+
+
+template <>
+class DataHandler< int> : public DataHandlerBase {
+  friend class State;
+
+public:
+  explicit DataHandler(BenchmarkRun *impl) : DataHandlerBase(impl) {}
+
+  void fake( int *data, ssize_t count);
+  void verify( int  *data, ssize_t count, std::vector<size_t> dims, std::string_view name);
+};
+
+
+
+
+
+template <>
 class DataHandler<double> : public DataHandlerBase {
   friend class State;
 
@@ -486,6 +515,8 @@ public:
   void fake(double *data, ssize_t count);
   void verify(double *data, ssize_t count, std::vector<size_t> dims, std::string_view name);
 };
+
+
 
 
 

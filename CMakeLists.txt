@@ -196,7 +196,12 @@ if (TARGET Catch2WithMain)
 endif ()
 
 # CUDA
-set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
+# FIXME: Automatically determine (newest working?) CUDA architecture, CMake isn't helping here much
+# https://cmake.org/cmake/help/latest/variable/CMAKE_CUDA_ARCHITECTURES.html
+# Clang uses sm_35 if nothing is passed, but that doesn't work with newer releases of the CUDA SDK anymore
+#set(CMAKE_CUDA_ARCHITECTURES 89) # ???
+#set(CMAKE_CUDA_ARCHITECTURES OFF) # ???
+#set(CMAKE_CUDA_ARCHITECTURES native) # ???
 
 if (ROSETTA_PPM_CUDA OR ROSETTA_PLATFORM_NVIDIA)
   find_package(CUDAToolkit REQUIRED)

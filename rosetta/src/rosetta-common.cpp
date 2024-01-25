@@ -1138,6 +1138,86 @@ void State::subAllocatedBytes(size_t size) {
 }
 
 
+
+
+
+void DataHandler<unsigned char>::fake(unsigned char *data, ssize_t count) {
+    // Alternating big/small pattern starting with 1 with truncation  
+  for (ssize_t i = 0; i < count; i += 1)
+    data[i] = (1-2*(i%2)) * ((i/2)+1);
+}
+
+
+
+// TODO: make template
+void DataHandler<unsigned char>::verify(unsigned char *data, ssize_t count, std::vector<size_t> dims, std::string_view name) {
+  if (!impl->isVerifyRun())
+    return;
+
+  auto &verifyout = impl->verifyout;
+
+  verifyout << "array";     // Output kind
+  static_assert(sizeof(unsigned char) == sizeof(uint8_t));
+  verifyout << " u8"; 
+
+  verifyout << ' ' << dims.size();
+  for (auto l : dims)
+    verifyout << ' ' << l;
+
+  if (!name.empty())
+    verifyout << ' ' << name;
+
+  verifyout << ':';
+
+
+  for (ssize_t i = 0; i < count; i += 1) {
+    verifyout << '\t' << data[i];
+  }
+  verifyout << '\n';
+}
+
+
+
+
+void DataHandler<int>::fake(int *data, ssize_t count) {
+  // Alternating positive/negative starting with 1
+  for (ssize_t i = 0; i < count; i += 1)
+    data[i] = (1 - 2 * (i % 2)) * ((i / 2) + 1);
+}
+
+
+
+
+void DataHandler<int>::verify(int *data, ssize_t count, std::vector<size_t> dims, std::string_view name) {
+  if (!impl->isVerifyRun())
+    return;
+
+  auto &verifyout = impl->verifyout;
+
+  verifyout << "array"; // Output kind
+  static_assert(sizeof(int) == sizeof(int32_t));
+  verifyout << " i32";
+
+  verifyout << ' ' << dims.size();
+  for (auto l : dims)
+    verifyout << ' ' << l;
+
+  if (!name.empty())
+    verifyout << ' ' << name;
+
+  verifyout << ':';
+
+
+  for (ssize_t i = 0; i < count; i += 1) {
+    verifyout << '\t' << data[i];
+  }
+  verifyout << '\n';
+}
+
+
+
+
+ 
 void DataHandler<double>::fake(double *data, ssize_t count) {
   // Generate some data v that is unlikely to cause problems:
   // 1. Not too close to zero (1/v)

@@ -1,7 +1,4 @@
-// BUILD: add_benchmark(cuda,
-// BUILD:                SizeParam('n', pbsize, runtime, verify=129, train=1024, ref=6000, min=0),
-// BUILD:                TuneParam('THREADS_PER_BLOCK', int, runtime, choices=[32,64,128,256,512])
-// BUILD:              )
+// IGNORE: add_benchmark(ppm=cuda)
 
 #include <rosetta.h>
 

@@ -1,8 +1,4 @@
-// BUILD: add_benchmark(cuda,
-// BUILD:               GenParam('real',compiletime,choices=['float','double','long double']),
-// BUILD:               SizeParam('n',runtime,verify=129,train=1024,ref=1024*1024,min=0),
-// BUILD:               TuneParam('threadsPerBlock',runtime)
-// BUILD:              )
+// BUILD: add_benchmark(ppm=cuda)
 
 #include <rosetta.h>
 
@@ -10,13 +6,13 @@
 __global__ void cuda_assign(pbsize_t n, real *data) {
   idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
-  if (i < n)
+  if (i < n) 
     data[i] = i;
 }
 
 
 static int num_blocks(int num, int factor) {
-  return (num + factor - 1) / factor;
+  return  (num + factor - 1) / factor;
 }
 
 

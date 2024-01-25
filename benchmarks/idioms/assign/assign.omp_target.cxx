@@ -10,7 +10,6 @@ static void kernel(pbsize_t n, real data[]) {
 }
 
 
-
 void run(State &state, pbsize_t n) {
   auto data = state.allocate_array<real>({n}, /*fakedata*/ false, /*verify*/ true, "data");
 
