@@ -6,13 +6,13 @@
 __global__ void cuda_assign(pbsize_t n, real *data) {
   idx_t i = blockDim.x * blockIdx.x + threadIdx.x;
 
-  if (i < n) 
+  if (i < n)
     data[i] = i;
 }
 
 
 static int num_blocks(int num, int factor) {
-  return  (num + factor - 1) / factor;
+  return (num + factor - 1) / factor;
 }
 
 
