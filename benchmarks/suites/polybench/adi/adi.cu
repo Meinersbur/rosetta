@@ -80,7 +80,7 @@ static void kernel(
 
   for (idx_t t = 1; t <= tsteps; t++) {
     // Column Sweep
-    kernel_column_sweep<<<num_blocks(n - 2, threadsPerBlock)>>>(tsteps, n, u, v, p, q, a, b, c, d, e, f);
+    kernel_column_sweep<<<num_blocks(n - 2, threadsPerBlock), threadsPerBlock>>>(tsteps, n, u, v, p, q, a, b, c, d, e, f);
 
     // Row Sweep
     kernel_row_sweep<<<num_blocks(n - 2, threadsPerBlock), threadsPerBlock>>>(tsteps, n, u, v, p, q, a, b, c, d, e, f);
